@@ -25,109 +25,199 @@ body {
   margin: 0;
   font-family: "IBM Plex Sans Thai", "Segoe UI", sans-serif;
   color: var(--text);
-  background: transparent;
+  background: var(--page-bg);
 }
 
 /* =========================================
-   LOGIN PAGE (CLEAN & MINIMAL)
+   1. LOGIN PAGE (PREMIUM GLASSMORPHISM)
    ========================================= */
-.login-page {
-  min-height: 100vh;
+.login-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
+.login-card { width: 100%; max-width: 420px; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 20px; box-shadow: 0 15px 35px rgba(0, 45, 115, 0.15), 0 5px 15px rgba(0, 0, 0, 0.05); padding: 3rem 2.5rem; display: flex; flex-direction: column; gap: 1.8rem; animation: fadeIn 0.6s ease-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+.login-header { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.login-logo { height: 48px !important; object-fit: contain; margin-bottom: 10px !important; }
+.login-header h1 { margin: 0; color: #1a365d; font-size: 1.8rem; font-family: "Noto Serif Thai", serif; font-weight: 800; letter-spacing: -0.5px; }
+.login-header p { margin: 0; color: #64748b; font-size: 0.95rem; font-weight: 500; }
+.login-form { display: flex; flex-direction: column; gap: 1.25rem; }
+.login-card label { font-weight: 700; color: #334155; font-size: 0.85rem; letter-spacing: 0.2px; margin-bottom: 0.4rem; display: block; }
+.login-card input, .modern-select { width: 100%; border: 1.5px solid #cbd5e1; background: rgba(255, 255, 255, 0.9); border-radius: 10px; padding: 0.8rem 1rem; font-size: 0.95rem; color: #1e293b; transition: all 0.2s ease; }
+.login-card input:focus, .modern-select:focus { outline: none; border-color: #2b6cb0; background: #ffffff; box-shadow: 0 0 0 4px rgba(43, 108, 176, 0.1); }
+.btn-login-submit { background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%); color: white; border: none; padding: 0.9rem; border-radius: 10px; font-size: 1rem; font-weight: 700; cursor: pointer; width: 100%; transition: all 0.3s ease; margin-top: 0.8rem; box-shadow: 0 6px 15px rgba(30, 58, 138, 0.25); }
+.btn-login-submit:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(30, 58, 138, 0.35); background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); }
+.auth-error { color: #b91c1c; font-size: 0.85rem; font-weight: 600; background: #fef2f2; border: 1px solid #fecaca; padding: 0.75rem; border-radius: 8px; text-align: center; }
+.login-footer { text-align: center; margin-top: 0.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(0, 0, 0, 0.08); }
+.login-footer .btn-link { background: none; border: none; color: #2b6cb0; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: all 0.2s ease; padding: 5px 10px; border-radius: 6px; }
+.login-footer .btn-link:hover { color: #1e3a8a; background: rgba(43, 108, 176, 0.05); }
+.password-input-wrapper { position: relative; display: flex; align-items: center; }
+.password-input-wrapper input { padding-right: 2.5rem; }
+.password-toggle-btn { position: absolute; right: 0.5rem; background: transparent; border: none; color: #64748b; cursor: pointer; padding: 0.2rem; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: color 0.2s, background 0.2s; }
+.password-toggle-btn:hover { color: #0072bb; background: rgba(0, 114, 187, 0.1); }
+
+/* =========================================
+   2. TOPBAR & SIDEBAR NAVIGATION (Minimalist 🚀)
+   ========================================= */
+.topbar {
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding: 0 32px;
+  height: 75px;
+  width: 100%;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  flex-wrap: nowrap !important;
+}
+
+/* --- ฝั่งซ้าย (Logos) --- */
+.topbar-left {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  flex: 0 0 auto;
+  height: 100%;
+}
+
+.brand-container { display: flex; align-items: center; gap: 16px; }
+.hospital-logo { height: 38px; object-fit: contain; }
+.vertical-divider { width: 2px; height: 32px; background-color: #e2e8f0; border-radius: 2px; }
+.system-identity { display: flex; align-items: center; gap: 12px; }
+.greenline-logo { height: 26px; object-fit: contain; }
+
+.system-text { display: flex; flex-direction: column; justify-content: center; }
+.system-name { font-weight: 800; font-size: 1.1rem; color: #0f2b4b; line-height: 1.2; margin: 0; white-space: nowrap; }
+.location-tag { font-size: 0.7rem; color: #64748b; font-weight: 600; letter-spacing: 0.5px; line-height: 1; text-transform: uppercase; white-space: nowrap; }
+
+/* --- 🚀 ปุ่มแฮมเบอร์เกอร์ (แสดงทุกหน้าจอ) --- */
+.hamburger-btn {
+  display: block !important;
+  position: relative;
+  z-index: 1001; /* ให้อยู่เหนือ Sidebar */
+  background: none;
+  border: none;
+  font-size: 2rem; /* ขยายปุ่มให้กดง่าย */
+  color: #1a365d;
+  cursor: pointer;
+  padding: 0 10px;
+  transition: transform 0.2s ease;
+}
+.hamburger-btn:hover { transform: scale(1.1); }
+
+/* --- 🚀 Sidebar Drawer (กล่องเมนูที่เลื่อนออกมา) --- */
+.topbar-sidebar {
+  position: fixed !important;
+  top: 0;
+  right: 0;
+  width: 320px; /* ขยายกว้างขึ้นให้ดูโปร */
+  height: 100vh;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  flex-direction: column !important;
+  padding: 90px 28px 32px; /* ดันลงมาหลบปุ่มปิด */
+  box-shadow: -15px 0 35px rgba(0, 0, 0, 0.08);
+  transform: translateX(100%);
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  visibility: hidden;
+  z-index: 1000;
+  display: flex;
+  align-items: stretch;
+}
+
+.topbar-sidebar.open {
+  visibility: visible;
+  transform: translateX(0);
+}
+
+/* 1. โปรไฟล์ (บนสุด) */
+.sidebar-profile {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 24px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.user-avatar {
+  width: 50px;
+  height: 50px;
+  background: linear-gradient(135deg, #0072bb, #002d73);
+  color: white;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1.5rem;
+  font-weight: 700;
+  font-size: 1.4rem;
+  box-shadow: 0 4px 12px rgba(0, 114, 187, 0.25);
+  flex-shrink: 0;
 }
 
-.login-card {
-  width: 100%;
-  max-width: 380px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-  padding: 2.5rem 2rem;
+.user-details { display: flex; flex-direction: column; justify-content: center; overflow: hidden; }
+.user-details .username { font-weight: 700; color: #1e293b; font-size: 1.05rem; margin: 0; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
+.user-details .user-role { font-size: 0.75rem; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+
+/* 2. เมนู (ตรงกลาง) */
+.sidebar-nav {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 8px;
+  width: 100%;
 }
 
-.login-title {
-  margin: 0;
-  color: #0f172a;
-  font-size: 1.5rem;
-  text-align: center;
-  font-family: "Noto Serif Thai", serif;
-  font-weight: 700;
-}
-
-.login-card label {
-  display: block;
-  font-weight: 600;
+.sidebar-nav .nav-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 16px 20px;
   color: #475569;
-  font-size: 0.85rem;
-  margin-bottom: 0.4rem;
-}
-
-.login-card input, .login-card select {
-  width: 100%;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  padding: 0.7rem 0.8rem;
-  font-size: 0.95rem;
-  transition: border-color 0.2s;
-}
-
-.login-card input:focus {
-  outline: none;
-  border-color: #0072bb;
-}
-
-.manager-secure-box {
-  background: #fffbeb;
-  border: 1px solid #fef3c7;
-  padding: 1rem;
-  border-radius: 8px;
-  margin-top: 0.5rem;
-}
-
-.auth-error {
-  color: #b91c1c;
-  font-size: 0.8rem;
-  background: #fef2f2;
-  padding: 0.6rem;
-  border-radius: 4px;
-  text-align: center;
-}
-
-.btn-login-submit {
-  background: #0072bb;
-  color: white;
-  border: none;
-  padding: 0.8rem;
-  border-radius: 6px;
-  font-weight: 700;
-  cursor: pointer;
-  width: 100%;
-}
-
-.auth-switch-link {
-  text-align: center;
-  font-size: 0.85rem;
-  color: #64748b;
-}
-
-.auth-switch-link span {
-  color: #0072bb;
-  cursor: pointer;
   font-weight: 600;
+  font-size: 1.05rem;
   text-decoration: none;
-  margin-left: 4px;
+  border-radius: 12px;
+  transition: all 0.2s ease;
 }
 
-.auth-switch-link span:hover {text-decoration: underline;}
-.app-container { display: flex; flex-direction: column; min-height: 100vh; }
+.sidebar-nav .nav-item:hover { color: #0072bb; background: rgba(0, 114, 187, 0.05); transform: translateX(5px); }
+.sidebar-nav .nav-item.active { color: #0072bb; background: rgba(0, 114, 187, 0.08); font-weight: 700; }
 
+/* 3. ปุ่ม Logout (ล่างสุด) */
+.topbar-sidebar .logout-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #fff5f5;
+  color: #ef4444;
+  border: 1px solid #fecaca;
+  padding: 16px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 1.05rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: auto; /* 🚀 ดันปุ่มนี้ลงไปติดขอบจอด้านล่างสุดเสมอ */
+  width: 100%;
+}
+
+.topbar-sidebar .logout-btn:hover { background: #ef4444; color: white; border-color: #ef4444; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.2); }
+
+/* Responsive ซ่อนข้อความแบรนด์ในจอเล็กมาก */
+@media screen and (max-width: 768px) {
+  .system-text { display: none !important; }
+  .topbar { padding: 0 16px; }
+  .topbar-sidebar { width: 85%; max-width: 320px; } /* ไม่ให้เมนูกินเต็มจอ 100% ในมือถือ */
+}
+
+/* =========================================
+   3. APP CONTENT (โค้ดตารางและฟอร์มเดิมของคุณ 100%)
+   ========================================= */
+.app-container { display: flex; flex-direction: column; min-height: 100vh; }
 .btn { border: none; border-radius: 10px; padding: 0.7rem 1.5rem; font-weight: 700; cursor: pointer; transition: 0.2s; }
 .btn-primary { background: linear-gradient(135deg, var(--blue), var(--blue-dark)); color: #fff; width: 100%; }
 .btn-secondary { background: #f1f5f9; color: #475569; }
@@ -141,7 +231,7 @@ body {
 .pdf-preview-body { flex: 1; overflow: auto; background: #f2f5f9; }
 .pdf-preview-empty { height: 100%; display: flex; align-items: center; justify-content: center; color: #516178; font-weight: 600; }
 .pdf-preview-frame { width: min(100%, 980px); height: 100%; border: none; display: block; margin: 0 auto; background: #fff; }
-.page-heading { margin: 0; color: #102a48; font-size: 1.8rem; font-weight: 600; font-family: "Noto Serif Thai", serif; margin-bottom: 1rem; }
+.page-heading {margin: 0 0 1.2rem 0; color: #102a48; font-size: 1.8rem; font-weight: 700; font-family: "Noto Serif Thai", serif; text-align: center !important; width: 100%; display: block !important; }
 .page-rule { display: none; }
 .manager-panel { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; padding: 0.75rem 0.9rem; border: 1px solid #d9e0ec; border-radius: 4px; background: rgba(255, 255, 255, 0.6); }
 .manager-status { font-weight: 700; font-size: 0.82rem; color: #4f6177; }
@@ -218,6 +308,13 @@ button:hover, button:focus-visible { transform: translateY(-1px); box-shadow: 0 
 .application-portfolio-table tbody tr:hover td { background: #dbe9ff; }
 .application-portfolio-table .checkbox-cell { text-align: center; }
 .application-portfolio-table .checkbox-cell input { width: auto; margin: 0; }
+.pdpa-table th:nth-child(3), .pdpa-table th:nth-child(4), .pdpa-table th:nth-child(5) { min-width: 220px; }
+.pdpa-checklist { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.35rem 0.75rem; }
+.pdpa-checklist-item { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; color: #526175; font-weight: 600; margin: 0; }
+.pdpa-checklist-item input { width: auto; margin: 0; }
+.app-grid { display: grid; grid-template-columns: repeat(5, minmax(220px, 1fr)); gap: 0.65rem; }
+.app-tile p { margin: 0.3rem 0 0; padding: 0 0.75rem; font-size: 0.73rem; color: #586b7f; }
+.app-tile p:last-child { padding-bottom: 0.75rem; }
 
 .form-header { background: #fff; padding: 1.2rem; margin-bottom: 1rem; border: 1px solid var(--line); border-radius: 4px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08); width: min(980px, 100%); margin-left: auto; margin-right: auto; display: grid; gap: 0.8rem; }
 .print-hidden { display: block; }
@@ -236,10 +333,45 @@ button:hover, button:focus-visible { transform: translateY(-1px); box-shadow: 0 
 .status-field { display: grid; grid-template-columns: 120px 1fr; gap: 0.5rem; align-items: center; }
 .status-field label { font-weight: 700; color: var(--text); margin: 0; grid-template-columns: 1fr; }
 .status-field input { margin: 0; }
-.form-section { background: rgba(255, 255, 255, 0.95); padding: 1.35rem; border: 1px solid rgba(207, 224, 242, 0.95); border-radius: 14px; box-shadow: 0 12px 22px rgba(15, 43, 75, 0.1); width: min(980px, 100%); margin-left: auto; margin-right: auto; }
-.form-section + .form-section { position: relative; margin-top: 1.6rem; }
-.form-section + .form-section::before { content: ""; position: absolute; left: 0; right: 0; top: -0.9rem; height: 1px; background: linear-gradient(90deg, transparent, #cfd7e6 20%, #a8b7cc 50%, #cfd7e6 80%, transparent); }
-.section-title { background: linear-gradient(135deg, var(--blue), var(--blue-dark)); color: #fff; padding: 0.65rem 1.1rem; margin: 0 0 1.2rem 0; font-weight: 700; font-size: 0.95rem; letter-spacing: 0.02em; }
+/* =========================================
+   4. FORM SECTIONS & CARDS (กรอบสวยเนียนเท่ากันทุกอัน 🚀)
+   ========================================= */
+.form-section { 
+  background: rgba(255, 255, 255, 0.98); 
+  padding: 24px; 
+  /* 🚀 เพิ่มเส้นขอบสีเทาฟ้าให้ชัดเจน เท่ากันทุกฟอร์ม */
+  border: 1px solid #cbd5e1; 
+  border-radius: 16px; 
+  box-shadow: 0 8px 20px rgba(15, 43, 75, 0.08); 
+  width: min(980px, 100%); 
+  margin-left: auto; 
+  margin-right: auto; 
+  /* 🚀 บังคับตัดมุมที่ล้นออก เพื่อให้หัวข้อฟอร์มโค้งมนตามกรอบ */
+  overflow: hidden; 
+}
+
+/* ระยะห่างระหว่างกล่องฟอร์ม */
+.form-section + .form-section { 
+  margin-top: 24px; 
+}
+
+/* ลบเส้นคั่นประหลาดๆ ของเก่าทิ้งไปเลย */
+.form-section + .form-section::before { 
+  display: none; 
+}
+
+.section-title { 
+  background: linear-gradient(135deg, var(--blue), var(--blue-dark)); 
+  color: #fff; 
+  padding: 14px 24px; 
+  /* 🚀 ใช้เทคนิค Margin ติดลบ ดันหัวข้อให้ชิดขอบบน/ซ้าย/ขวา พอดีเป๊ะ */
+  margin: -24px -24px 24px -24px; 
+  font-weight: 700; 
+  font-size: 1.05rem; 
+  letter-spacing: 0.5px; 
+  text-transform: uppercase; 
+  border-bottom: 3px solid #002d73; /* เพิ่มมิติให้ขอบล่างของหัวข้อ */
+}
 .form-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; margin-bottom: 1rem; }
 .form-row.print-only-grid { display: none !important; }
 .form-row.details-row { grid-template-columns: repeat(5, 1fr); }
@@ -264,6 +396,7 @@ textarea { resize: vertical; font-family: Arial, sans-serif; }
 .checkbox-group, .radio-group { display: flex; flex-direction: column; gap: 0.5rem; }
 .checkbox-item, .radio-item { display: flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; color: var(--text); font-weight: 400; cursor: pointer; margin: 0; }
 .checkbox-item input, .radio-item input { width: auto; margin: 0; cursor: pointer; accent-color: var(--blue); }
+.field-note { margin: 0.5rem 0 0; padding: 0.4rem; background: #f5f7fb; border-left: 3px solid var(--blue); font-size: 0.75rem; color: var(--muted); }
 .cost-table-wrapper { overflow-x: auto; border: 1px solid var(--line); border-radius: 3px; }
 .cost-table { width: 100%; border-collapse: collapse; background: #fff; font-size: 0.8rem; table-layout: fixed; }
 .cost-table th { background: #f5f7fb; padding: 0.6rem; border: 1px solid var(--line); font-weight: 700; color: var(--text); text-align: center; }
@@ -285,6 +418,8 @@ textarea { resize: vertical; font-family: Arial, sans-serif; }
 .approval-name, .approval-date { padding: 0.2rem 0; border-bottom: 1px solid #111; }
 .approval-date { text-align: left; padding-left: 0.5rem; }
 .approval-role { font-weight: 700; padding: 0.35rem 0.2rem; font-size: 0.72rem; }
+.approval-grid-right .approval-card { grid-column: auto; width: min(250px, 100%); }
+.approval-grid-right { display: flex; justify-content: flex-end; }
 .gls-approval-grid { display: grid; grid-template-columns: repeat(2, minmax(220px, 250px)); gap: 1.2rem; margin-top: 1.4rem; justify-content: end; justify-items: end; }
 .gls-approval-grid .approval-card { width: 100%; max-width: 250px; }
 
@@ -305,213 +440,12 @@ textarea { resize: vertical; font-family: Arial, sans-serif; }
 }
 
 /* =========================================
-   Topbar UI Upgrade (Modern Design)
-   ========================================= */
-
-.topbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 24px;
-  height: 75px;
-  background: #ffffff;
-  border-bottom: 1px solid #edf2f7;
-  box-shadow: 0 4px 15px -5px rgba(0, 0, 0, 0.05);
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-}
-
-.brand-container {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.hospital-logo {
-  height: 45px;
-  object-fit: contain;
-}
-
-.vertical-divider {
-  width: 2px;
-  height: 40px;
-  background: #e2e8f0;
-  border-radius: 2px;
-}
-
-/* 🚀 จัดกลุ่มโลโก้เขียวและข้อความให้อยู่บรรทัดเดียวกันอย่างสวยงาม */
-.system-identity {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.greenline-logo {
-  height: 28px;
-  object-fit: contain;
-}
-
-.system-text {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.system-name {
-  font-weight: 800;
-  font-size: 1.15rem;
-  color: #1a365d;
-  line-height: 1;
-  margin-bottom: 3px;
-}
-
-.location-tag {
-  font-size: 0.75rem;
-  color: #718096;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  line-height: 1;
-}
-
-.topbar-nav {
-  display: flex;
-  gap: 8px;
-  background: #f7fafc;
-  padding: 6px;
-  border-radius: 12px;
-}
-
-.nav-item {
-  padding: 10px 20px;
-  border-radius: 8px;
-  text-decoration: none;
-  color: #4a5568;
-  font-weight: 600;
-  font-size: 0.95rem;
-  transition: all 0.2s ease;
-}
-
-.nav-item:hover {
-  color: #2b6cb0;
-  background: #ebf8ff;
-}
-
-.nav-item.active {
-  background: #ffffff;
-  color: #2b6cb0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.topbar-right {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-}
-
-.user-profile {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding-right: 20px;
-  border-right: 1px solid #e2e8f0;
-}
-
-.user-avatar {
-  width: 40px;
-  height: 40px;
-  background: #2b6cb0;
-  color: white;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 1.1rem;
-}
-
-.user-details {
-  display: flex;
-  flex-direction: column;
-}
-
-.username {
-  font-weight: 700;
-  color: #2d3748;
-  font-size: 0.9rem;
-}
-
-.user-role {
-  font-size: 0.75rem;
-  color: #a0aec0;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.logout-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: #fff5f5;
-  color: #c53030;
-  border: 1px solid #fed7d7;
-  padding: 10px 18px;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.logout-btn:hover {
-  background: #c53030;
-  color: white;
-  border-color: #c53030;
-}
-
-/* =========================================
-   Password Input Wrapper
-   ========================================= */
-.password-input-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.password-input-wrapper input {
-  padding-right: 2.5rem;
-}
-
-.password-toggle-btn {
-  position: absolute;
-  right: 0.5rem;
-  background: transparent;
-  border: none;
-  color: #64748b;
-  cursor: pointer;
-  padding: 0.2rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: color 0.2s, background 0.2s;
-}
-
-.password-toggle-btn:hover {
-  color: #0072bb;
-  background: rgba(0, 114, 187, 0.1);
-}
-
-.password-toggle-btn:focus {
-  outline: none;
-}
-
-/* =========================================
    MEDIA QUERIES
    ========================================= */
 @media (max-width: 1200px) { .form-row { grid-template-columns: repeat(3, 1fr); } .form-row.details-row { grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 900px) { .toolbar, .app-grid { grid-template-columns: 1fr 1fr; } .manager-update { flex-direction: column; align-items: stretch; } .request-card { width: 100%; } }
 @media (max-width: 768px) { .form-row, .form-row.details-row { grid-template-columns: 1fr 1fr; } .form-status { grid-template-columns: 1fr; gap: 1rem; } .approval-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .approval-grid-right .approval-card { grid-column: auto; } .approval-row { grid-template-columns: 1fr; gap: 1.5rem; } .gls-approval-grid { grid-template-columns: 1fr; } }
-@media (max-width: 640px) { .toolbar, .app-grid { grid-template-columns: 1fr; } .topbar-nav { gap: 0.65rem; flex-wrap: wrap; justify-content: flex-end; } .page-wrap { width: min(100%, calc(100% - 1rem)); } }
+@media (max-width: 640px) { .toolbar, .app-grid { grid-template-columns: 1fr; } .page-wrap { width: min(100%, calc(100% - 1rem)); } }
 @media (max-width: 540px) { .form-row, .form-row.details-row { grid-template-columns: 1fr; } .approval-grid { grid-template-columns: 1fr; } .button-row { flex-direction: column; } .btn { width: 100%; } .cost-table { font-size: 0.7rem; } .cost-table th, .cost-table td { padding: 0.3rem; } .cost-table input { font-size: 0.7rem; padding: 0.3rem; } }
 
 @media print {
@@ -567,4 +501,18 @@ textarea { resize: vertical; font-family: Arial, sans-serif; }
   .form-section + .form-section { margin-top: 0.8rem; }
   .print-break-before { break-before: page; page-break-before: always; }
   .gls-approval-grid { gap: 0.6rem !important; margin-top: 0.6rem !important; }
+}
+/* =========================================
+   แก้ไขกรอบซ้อนทับด้านใน (Fix Fieldset Border)
+   ========================================= */
+fieldset {
+  border: none !important; /* สั่งลบกรอบที่เบราว์เซอร์แถมมาให้ทิ้งไปเลย */
+  padding: 0 !important;
+  margin: 0 !important;
+  min-width: 0;
+}
+
+/* ถ้าสมมติว่ากรอบนั้นไม่ได้ใช้ fieldset แต่เป็นคลาสที่มีขอบ ให้ล้างขอบเขตด้านในทิ้งด้วย */
+.form-section > div {
+  border: none !important;
 }

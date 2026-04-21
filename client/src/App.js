@@ -14,7 +14,7 @@ import {
 import './index.css';
 
 // ==========================================
-// ส่วนของไอคอนสำหรับ UI
+// ส่วนของไอคอน UI (ตา / Logout)
 // ==========================================
 const EyeIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -38,136 +38,237 @@ const LogoutIcon = () => (
   </svg>
 );
 
+// ==========================================
+// Component หลัก (รักษา Logic เดิมของคุณ 100%)
+// ==========================================
 function App() {
-  const [currentUser, setCurrentUser] = useState(null);
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [isLoginView, setIsLoginView] = useState(true);
-
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [registerRole, setRegisterRole] = useState('employee');
+  const [managerCode, setManagerCode] = useState(''); 
+  const [authMode, setAuthMode] = useState('login');
+  const [authError, setAuthError] = useState('');
+  const [isAuthenticating, setIsAuthenticating] = useState(true);
+  const [session, setSession] = useState(() => loadAuthSession());
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
 
-  useEffect(() => {
-    const initAuth = async () => {
-      const session = loadAuthSession();
-      if (session?.token) {
-        try {
-          const user = await getMe(session.token);
-          setCurrentUser(user);
-        } catch (err) {
-          clearAuthSession();
-        }
-      }
-      setIsInitialized(true);
-    };
-    initAuth();
-  }, []);
-
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setErrorMsg('');
-    try {
-      const { token, user } = await loginWithPassword(username, password);
-      saveAuthSession(token);
-      setCurrentUser(user);
-    } catch (err) {
-      setErrorMsg(err.message || 'Login failed');
-    }
+  // 🚀 ดีไซน์รูปภาพพื้นหลัง
+  const backgroundStyle = {
+    backgroundImage: `linear-gradient(rgba(234, 242, 251, 0.6), rgba(234, 242, 251, 0.6)), url(${process.env.PUBLIC_URL}/bangkok-hospital-phuket.jpg)`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    backgroundAttachment: 'fixed',
+    minHeight: '100vh'
   };
 
-  const handleRegister = async (e) => {
-    e.preventDefault();
-    setErrorMsg('');
+  const currentUser = session?.user || null;
+
+  useEffect(() => {
+    const bootstrapSession = async () => {
+      if (!session?.token) {
+        setIsAuthenticating(false);
+        return;
+      }
+      try {
+        const me = await getMe(session.token);
+        const nextSession = { token: session.token, user: me.user };
+        saveAuthSession(nextSession);
+        setSession(nextSession);
+      } catch (error) {
+        clearAuthSession();
+        setSession(null);
+      } finally {
+        setIsAuthenticating(false);
+      }
+    };
+    bootstrapSession();
+  }, [session?.token]);
+
+  const roleLabel = useMemo(() => (currentUser?.role === 'manager' ? 'Manager' : 'Employee'), [currentUser]);
+
+  const handleAuthenticate = async (event) => {
+    event.preventDefault();
+    setAuthError('');
+    const normalizedUsername = username.trim();
+
+    if (normalizedUsername.length < 3) return setAuthError('Username must be at least 3 characters.');
+    if (authMode === 'login' && password.length < 6) return setAuthError('Password too short.');
+    if (authMode === 'register') {
+      if (password.length < 8) return setAuthError('Password must be at least 8 characters.');
+      if (password !== confirmPassword) return setAuthError('Passwords do not match.');
+      if (registerRole === 'manager' && !managerCode.trim()) {
+        return setAuthError('กรุณาระบุ Manager Secret Code');
+      }
+    }
+
+    setIsAuthenticating(true);
     try {
-      const { token, user } = await registerWithPassword(username, password);
-      saveAuthSession(token);
-      setCurrentUser(user);
-    } catch (err) {
-      setErrorMsg(err.message || 'Registration failed');
+      const data = authMode === 'register'
+        ? await registerWithPassword(normalizedUsername, password, registerRole, managerCode)
+        : await loginWithPassword(normalizedUsername, password);
+      saveAuthSession(data);
+      setSession(data);
+      setPassword(''); setConfirmPassword(''); setManagerCode('');
+    } catch (error) {
+      setAuthError(error.message);
+    } finally {
+      setIsAuthenticating(false);
     }
   };
 
   const handleLogout = () => {
     clearAuthSession();
-    setCurrentUser(null);
-    setUsername('');
-    setPassword('');
+    setSession(null);
+    setIsMobileMenuOpen(false);
   };
 
-  const roleLabel = useMemo(() => {
-    if (!currentUser) return '';
-    return currentUser.role === 'manager' ? 'Manager' : 'Employee';
-  }, [currentUser]);
-
-  if (!isInitialized) return null;
+  if (isAuthenticating) {
+    return (
+      <main className="login-page" style={backgroundStyle}>
+        <div className="login-card"><h1>BA System</h1><p>Loading...</p></div>
+      </main>
+    );
+  }
 
   if (!currentUser) {
     return (
-      <div className="login-page">
-        <div className="login-card">
+      <main className="login-page" style={backgroundStyle}>
+        <form className="login-card" onSubmit={handleAuthenticate}>
           <div className="login-header">
-            <img src="/logo.png" alt="Logo" className="login-logo" />
-            <h1>BA System</h1>
-            <p>{isLoginView ? 'Sign in to your account' : 'Create new account'}</p>
+            <img src={`${process.env.PUBLIC_URL}/LOGO-BPK.png`} alt="Logo" className="login-logo" style={{ height: '48px', objectFit: 'contain', marginBottom: '10px' }} />
+            <h1 className="login-title">BA System</h1>
+            <p className="login-desc" style={{ color: '#64748b', fontSize: '0.95rem', margin: 0 }}>
+              {authMode === 'login' ? 'Sign In' : 'Sign Up'}
+            </p>
           </div>
-
-          <form className="login-form" onSubmit={isLoginView ? handleLogin : handleRegister}>
+          
+          <div className="login-form">
             <div className="form-group">
               <label>Username</label>
-              <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} required placeholder="Enter your username" />
+              <input value={username} onChange={(e) => setUsername(e.target.value)} required placeholder="Enter username" />
             </div>
+
             <div className="form-group">
               <label>Password</label>
               <div className="password-input-wrapper">
-                <input type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="Enter your password" />
-                <button type="button" className="password-toggle" onClick={() => setShowPassword(!showPassword)}>
+                <input 
+                  type={showPassword ? "text" : "password"} 
+                  value={password} 
+                  onChange={(e) => setPassword(e.target.value)} 
+                  required 
+                  placeholder="Enter password"
+                />
+                <button 
+                  type="button" 
+                  className="password-toggle-btn" 
+                  onClick={() => setShowPassword(!showPassword)}
+                  tabIndex="-1" 
+                >
                   {showPassword ? <EyeOffIcon /> : <EyeIcon />}
                 </button>
               </div>
             </div>
 
-            {errorMsg && <div className="auth-error">{errorMsg}</div>}
+            {authMode === 'register' && (
+              <div style={{ animation: 'fadeIn 0.3s ease-out', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div className="form-group">
+                  <label>Confirm Password</label>
+                  <div className="password-input-wrapper">
+                    <input 
+                      type={showPassword ? "text" : "password"} 
+                      value={confirmPassword} 
+                      onChange={(e) => setConfirmPassword(e.target.value)} 
+                      required 
+                      placeholder="Confirm password"
+                    />
+                    <button 
+                      type="button" 
+                      className="password-toggle-btn" 
+                      onClick={() => setShowPassword(!showPassword)}
+                      tabIndex="-1"
+                    >
+                      {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                    </button>
+                  </div>
+                </div>
 
-            <button type="submit" className="btn btn-primary btn-block">
-              {isLoginView ? 'Login' : 'Register'}
-            </button>
-          </form>
+                <div className="form-group">
+                  <label>Role</label>
+                  <select className="modern-select" value={registerRole} onChange={(e) => setRegisterRole(e.target.value)}>
+                    <option value="employee">Employee (General User)</option>
+                    <option value="manager">Manager (Approver)</option>
+                  </select>
+                </div>
 
-          <div className="login-footer">
-            <button className="btn-link" onClick={() => { setIsLoginView(!isLoginView); setErrorMsg(''); }}>
-              {isLoginView ? "Don't have an account? Register" : 'Already have an account? Login'}
+                {registerRole === 'manager' && (
+                  <div className="manager-auth-box" style={{ background: '#fffbeb', border: '1px solid #fef3c7', padding: '15px', borderRadius: '10px' }}>
+                    <label style={{ color: '#b45309', marginBottom: '8px' }}>Manager Secret Code</label>
+                    <div className="password-input-wrapper">
+                      <input 
+                        type={showPassword ? "text" : "password"} 
+                        placeholder="Enter Authorization Code"
+                        value={managerCode} 
+                        onChange={(e) => setManagerCode(e.target.value)} 
+                        required 
+                        style={{ borderColor: '#fcd34d', background: '#fff' }}
+                      />
+                      <button 
+                        type="button" 
+                        className="password-toggle-btn" 
+                        onClick={() => setShowPassword(!showPassword)}
+                        tabIndex="-1"
+                      >
+                        {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {authError && <div className="auth-error">{authError}</div>}
+
+            <button type="submit" className="btn btn-login-submit" disabled={isAuthenticating}>
+              {authMode === 'login' ? 'Login' : 'Create Account'}
             </button>
           </div>
-        </div>
-      </div>
+
+          <div className="login-footer">
+            <button 
+              type="button"
+              className="btn-link"
+              onClick={(e) => { 
+                e.preventDefault(); 
+                setAuthMode(authMode === 'login' ? 'register' : 'login'); 
+                setAuthError(''); 
+                setShowPassword(false); 
+              }}
+            >
+              {authMode === 'login' ? "Don't have an account? Register here" : "Already have an account? Login here"}
+            </button>
+          </div>
+        </form>
+      </main>
     );
   }
 
   return (
     <Router>
-      <div className="app-container">
-        {/* 🚀 TOPBAR ปรับปรุงใหม่ 🚀 */}
-        <header className="topbar">
+      <div className="app-container" style={backgroundStyle}>
+        <header className="topbar print-hidden">
           <div className="topbar-left">
             <div className="brand-container">
-              {/* 🏥 โลโก้โรงพยาบาล */}
               <img 
-                src={`${process.env.PUBLIC_URL}/bangkok-hospital-phuket.png`} 
+                src={`${process.env.PUBLIC_URL}/LOGO-BPK.png`} 
                 alt="Bangkok Hospital Phuket" 
                 className="hospital-logo" 
-                onError={(e) => { e.target.style.display = 'none'; }} /* ซ่อนถ้าหาไฟล์ไม่เจอ จะได้ไม่ดูแปลกๆ */
+                onError={(e) => { e.target.style.display = 'none'; }}
               />
-              
               <div className="vertical-divider"></div>
-
-              {/* 🟢 โลโก้ Greenline และชื่อระบบ */}
               <div className="system-identity">
-                <img 
-                  src={`${process.env.PUBLIC_URL}/logo.png`} 
-                  alt="Greenline Synergy" 
-                  className="greenline-logo" 
-                />
+                <img src={`${process.env.PUBLIC_URL}/logo.png`} alt="Greenline Synergy" className="greenline-logo" />
                 <div className="system-text">
                   <span className="system-name">BA System</span>
                   <span className="location-tag">Phuket</span>
@@ -176,28 +277,38 @@ function App() {
             </div>
           </div>
           
-          <nav className="topbar-nav">
-            <NavLink to="/" className="nav-item" end>Request Form</NavLink>
-            <NavLink to="/projects" className="nav-item">Project Portfolio</NavLink>
-            <NavLink to="/applications" className="nav-item">App Portfolio</NavLink>
-          </nav>
+          {/* ปุ่มแฮมเบอร์เกอร์ */}
+          <button className="hamburger-btn" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+            {isMobileMenuOpen ? '✕' : '☰'}
+          </button>
+          
+          {/* 🚀 Sidebar ที่รวมทุกอย่างไว้ด้านใน */}
+          <div className={`topbar-sidebar ${isMobileMenuOpen ? 'open' : ''}`}>
+            
+            {/* 1. โปรไฟล์ผู้ใช้อยู่บนสุด */}
+            <div className="sidebar-profile">
+              <div className="user-avatar">
+                {currentUser?.username?.charAt(0)?.toUpperCase() || 'U'}
+              </div>
+              <div className="user-details">
+                <span className="username">{currentUser?.username || 'Employee'}</span>
+                <span className="user-role">{roleLabel}</span>
+              </div>
+            </div>
 
-          <div className="topbar-right">
-            <div className="user-profile">
-            <div className="user-avatar">
-            {/* 🚀 เพิ่ม ? และใส่ค่า default เป็น 'U' ป้องกันระบบพัง */}
-            {currentUser?.username?.charAt(0)?.toUpperCase() || 'U'}
-          </div>
-          <div className="user-details">
-            {/* 🚀 ป้องกันกรณีที่ username เป็นค่าว่าง */}
-            <span className="username">{currentUser?.username || 'Employee'}</span>
-              <span className="user-role">{roleLabel}</span>
-                </div>
-                  </div>
+            {/* 2. ลิงก์เมนูต่างๆ อยู่ตรงกลาง */}
+            <nav className="sidebar-nav">
+              <NavLink to="/" className="nav-item" end onClick={() => setIsMobileMenuOpen(false)}>Request Form</NavLink>
+              <NavLink to="/projects" className="nav-item" onClick={() => setIsMobileMenuOpen(false)}>Project Portfolio</NavLink>
+              <NavLink to="/applications" className="nav-item" onClick={() => setIsMobileMenuOpen(false)}>App Portfolio</NavLink>
+            </nav>
+
+            {/* 3. ปุ่ม Logout โดนดันไปอยู่ล่างสุด */}
             <button className="logout-btn" onClick={handleLogout}>
               <LogoutIcon />
               Logout
             </button>
+            
           </div>
         </header>
 

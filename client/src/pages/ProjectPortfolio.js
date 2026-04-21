@@ -125,7 +125,7 @@ function ProjectPortfolio({ currentUser }) {
   return (
     <div className="page-wrap page-project">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1 className="page-heading" style={{ margin: 0 }}>Project Portfolio (BA Workflow)</h1>
+        <h1 className="page-heading" style={{ margin: 0 }}>Project Portfolio</h1>
       </div>
       <div className="page-rule"></div>
 
