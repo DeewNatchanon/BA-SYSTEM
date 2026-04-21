@@ -1,199 +1,62 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { fetchProjects } from '../api/authApi';
 
-function ApplicationPortfolio() {
+function ApplicationPortfolio({ currentUser }) {
+  const [allData, setAllData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedApp, setSelectedApp] = useState(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('general');
+
+  // รายการหัวข้อสำหรับ PDPA/ROPA (ใช้แมปกับ JSONB ใน Database)
   const pdpaItems = [
     { key: 'health', label: 'ข้อมูลสุขภาพ' },
     { key: 'id', label: 'บัตรประชาชน' },
     { key: 'email', label: 'Email' },
-    { key: 'financial', label: 'ข้อมูลการเงิน' },
-    { key: 'crime', label: 'ประวัติอาชญากรรม' },
-    { key: 'religion', label: 'เชื้อชาติ/ศาสนา' },
     { key: 'photo', label: 'รูปถ่ายใบหน้า' }
   ];
 
   const ropaItems = [
     { key: 'collect', label: 'เก็บรวบรวม' },
     { key: 'store', label: 'จัดเก็บ' },
-    { key: 'use', label: 'ใช้/ประมวลผล' },
-    { key: 'share', label: 'ส่งต่อ' },
-    { key: 'retain', label: 'ระยะเวลาเก็บ' },
-    { key: 'delete', label: 'ลบทำลาย' }
+    { key: 'use', label: 'ใช้/ประมวลผล' }
   ];
 
-  const [pdpaApps, setPdpaApps] = useState([
-    {
-      id: '0701',
-      name: 'Cashier Pharmacy Queue',
-      pdpa: { health: true, id: true },
-      ropa: { collect: true, store: true, use: true }
-    },
-    {
-      id: '0602',
-      name: 'Patient Certificate',
-      pdpa: { health: true, id: true, email: true },
-      ropa: { collect: true, store: true, use: true, share: true }
-    },
-    {
-      id: '0662',
-      name: 'Vaccination Book',
-      pdpa: { health: true, id: true, email: true, photo: true },
-      ropa: { collect: true, store: true, use: true, retain: true }
-    }
-  ]);
+  // 🚀 ดึงข้อมูลทั้งหมดจาก Database
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const sessionRaw = localStorage.getItem('ba-system.auth-session');
+        const sessionData = sessionRaw ? JSON.parse(sessionRaw) : null;
+        const token = sessionData?.token;
 
-  const toggleFlag = (appId, group, key) => {
-    setPdpaApps(prev => prev.map(app => (
-      app.id === appId
-        ? { ...app, [group]: { ...app[group], [key]: !app[group]?.[key] } }
-        : app
-    )));
+        if (token) {
+          const data = await fetchProjects(token);
+          // กรองเฉพาะอันที่ Go-live (รองรับทั้งพิมพ์เล็กพิมพ์ใหญ่)
+          const appsOnly = data.filter(item => item.phase && item.phase.toLowerCase() === 'go-live');
+          setAllData(appsOnly);
+        }
+      } catch (error) {
+        console.error("Error loading applications:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadData();
+  }, [currentUser]);
+
+  const handleViewDetails = (app) => {
+    setSelectedApp(app);
+    setActiveTab('general');
+    setIsViewModalOpen(true);
   };
 
-  const generalInfo = [
-    {
-      appId: '0701',
-      groupDept: 'SOG_6',
-      site: 'BSI',
-      name: 'Cashier Pharmacy Queue',
-      abbr: 'CPQ',
-      description: 'ระบบคิวหน้าห้องยาและการเงิน',
-      module: 'Cashier Queue',
-      status: 'Active',
-      users: 18,
-      enterprise: 'Patient Portal',
-      category: 'EMR',
-      director: 'Supat Plungprasertkul'
-    },
-    {
-      appId: '0602',
-      groupDept: 'SOG_6',
-      site: 'BPK',
-      name: 'Patient Certificate',
-      abbr: 'PatientCer',
-      description: 'ระบบใบรับรองแพทย์ออนไลน์',
-      module: 'Certificate',
-      status: 'Active',
-      users: 24,
-      enterprise: 'Patient Portal',
-      category: 'EMR',
-      director: 'Supat Plungprasertkul'
-    },
-    {
-      appId: '0662',
-      groupDept: 'SOG_6',
-      site: 'BPK',
-      name: 'Vaccination Book',
-      abbr: 'Vaccine',
-      description: 'สมุดวัคซีนออนไลน์',
-      module: 'Vaccine',
-      status: 'Active',
-      users: 30,
-      enterprise: 'Patient Portal',
-      category: 'EMR',
-      director: 'Supat Plungprasertkul'
-    }
-  ];
+  const handleCloseModal = () => {
+    setIsViewModalOpen(false);
+    setSelectedApp(null);
+  };
 
-  const supportInfo = [
-    {
-      serviceHour: '8*5 (08.00-17.00)',
-      owner: 'Wason Buncharoen',
-      ownerContact: 'Wason.Bu@glsict.com | 076-254421-5 Ext.1215',
-      deptName: 'Services & Operations Group 6',
-      l3: 'Thanawat Tirsumvat',
-      l3Contact: 'Thanawat.Ti@glsict.com | Ext.7788',
-      l2: 'BPK IT',
-      l2Contact: 'bpkit@bgh.co.th',
-      l1: 'IT Operation BPK',
-      l1Contact: 'Centralized IT Helpdesk 02-762-8055'
-    }
-  ];
-
-  const serverBackup = [
-    {
-      ip: '10.143.10.36',
-      serverName: 'Windows Server 2016',
-      hisServer: '-',
-      fileShare: '-',
-      backup: 'Full backup_Monthly',
-      standalone: 'No'
-    },
-    {
-      ip: '10.143.10.36',
-      serverName: 'bpk-webapp01',
-      hisServer: '-',
-      fileShare: '-',
-      backup: 'Full backup_Monthly',
-      standalone: 'Yes'
-    }
-  ];
-
-  const techStack = [
-    {
-      language: 'ASP .Net (C#)',
-      tools: 'Microsoft Visual Studio 2015',
-      platform: 'Web Base',
-      webServerIp: '10.143.10.37',
-      webServerName: 'bpk-webapp-prd1',
-      appServerIp: '10.143.10.37',
-      appServerName: 'bpk-webapp-prd1'
-    },
-    {
-      language: 'ASP .Net (C#)',
-      tools: 'Microsoft Visual Studio 2012',
-      platform: 'Web Base',
-      webServerIp: '10.143.10.37',
-      webServerName: 'bpk-webapp-prd1',
-      appServerIp: '-',
-      appServerName: '-'
-    }
-  ];
-
-  const versionUsage = [
-    {
-      lastUpdate: '05/09/2022',
-      version: '1.0.2',
-      usageHour: '8*7 (08.00-17.00)',
-      impact: 'Yes',
-      dataRecord: 'Health Info.'
-    },
-    {
-      lastUpdate: '16/08/2020',
-      version: 'None',
-      usageHour: '8*7 (08.00-17.00)',
-      impact: 'No',
-      dataRecord: 'Health Info.'
-    }
-  ];
-
-  const catalog = [
-    {
-      catalog: 'Functional Application',
-      type: 'Inhouse',
-      customizedBy: 'GLS',
-      vendor: '-',
-      sourceAvailable: 'Yes',
-      sourceName: 'Patient Certificate',
-      sourceLocation: 'http://git.bdms.co.th/SOG6_Projects/patientcertification',
-      firstInstall: '15/08/2021'
-    },
-    {
-      catalog: 'Functional Application',
-      type: 'Inhouse',
-      customizedBy: 'GLS',
-      vendor: '-',
-      sourceAvailable: 'Yes',
-      sourceName: 'Vaccination',
-      sourceLocation: '\\\\10.143.10.36\\web\\Vaccination',
-      firstInstall: '16/08/2019'
-    }
-  ];
-
-  const supportRow = supportInfo[0] || {};
-  const serverRow = serverBackup[0] || {};
-  const techRow = techStack[0] || {};
-  const versionRow = versionUsage[0] || {};
-  const catalogRow = catalog[0] || {};
+  if (isLoading) return <div style={{ padding: '20px', textAlign: 'center' }}>กำลังดึงข้อมูล Application Portfolio...</div>;
 
   return (
     <div className="page-wrap page-app">
@@ -201,139 +64,159 @@ function ApplicationPortfolio() {
       <div className="page-rule"></div>
 
       <section className="content-card portfolio-section">
-        <div className="portfolio-section-title">Application Portfolio (Combined)</div>
+        <div className="portfolio-section-title">Active Applications (Sync from Projects)</div>
         <div className="table-wrap">
           <table className="portfolio-table application-portfolio-table">
             <thead>
               <tr className="group-row">
-                <th className="group-general" colSpan={8}>General</th>
-                <th className="group-pdpa" colSpan={pdpaItems.length}>PDPA</th>
-                <th className="group-ropa" colSpan={ropaItems.length}>ROPA</th>
-                <th className="group-support" colSpan={6}>Support</th>
-                <th className="group-server" colSpan={6}>Server/Backup</th>
-                <th className="group-tech" colSpan={7}>Technology</th>
-                <th className="group-version" colSpan={5}>Version/Usage</th>
-                <th className="group-catalog" colSpan={8}>Catalog/Source</th>
+                <th className="group-general" colSpan={5}>General Info</th>
+                <th className="group-pdpa" colSpan={pdpaItems.length}>PDPA Flags</th>
+                <th className="group-tech" colSpan={3}>Technology Stack</th>
+                <th className="group-support" colSpan={2}>Support</th>
               </tr>
               <tr>
-                <th>App_ID</th>
-                <th>Dept</th>
+                <th>App ID</th>
                 <th>Site</th>
-                <th>App Name</th>
-                <th>Abbr</th>
-                <th>Module</th>
+                <th>Application Name</th>
                 <th>Status</th>
-                <th>Users</th>
-                {pdpaItems.map(item => (
-                  <th key={`pdpa-${item.key}`}>{item.label}</th>
-                ))}
-                {ropaItems.map(item => (
-                  <th key={`ropa-${item.key}`}>{item.label}</th>
-                ))}
-                <th>Service Hour</th>
-                <th>Owner</th>
-                <th>Owner Contact</th>
-                <th>L3</th>
-                <th>L2</th>
-                <th>L1</th>
-                <th>DB IP</th>
-                <th>DB Server</th>
-                <th>HIS Conn</th>
-                <th>File Share</th>
-                <th>Backup</th>
-                <th>Standalone</th>
+                <th>Go-Live Date</th>
+                {pdpaItems.map(item => <th key={item.key}>{item.label}</th>)}
                 <th>Language</th>
-                <th>Tools</th>
+                <th>DB Server</th>
                 <th>Platform</th>
-                <th>Web IP</th>
-                <th>Web Server</th>
-                <th>App IP</th>
-                <th>App Server</th>
-                <th>Last Update</th>
-                <th>Version</th>
-                <th>Usage Hour</th>
-                <th>Impact</th>
-                <th>Data Record</th>
-                <th>Catalog</th>
-                <th>Type</th>
-                <th>Customized</th>
-                <th>Vendor</th>
-                <th>Source</th>
-                <th>Source Name</th>
-                <th>Source Location</th>
-                <th>First Install</th>
+                <th>Manager</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
-              {generalInfo.map(app => {
-                const pdpaRow = pdpaApps.find(row => row.id === app.appId) || {};
-                return (
-                  <tr key={app.appId}>
-                    <td>{app.appId}</td>
-                    <td>{app.groupDept}</td>
-                    <td>{app.site}</td>
-                    <td><strong>{app.name}</strong></td>
-                    <td>{app.abbr}</td>
-                    <td>{app.module}</td>
-                    <td>{app.status}</td>
-                    <td>{app.users}</td>
-                    {pdpaItems.map(item => (
-                      <td key={`pdpa-cell-${app.appId}-${item.key}`} className="checkbox-cell">
-                        <input
-                          type="checkbox"
-                          checked={Boolean(pdpaRow.pdpa?.[item.key])}
-                          onChange={() => toggleFlag(app.appId, 'pdpa', item.key)}
-                        />
-                      </td>
-                    ))}
-                    {ropaItems.map(item => (
-                      <td key={`ropa-cell-${app.appId}-${item.key}`} className="checkbox-cell">
-                        <input
-                          type="checkbox"
-                          checked={Boolean(pdpaRow.ropa?.[item.key])}
-                          onChange={() => toggleFlag(app.appId, 'ropa', item.key)}
-                        />
-                      </td>
-                    ))}
-                    <td>{supportRow.serviceHour}</td>
-                    <td>{supportRow.owner}</td>
-                    <td>{supportRow.ownerContact}</td>
-                    <td>{supportRow.l3}</td>
-                    <td>{supportRow.l2}</td>
-                    <td>{supportRow.l1}</td>
-                    <td>{serverRow.ip}</td>
-                    <td>{serverRow.serverName}</td>
-                    <td>{serverRow.hisServer}</td>
-                    <td>{serverRow.fileShare}</td>
-                    <td>{serverRow.backup}</td>
-                    <td>{serverRow.standalone}</td>
-                    <td>{techRow.language}</td>
-                    <td>{techRow.tools}</td>
-                    <td>{techRow.platform}</td>
-                    <td>{techRow.webServerIp}</td>
-                    <td>{techRow.webServerName}</td>
-                    <td>{techRow.appServerIp}</td>
-                    <td>{techRow.appServerName}</td>
-                    <td>{versionRow.lastUpdate}</td>
-                    <td>{versionRow.version}</td>
-                    <td>{versionRow.usageHour}</td>
-                    <td>{versionRow.impact}</td>
-                    <td>{versionRow.dataRecord}</td>
-                    <td>{catalogRow.catalog}</td>
-                    <td>{catalogRow.type}</td>
-                    <td>{catalogRow.customizedBy}</td>
-                    <td>{catalogRow.vendor}</td>
-                    <td>{catalogRow.sourceAvailable}</td>
-                    <td>{catalogRow.sourceName}</td>
-                    <td>{catalogRow.sourceLocation}</td>
-                    <td>{catalogRow.firstInstall}</td>
-                  </tr>
-                );
-              })}
+              {allData.length > 0 ? allData.map(app => (
+                <tr key={app.id}>
+                  <td>{app.id}</td>
+                  <td>{app.site}</td>
+                  <td>
+                    <button 
+                      onClick={() => handleViewDetails(app)}
+                      style={{ 
+                        color: '#0056b3', background: 'none', border: 'none', 
+                        cursor: 'pointer', fontWeight: 'bold', textDecoration: 'underline', padding: 0 
+                      }}
+                    >
+                      {app.name}
+                    </button>
+                  </td>
+                  <td><span className="status-pill status-go">{app.status}</span></td>
+                  <td>{app.actual_go_live || app.plan_go_live || '-'}</td>
+                  
+                  {pdpaItems.map(item => (
+                    <td key={item.key} style={{ textAlign: 'center' }}>
+                      {app.compliance?.pdpa?.[item.key] || app.compliance?.[item.key] ? '✅' : '-'}
+                    </td>
+                  ))}
+
+                  <td>{app.tech?.language || '-'}</td>
+                  <td>{app.tech?.server || '-'}</td>
+                  <td>{app.tech?.platform || 'Web Base'}</td>
+
+                  <td>{app.manager}</td>
+                  <td>
+                    <button className="btn btn-tertiary" onClick={() => handleViewDetails(app)}>View</button>
+                  </td>
+                </tr>
+              )) : (
+                <tr><td colSpan="15" style={{ textAlign: 'center', padding: '20px' }}>ยังไม่มีแอปพลิเคชันที่ Go-live</td></tr>
+              )}
             </tbody>
           </table>
         </div>
       </section>
+
+      {/* ========================================== */}
+      {/* 🚀 MODAL: APPLICATION DASHBOARD (แก้สีปุ่ม Tab แล้ว) 🚀 */}
+      {/* ========================================== */}
+      {isViewModalOpen && selectedApp && (
+        <div className="pdf-preview-overlay" style={{zIndex: 9999}}>
+          <div className="pdf-preview-card" style={{ width: '90%', maxWidth: '900px', height: '80vh', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '20px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h2 style={{ margin: '0 0 5px 0', color: 'var(--blue-dark)' }}>{selectedApp.name}</h2>
+                <span style={{ color: '#666' }}>App ID: {selectedApp.id} | Site: {selectedApp.site}</span>
+              </div>
+              <button className="btn btn-tertiary" onClick={handleCloseModal}>✕</button>
+            </div>
+
+            {/* 🛠️ แก้ไขสีตัวอักษรของ Tab ตรงนี้ครับ */}
+            <div style={{ display: 'flex', borderBottom: '1px solid #ddd', background: '#f8f9fa' }}>
+              {['general', 'infrastructure', 'security', 'history'].map(tab => (
+                <button 
+                  key={tab} 
+                  onClick={() => setActiveTab(tab)}
+                  style={{ 
+                    padding: '12px 24px', border: 'none', 
+                    background: activeTab === tab ? '#fff' : 'transparent',
+                    borderBottom: activeTab === tab ? '3px solid var(--blue)' : '3px solid transparent',
+                    fontWeight: activeTab === tab ? 'bold' : 'normal', cursor: 'pointer',
+                    color: activeTab === tab ? '#0056b3' : '#666' /* 👈 เพิ่มสีให้ตัวหนังสือแล้ว */
+                  }}
+                >
+                  {tab.toUpperCase()}
+                </button>
+              ))}
+            </div>
+
+            <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
+              {activeTab === 'general' && (
+                <div>
+                  <h4>ข้อมูลทั่วไป (General Information)</h4>
+                  <p><strong>รายละเอียด:</strong> {selectedApp.description}</p>
+                  <p><strong>ผู้จัดการระบบ:</strong> {selectedApp.manager}</p>
+                  <p><strong>หน่วยงานเจ้าของ:</strong> {selectedApp.owner || 'SOG6'}</p>
+                </div>
+              )}
+              {activeTab === 'infrastructure' && (
+                <div>
+                  <h4>ข้อมูลโครงสร้างระบบ (Infrastructure)</h4>
+                  <table className="portfolio-table">
+                    <tbody>
+                      <tr><td><strong>Language/Framework:</strong></td><td>{selectedApp.tech?.language || '-'}</td></tr>
+                      <tr><td><strong>Database Server:</strong></td><td>{selectedApp.tech?.server || '-'}</td></tr>
+                      <tr><td><strong>Web Server:</strong></td><td>{selectedApp.tech?.webServer || '-'}</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {activeTab === 'security' && (
+                <div>
+                  <h4>ความปลอดภัยและ PDPA</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                    <div style={{ padding: '15px', border: '1px solid #eee', borderRadius: '8px' }}>
+                      <h5>PDPA ข้อมูลที่จัดเก็บ:</h5>
+                      <ul>
+                        {pdpaItems.map(item => (
+                          <li key={item.key} style={{ color: selectedApp.compliance?.pdpa?.[item.key] ? 'green' : '#ccc' }}>
+                            {selectedApp.compliance?.pdpa?.[item.key] ? '✅' : '⚪'} {item.label}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {activeTab === 'history' && (
+                <div>
+                  <h4>ประวัติโปรเจกต์ (Project History)</h4>
+                  <p>แอปพลิเคชันนี้เริ่มต้นจากโปรเจกต์ ID: {selectedApp.id}</p>
+                  <p>วันที่เริ่มดำเนินการจริง: {selectedApp.actual_start || '-'}</p>
+                  <p>วันที่เปิดใช้งานจริง (Go-Live): {selectedApp.actual_go_live || '-'}</p>
+                </div>
+              )}
+            </div>
+
+            <div style={{ padding: '20px', borderTop: '1px solid #eee', textAlign: 'right' }}>
+              <button className="btn btn-secondary" onClick={handleCloseModal}>ปิดหน้าต่าง</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
