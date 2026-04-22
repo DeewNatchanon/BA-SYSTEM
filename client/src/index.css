@@ -516,3 +516,596 @@ fieldset {
 .form-section > div {
   border: none !important;
 }
+/* =========================================
+   5. SETTINGS MODAL & THEMES (ส่วนที่เพิ่มใหม่)
+   ========================================= */
+
+/* 🌙 Dark Mode Override */
+[data-theme='dark'] {
+  --page-bg: #0f172a;
+  --surface: #1e293b;
+  --surface-2: #334155;
+  --line: #475569;
+  --text: #f8fafc;
+  --muted: #94a3b8;
+  --blue: #38bdf8;
+  --blue-dark: #0284c7;
+  color-scheme: dark;
+}
+
+/* 🏥 Hospital Mode Override */
+[data-theme='hospital'] {
+  --page-bg: #f0fdf4;
+  --surface: #ffffff;
+  --surface-2: #f0fdf4;
+  --line: #bbf7d0;
+  --text: #064e3b;
+  --blue: #059669;
+}
+
+/* ทำให้การ์ดต่างๆ เปลี่ยนสีตาม Theme อย่างนุ่มนวล */
+.form-section, .form-header, .topbar, .topbar-sidebar {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* 🚀 SETTINGS MODAL STYLES */
+.settings-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 2000; opacity: 0; visibility: hidden; transition: 0.3s;
+}
+.settings-overlay.active { opacity: 1; visibility: visible; }
+
+.settings-card {
+  background: var(--surface); width: 90%; max-width: 480px;
+  border-radius: 24px; padding: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+  transform: translateY(30px); transition: 0.3s;
+}
+.settings-overlay.active .settings-card { transform: translateY(0); }
+
+.settings-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+.settings-header h2 { margin: 0; font-size: 1.2rem; color: var(--blue); font-weight: 700; }
+.close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--muted); }
+
+.section-label { display: block; font-size: 0.8rem; font-weight: 800; color: var(--muted); text-transform: uppercase; margin-bottom: 12px; }
+.setting-section { margin-bottom: 25px; }
+
+.profile-preview { display: flex; align-items: center; gap: 15px; padding: 15px; background: var(--surface-2); border-radius: 15px; border: 1px solid var(--line); }
+.avatar-large { width: 60px; height: 60px; background: linear-gradient(135deg, var(--blue), var(--blue-dark)); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 700; }
+.p-username { margin: 0; font-weight: 700; font-size: 1.1rem; color: var(--text); }
+.p-role { margin: 0; font-size: 0.85rem; color: var(--blue); font-weight: 600; }
+
+.theme-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.theme-option { padding: 12px; border: 2px solid var(--line); background: var(--surface-2); border-radius: 12px; cursor: pointer; font-weight: 700; color: var(--text); transition: 0.2s; }
+.theme-option:hover { border-color: var(--blue); }
+.theme-option.active { border-color: var(--blue); color: var(--blue); background: var(--surface); box-shadow: 0 0 0 2px rgba(0, 114, 187, 0.1); }
+
+.toggle-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: var(--surface-2); border-radius: 12px; color: var(--text); font-weight: 600; font-size: 0.9rem; border: 1px solid var(--line); margin-bottom: 8px; }
+
+.btn-logout-alt { width: 100%; padding: 14px; border: none; background: #ef4444; color: white; border-radius: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; }
+.btn-logout-alt:hover { background: #dc2626; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2); }
+/* =========================================
+   แก้ไขจุดบกพร่องของโหมด DARK & THEMES
+   ========================================= */
+
+/* บังคับให้ Input, Select, Textarea ทุกตัวเปลี่ยนสีตาม Theme */
+[data-theme='dark'] input,
+[data-theme='dark'] select,
+[data-theme='dark'] textarea,
+[data-theme='dark'] .modern-select,
+[data-theme='dark'] .status-select {
+  background-color: var(--surface-2);
+  color: var(--text);
+  border-color: var(--line);
+}
+
+[data-theme='dark'] input:focus,
+[data-theme='dark'] select:focus,
+[data-theme='dark'] textarea:focus {
+  background-color: var(--surface);
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2); /* สีฟ้าอ่อนสำหรับ Dark Mode */
+}
+
+/* แก้ไขสีตารางใน Dark Mode */
+[data-theme='dark'] .cost-table, 
+[data-theme='dark'] .portfolio-table,
+[data-theme='dark'] .project-portfolio-table {
+  background-color: var(--surface);
+  border-color: var(--line);
+}
+
+[data-theme='dark'] .cost-table th, 
+[data-theme='dark'] .portfolio-table th {
+  background-color: var(--surface-2);
+  color: var(--text);
+  border-color: var(--line);
+}
+
+[data-theme='dark'] .cost-table td, 
+[data-theme='dark'] .portfolio-table td {
+  background-color: var(--surface);
+  border-color: var(--line);
+  color: var(--text);
+}
+
+/* เปลี่ยนสีตัวหนังสือต่างๆ ที่อาจจะมองไม่เห็นใน Dark Mode */
+[data-theme='dark'] label,
+[data-theme='dark'] .note-label,
+[data-theme='dark'] .checkbox-item,
+[data-theme='dark'] .radio-item {
+  color: var(--text);
+}
+
+/* =========================================
+   UI ของ Settings Modal ที่เพิ่มใหม่
+   ========================================= */
+.edit-profile-form { display: flex; flex-direction: column; width: 100%; }
+.edit-input { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); color: var(--text); font-size: 0.9rem; margin-bottom: 5px; }
+.btn-text { background: none; border: none; color: var(--blue); font-weight: 700; cursor: pointer; padding: 0; font-size: 0.85rem; }
+.btn-text:hover { text-decoration: underline; }
+.btn-small-primary { background: var(--blue); color: white; border: none; padding: 5px 10px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; flex: 1; }
+.btn-small-secondary { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); padding: 5px 10px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; flex: 1; }
+.change-password-box { background: var(--surface-2); padding: 15px; border-radius: 12px; border: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+/* =========================================
+   ปรับแต่ง Scrollbar แบบมินิมอล (ใช้กับทุกหน้าและทุกกล่องในเว็บ)
+   ========================================= */
+
+/* ใช้ * เพื่อให้มีผลกับทุกๆ ส่วนที่มีการเลื่อน (Scroll) */
+*::-webkit-scrollbar {
+  width: 8px;  /* ความกว้างสำหรับแถบเลื่อนแนวตั้ง */
+  height: 8px; /* ความสูงสำหรับแถบเลื่อนแนวนอน (เช่น ตาราง) */
+}
+
+/* พื้นหลังของแถบเลื่อน (Track) */
+*::-webkit-scrollbar-track {
+  background: transparent; /* ให้พื้นหลังโปร่งใส */
+}
+
+/* ตัวจับเลื่อน (Thumb) */
+*::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.25); /* สีเทาโปร่งใส */
+  border-radius: 10px; /* ขอบโค้งมน */
+}
+
+/* เวลาเอาเมาส์ไปชี้ที่แถบเลื่อน (Hover) ให้สีเข้มขึ้นนิดนึง */
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.6); 
+}
+/* =========================================
+   ระบบการแจ้งเตือน (Notifications & Toast)
+   ========================================= */
+
+/* 1. Toast Notification (ป๊อปอัปมุมขวาล่าง) */
+.toast-notification {
+  position: fixed;
+  bottom: 30px;
+  right: -300px; /* ซ่อนไว้ก่อน */
+  background: var(--surface);
+  color: var(--text);
+  padding: 14px 24px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  font-weight: 700;
+  font-size: 0.95rem;
+  z-index: 9999;
+  transition: right 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-left: 5px solid var(--blue);
+}
+
+.toast-notification.show {
+  right: 30px; /* สไลด์เข้ามา */
+}
+
+/* สีของ Toast ตามประเภท */
+.toast-notification.success { border-left-color: #10b981; }
+.toast-notification.error { border-left-color: #ef4444; }
+.toast-notification.warning { border-left-color: #f59e0b; }
+.toast-notification.info { border-left-color: #3b82f6; }
+
+
+/* 2. Notification Bell (ปุ่มกระดิ่ง) */
+.notif-wrapper {
+  position: relative;
+}
+
+.notif-btn {
+  background: none;
+  border: none;
+  color: #1a365d;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.notif-btn:hover {
+  background: rgba(0, 114, 187, 0.1);
+}
+
+[data-theme='dark'] .notif-btn { color: var(--text); }
+
+.notif-badge {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  background: #ef4444;
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 800;
+  height: 16px;
+  min-width: 16px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--surface);
+  padding: 0 4px;
+}
+
+
+/* 3. Notification Dropdown (กล่องข้อความแจ้งเตือน) */
+.notif-dropdown {
+  position: absolute;
+  top: 120%;
+  right: 0;
+  width: 350px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  z-index: 1005;
+  overflow: hidden;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.notif-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--surface-2);
+}
+
+.notif-header h4 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--text);
+  font-weight: 800;
+}
+
+.mark-read-btn {
+  background: none;
+  border: none;
+  color: var(--blue);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+.mark-read-btn:hover { text-decoration: underline; }
+
+.notif-body {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.notif-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.notif-item {
+  display: flex;
+  gap: 15px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  transition: background 0.2s;
+  position: relative;
+}
+.notif-item:hover { background: var(--surface-2); }
+.notif-item.unread { background: rgba(0, 114, 187, 0.03); }
+
+.notif-icon-bg {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  color: white;
+  flex-shrink: 0;
+}
+.notif-icon-bg.success { background: #10b981; }
+.notif-icon-bg.info { background: #3b82f6; font-family: serif; font-style: italic; }
+.notif-icon-bg.warning { background: #f59e0b; }
+
+.notif-content { flex: 1; }
+.notif-title { font-weight: 700; font-size: 0.9rem; color: var(--text); margin-bottom: 4px; }
+.notif-text { font-size: 0.8rem; color: var(--muted); line-height: 1.4; margin-bottom: 6px; }
+.notif-time { font-size: 0.7rem; color: #94a3b8; font-weight: 600; }
+
+.notif-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--blue);
+  border-radius: 50%;
+  position: absolute;
+  top: 20px;
+  right: 20px;
+}
+
+/* รองรับจอมือถือ */
+@media screen and (max-width: 480px) {
+  .notif-dropdown {
+    width: 300px;
+    right: -40px; /* ปรับให้ไม่ตกขอบจอ */
+  }
+}
+/* --- 🚀 DARK MODE FIXES (บังคับสี Input & Text) --- */
+[data-theme='dark'] input, 
+[data-theme='dark'] select, 
+[data-theme='dark'] textarea {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+  border-color: #475569 !important;
+}
+
+[data-theme='dark'] .form-section, 
+[data-theme='dark'] .topbar, 
+[data-theme='dark'] .topbar-sidebar {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  border-color: #334155 !important;
+}
+
+[data-theme='dark'] .nav-item { color: #94a3b8; }
+[data-theme='dark'] .nav-item.active { background: #38bdf8; color: #000; }
+
+/* --- 🚀 SIDEBAR NOTIFICATION STYLES --- */
+.sidebar-notif-section {
+  margin: 10px 0 20px 0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+.notif-toggle-btn {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.notif-badge-inline {
+  background: #ef4444;
+  color: white;
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.sidebar-notif-list {
+  max-height: 200px;
+  overflow-y: auto;
+  border-top: 1px solid var(--line);
+}
+
+.sidebar-notif-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.85rem;
+  align-items: center;
+}
+
+.sidebar-notif-item.unread { background: rgba(0, 114, 187, 0.05); }
+
+.notif-dot-small {
+  width: 6px; height: 6px;
+  background: var(--blue);
+  border-radius: 50%;
+}
+
+.notif-title-small { font-weight: 700; color: var(--text); }
+.notif-text-small { color: var(--muted); font-size: 0.75rem; }
+
+/* ปรับ Scrollbar ให้มินิมอลตามที่ต้องการ */
+*::-webkit-scrollbar { width: 6px; height: 6px; }
+*::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.2); border-radius: 10px; }
+*::-webkit-scrollbar-thumb:hover { background: rgba(100, 116, 139, 0.5); }
+/* =========================================
+   🚀 ACTION BUTTONS (BELL & SETTINGS)
+   ========================================= */
+
+/* ดีไซน์ปุ่มกลมแบบใหม่ ไม่บี้แบน ไม่ทับกากบาท */
+.action-icon-btn {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0; /* ป้องกันการบี้แบนเป็นวงรี */
+  padding: 0;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+}
+
+.action-icon-btn:hover {
+  background: #f8fafc;
+  color: var(--blue);
+  border-color: var(--blue);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 114, 187, 0.1);
+}
+
+/* รองรับ Dark Mode */
+[data-theme='dark'] .action-icon-btn {
+  background: var(--surface-2);
+  border-color: var(--line);
+  color: var(--text);
+}
+[data-theme='dark'] .action-icon-btn:hover {
+  color: var(--blue);
+  border-color: var(--blue);
+}
+
+/* 2. ป้ายตัวเลขแจ้งเตือนสีแดง (Badge) */
+.notif-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #ef4444;
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 800;
+  height: 18px;
+  min-width: 18px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--surface);
+  padding: 0 4px;
+}
+
+/* 3. กล่อง Popup ลอยตัว (ทิ้งตัวลงมาจากใต้ปุ่มกระดิ่ง) */
+.notif-popup-dropdown {
+  position: absolute;
+  top: 50px;       /* ลอยอยู่ใต้ปุ่มพอดี */
+  right: -10px;    /* จัดให้อยู่ใต้ปุ่มกระดิ่ง แอบเหลื่อมนิดๆ ให้สวย */
+  width: 320px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+  z-index: 1020;
+  overflow: hidden;
+  animation: slideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.notif-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--surface-2);
+}
+
+.notif-header h4 { margin: 0; font-size: 0.95rem; color: var(--text); font-weight: 800; }
+
+.mark-read-btn {
+  background: none; border: none; color: var(--blue);
+  font-size: 0.75rem; font-weight: 700; cursor: pointer; padding: 0;
+}
+.mark-read-btn:hover { text-decoration: underline; }
+
+/* 4. รายการที่อยู่ใน Popup */
+.sidebar-notif-list {
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+.sidebar-notif-item {
+  display: flex; gap: 12px; padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+  align-items: flex-start;
+  transition: background 0.2s;
+}
+
+.sidebar-notif-item:hover { background: var(--surface-2); }
+.sidebar-notif-item.unread { background: rgba(0, 114, 187, 0.04); }
+
+.notif-dot-small {
+  width: 8px; height: 8px; flex-shrink: 0;
+  background: var(--blue); border-radius: 50%;
+  margin-top: 6px;
+}
+
+.notif-title-small { font-weight: 700; color: var(--text); font-size: 0.9rem; margin-bottom: 4px;}
+.notif-text-small { color: var(--muted); font-size: 0.8rem; line-height: 1.4; }
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.notif-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--surface-2);
+}
+
+.notif-header h4 { margin: 0; font-size: 0.95rem; color: var(--text); font-weight: 800; }
+
+.mark-read-btn {
+  background: none; border: none; color: var(--blue);
+  font-size: 0.75rem; font-weight: 700; cursor: pointer; padding: 0;
+}
+.mark-read-btn:hover { text-decoration: underline; }
+
+/* 4. รายการที่อยู่ใน Popup */
+.sidebar-notif-list {
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+.sidebar-notif-item {
+  display: flex; gap: 12px; padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+  align-items: flex-start;
+  transition: background 0.2s;
+}
+
+.sidebar-notif-item:hover { background: var(--surface-2); }
+.sidebar-notif-item.unread { background: rgba(0, 114, 187, 0.04); }
+
+.notif-dot-small {
+  width: 8px; height: 8px; flex-shrink: 0;
+  background: var(--blue); border-radius: 50%;
+  margin-top: 6px;
+}
+
+.notif-title-small { font-weight: 700; color: var(--text); font-size: 0.9rem; margin-bottom: 4px;}
+.notif-text-small { color: var(--muted); font-size: 0.8rem; line-height: 1.4; }

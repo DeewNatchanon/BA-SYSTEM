@@ -132,6 +132,20 @@ function ApplicationPortfolio({ currentUser }) {
     }
   };
 
+  // 🚀 ฟังก์ชันดึงสีของ Tab ที่ถูกเลือก เพื่อให้เส้นขอบด้านล่างเปลี่ยนสีตาม
+  const getActiveColor = () => {
+    switch(activeTab) {
+      case 'general': return '#0072bb'; // Blue
+      case 'tech': return '#8b5cf6';    // Purple
+      case 'support': return '#10b981'; // Green
+      case 'security': return '#ef4444';// Red (สีแดงชัดเจน)
+      case 'history': return '#f59e0b'; // Amber (สีเหลืองอำพัน ไม่ซ้ำกับสีแดง)
+      default: return '#e2e8f0';
+    }
+  };
+
+  const activeColor = getActiveColor();
+
   if (isLoading) return <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>กำลังดึงข้อมูล Application Portfolio...</div>;
 
   return (
@@ -159,12 +173,8 @@ function ApplicationPortfolio({ currentUser }) {
             </thead>
             <tbody>
               {allData.length > 0 ? allData.map(app => {
-                // 🚀 เช็คสถานะ PDPA ว่ามีการติ๊กไหม
                 const hasPdpa = app.compliance?.pdpa && Object.values(app.compliance.pdpa).some(val => val === true);
-                
-                // 🚀 เช็คสถานะ ROPA ว่ามีการพิมพ์ข้อความอะไรลงไปในช่องไหม (ไม่นับช่องว่าง)
                 const hasRopa = app.compliance?.ropa && Object.values(app.compliance.ropa).some(val => typeof val === 'string' && val.trim() !== '');
-
                 const isNewSystem = app.project_type === 'New System' || app.project_type === 'New';
 
                 return (
@@ -189,19 +199,16 @@ function ApplicationPortfolio({ currentUser }) {
                     </td>
                     <td style={{ padding: '16px 20px', textAlign: 'center' }}>
                       <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                        {/* แสดงป้าย PDPA */}
                         {hasPdpa && (
                           <div title="มีการจัดเก็บข้อมูล PDPA" style={{ padding: '4px 8px', background: '#fef3c7', color: '#b45309', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700, border: '1px solid #fde68a', whiteSpace: 'nowrap' }}>
                             🔒 PDPA
                           </div>
                         )}
-                        {/* แสดงป้าย ROPA เพิ่มเข้าไปด้วย ถ้ามีการกรอกข้อมูล */}
                         {hasRopa && (
                           <div title="มีการบันทึก ROPA" style={{ padding: '4px 8px', background: '#e0e7ff', color: '#0369a1', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700, border: '1px solid #bae6fd', whiteSpace: 'nowrap' }}>
                             🛡️ ROPA
                           </div>
                         )}
-                        {/* ถ้าไม่มีอะไรเลย ให้ขึ้นขีด */}
                         {!hasPdpa && !hasRopa && (
                           <span style={{ color: '#cbd5e1' }}>-</span>
                         )}
@@ -244,26 +251,36 @@ function ApplicationPortfolio({ currentUser }) {
               )}
             </div>
 
-            {/* Tab Navigation */}
-            <div style={{ padding: '0 30px', borderBottom: '1px solid #f1f5f9', display: 'flex', gap: '8px', overflowX: 'auto' }}>
+            {/* 🚀 Tab Navigation (ดีไซน์ใหม่ สีชัดเจนเต็มกรอบ) */}
+            <div style={{ 
+              padding: '10px 30px 0 30px', 
+              borderBottom: `3px solid ${activeColor}`, // เส้นขอบล่างเปลี่ยนสีตามแท็บ
+              display: 'flex', 
+              gap: '6px', 
+              overflowX: 'auto', 
+              alignItems: 'flex-end',
+              transition: 'border-color 0.3s ease'
+            }}>
               {[
-                { id: 'general', label: '🔵 General & Business' },
-                { id: 'tech', label: '🟣 Tech & Interface' },
-                { id: 'support', label: '🟢 Support & SLA' },
-                { id: 'security', label: '🟡 Security & PDPA/ROPA' },
-                { id: 'history', label: '🟠 History' }
+                { id: 'general', label: 'General & Business', color: '#0072bb' },
+                { id: 'tech', label: 'Tech & Interface', color: '#8b5cf6' },
+                { id: 'support', label: 'Support & SLA', color: '#10b981' },
+                { id: 'security', label: 'Security & PDPA/ROPA', color: '#ef4444' }, // แดงสด
+                { id: 'history', label: 'History', color: '#f59e0b' } // เหลืองอำพัน
               ].map(tab => (
                 <button 
                   key={tab.id} onClick={() => setActiveTab(tab.id)}
                   style={{ 
-                    padding: '12px 20px', border: '1px solid',
-                    borderColor: activeTab === tab.id ? '#e2e8f0' : 'transparent',
-                    borderBottomColor: activeTab === tab.id ? 'transparent' : 'transparent',
-                    background: activeTab === tab.id ? '#ffffff' : '#f8fafc',
-                    color: activeTab === tab.id ? 'var(--blue-dark)' : '#64748b',
-                    fontWeight: activeTab === tab.id ? '700' : '600', fontSize: '0.85rem',
-                    cursor: 'pointer', borderRadius: '10px 10px 0 0',
-                    boxShadow: activeTab === tab.id ? '0 -4px 10px rgba(0,0,0,0.02)' : 'none'
+                    padding: '12px 24px', 
+                    border: 'none',
+                    background: activeTab === tab.id ? tab.color : '#f1f5f9', // ถ้า active สีจะเต็มกรอบ
+                    color: activeTab === tab.id ? '#ffffff' : '#64748b', // ถ้า active ตัวหนังสือจะเป็นสีขาว
+                    fontWeight: activeTab === tab.id ? '800' : '600', 
+                    fontSize: '0.85rem',
+                    cursor: 'pointer', 
+                    borderRadius: '10px 10px 0 0',
+                    transition: 'all 0.2s ease',
+                    whiteSpace: 'nowrap'
                   }}
                 >
                   {tab.label}
@@ -444,7 +461,7 @@ function ApplicationPortfolio({ currentUser }) {
               <div style={{ display: 'flex', gap: '10px' }}>
                 {isEditing ? (
                   <>
-                    <button onClick={handleCloseModal} disabled={isSaving} className="btn btn-tertiary" style={{ padding: '10px 24px' }}>ยกเลิก (Cancel)</button>
+                    <button onClick={handleCloseModal} disabled={isSaving} className="btn btn-tertiary" style={{ padding: '10px 24px', border: 'none', background: '#e2e8f0', borderRadius: '8px', cursor: 'pointer' }}>ยกเลิก (Cancel)</button>
                     <button onClick={handleSaveEdit} disabled={isSaving} style={{ background: '#166534', color: '#fff', border: 'none', padding: '10px 30px', borderRadius: '8px', fontWeight: '700', cursor: isSaving?'not-allowed':'pointer' }}>
                       {isSaving ? 'กำลังบันทึก...' : '💾 บันทึกการเปลี่ยนแปลง (Save)'}
                     </button>

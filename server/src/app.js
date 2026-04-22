@@ -1,25 +1,17 @@
 const express = require('express');
 const cors = require('cors');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
-const path = require('path'); // 🚀 1. เพิ่มการเรียกใช้ path
-
-const env = require('./config/env');
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const formRoutes = require('./routes/formRoutes');
+const projectRoutes = require('./routes/projectRoutes');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const path = require('path');
+const env = require('./config/env');
 const notFound = require('./middleware/notFound');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
-
-// 🚀 2. เปิดทางให้อนุญาตอ่านไฟล์ในโฟลเดอร์ uploads ได้
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
-
-// 🚀 3. ปรับ Helmet เล็กน้อย เพื่อไม่ให้บล็อกการแสดงผลไฟล์ PDF บนเบราว์เซอร์
-app.use(helmet({
-  crossOriginResourcePolicy: false,
-}));
 
 app.use(
   cors({
@@ -32,9 +24,20 @@ app.use(
       callback(new Error(`CORS blocked for origin: ${origin}`));
     },
     credentials: false
-  })
-);
+  }));
+
 app.use(express.json({ limit: '1mb' }));
+// 🚀 2. เปิดทางให้อนุญาตอ่านไฟล์ในโฟลเดอร์ uploads ได้
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+// ให้ระบบรู้ว่าถ้านำหน้าด้วย /api ให้ไปเรียกใช้ projectRoutes
+app.use('/api', projectRoutes);
+
+// 🚀 3. ปรับ Helmet เล็กน้อย เพื่อไม่ให้บล็อกการแสดงผลไฟล์ PDF บนเบราว์เซอร์
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+}));
+
 app.use(
   rateLimit({
     windowMs: env.rateLimitWindowMs,
@@ -43,7 +46,6 @@ app.use(
     legacyHeaders: false
   })
 );
-const projectRoutes = require('./routes/projectRoutes');
 app.use('/api/projects', projectRoutes);
 
 app.get('/health', (req, res) => {

@@ -3,7 +3,7 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { pdf } from '@react-pdf/renderer';
 import RequestFormPdf from '../pdf/RequestFormPdf';
-import { submitProjectRequest } from '../api/authApi';
+import { submitProjectRequest } from '../api/authApi'; 
 
 function RequestForm({ currentUser }) {
   const createBlankCost = () => ({
@@ -24,7 +24,6 @@ function RequestForm({ currentUser }) {
   };
 
   const initialFormData = {
-    // Requester only section
     requestId: '',
     requestDate: new Date().toISOString().split('T')[0],
     requesterName: '',
@@ -43,15 +42,11 @@ function RequestForm({ currentUser }) {
     budgetSources: '',
     anticipatedDate: '',
     otherRemark: '',
-    
-    // Approval Signatures (Requester section)
     reqSign1: '',
     reqSign2: '',
     reqSign3: '',
     reqSign4: '',
     reqSign5: '',
-
-    // GLS IT only section
     status: '',
     projectCategory: [], 
     projectType: [], 
@@ -71,7 +66,6 @@ function RequestForm({ currentUser }) {
     approvedBy: ''
   };
 
-  // 🚀 โหลดข้อมูล Draft อัตโนมัติเมื่อเปิดหน้าเว็บ
   const loadInitialData = () => {
     const draft = localStorage.getItem('ba-system.request-draft');
     if (draft) {
@@ -106,7 +100,6 @@ function RequestForm({ currentUser }) {
     });
   };
 
-  // 🚀 ระบบ Auto-Save: เซฟข้อมูลลงเครื่องอัตโนมัติทุกครั้งที่พิมพ์!
   useEffect(() => {
     localStorage.setItem('ba-system.request-draft', JSON.stringify(formData));
   }, [formData]);
@@ -172,7 +165,6 @@ function RequestForm({ currentUser }) {
   const showVendorFields = formData.resources.includes('GLS จ้าง Vendor') ||
     formData.resources.includes('โรงพยาบาลจ้าง Vendor');
 
-  // ฟังก์ชันล้างฟอร์ม (ปุ่ม Clear)
   const handleClearForm = () => {
     if (window.confirm('คุณต้องการล้างข้อมูลทั้งหมดใช่หรือไม่?')) {
       localStorage.removeItem('ba-system.request-draft');
@@ -189,32 +181,48 @@ function RequestForm({ currentUser }) {
     }
   };
 
-  // 🚀 ฟังก์ชันส่งข้อมูล และ Auto-Clear
   const handleFinalSubmit = async () => {
     if (!selectedFile) return alert("กรุณาแนบไฟล์เอกสารก่อนกดยืนยัน");
+    
+    if (!currentUser || !currentUser.id) {
+      return alert("ไม่พบข้อมูลผู้ใช้งาน กรุณาเข้าสู่ระบบใหม่");
+    }
 
     setIsSubmitting(true);
     try {
-      const submitData = new FormData();
-      submitData.append('approvedDocument', selectedFile); 
-      submitData.append('requestData', JSON.stringify(formData)); 
-
       const sessionRaw = localStorage.getItem('ba-system.auth-session');
       const sessionData = sessionRaw ? JSON.parse(sessionRaw) : null;
       const token = sessionData?.token; 
 
-      await submitProjectRequest(submitData, token); 
+      // 1. จัดเตรียมข้อมูล Text
+      // 1. จัดเตรียมข้อมูล Text
+      const requestData = {
+        name: formData.projectName || 'Untitled Project',
+        site: formData.requesterSite || 'N/A',
+        category: formData.projectCategory.join(', ') || 'N/A',
+        description: formData.projectDetail || 'N/A',
+        status: 'Pending Approval', // 🚀 3. เพิ่มบรรทัดนี้! บังคับสถานะให้ตรงเป๊ะ
+        requester_id: currentUser?.id,
+        form_data: formData 
+      };
 
-      alert('แนบเอกสารและบันทึกข้อมูลเข้าระบบสำเร็จ!');
+      // 2. แพ็คไฟล์ + ข้อมูล Text เข้าด้วยกัน (FormData)
+      const formDataToSend = new FormData();
+      formDataToSend.append('approvedDocument', selectedFile); // แนบไฟล์
+      formDataToSend.append('requestData', JSON.stringify(requestData)); // แนบข้อมูล
+
+      // 3. ยิง API ด้วยฟังก์ชันที่รองรับการแนบไฟล์
+      await submitProjectRequest(formDataToSend, token); 
+
+      alert('บันทึกข้อมูลและแนบไฟล์เข้าระบบสำเร็จ!');
       handleCloseModal(); 
       
-      // 🚀 ล้างหน้าจออัตโนมัติเมื่อส่งข้อมูลสำเร็จ
       localStorage.removeItem('ba-system.request-draft');
       setFormData({ ...initialFormData, requestDate: new Date().toISOString().split('T')[0] });
       
     } catch (error) {
       console.error('Submission error:', error);
-      alert('เกิดข้อผิดพลาด: ' + error.message);
+      alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' + error.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -287,7 +295,6 @@ function RequestForm({ currentUser }) {
                   value={formData.status || ''}
                   onChange={handleChange}
                   className="print-hide-input"
-                  disabled={!isManager}
                 />
                 <div className="print-only">{formData.status || '-'}</div>
               </div>
@@ -507,12 +514,7 @@ function RequestForm({ currentUser }) {
             </div>
           </div>
           <div className="section-title">GLS IT only</div>
-          {!isManager ? (
-            <div className="role-readonly-note">
-              GLS IT only is read-only for employee accounts.
-            </div>
-          ) : null}
-          <fieldset className="role-fieldset" disabled={!isManager}>
+          <fieldset className="role-fieldset">
             <div className="form-row">
               <div className="form-group full-width">
                 <label>Project Category: <span className="note-label">(หมวดหมู่โปรเจ็ค)</span></label>
@@ -790,7 +792,6 @@ function RequestForm({ currentUser }) {
           </fieldset>
         </section>
 
-        {/* 🚀 ปุ่มควบคุมด้านล่าง (เอาปุ่ม Save Draft ออก เพราะมี Auto-save แล้ว) */}
         <div className="form-row button-row" style={{ marginTop: '30px', gap: '10px' }}>
           <button type="submit" className="btn btn-primary" style={{ width: 'auto' }} disabled={isPreviewing}>
             {isPreviewing ? 'กำลังประมวลผล...' : 'พรีวิวและแนบเอกสาร (Preview & Submit)'}

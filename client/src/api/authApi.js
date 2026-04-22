@@ -61,20 +61,20 @@ export const clearAuthSession = () => {
   localStorage.removeItem(SESSION_KEY);
 };
 // เพิ่มฟังก์ชันสำหรับส่ง Request Form พร้อมไฟล์แนบ
-export const submitProjectRequest = async (formData, token) => {
-  const response = await fetch(`${API_BASE_URL}/api/forms/submit`, {
+export const submitProjectRequest = async (formDataToSend, token) => {
+  const response = await fetch('http://localhost:4000/api/projects', {
     method: 'POST',
     headers: {
-      // ห้ามใส่ 'Content-Type': 'application/json' 
-      // เพราะเราส่งเป็น FormData ระบบจะจัดการ Boundary ให้เอง
-      Authorization: `Bearer ${token}`
+      // 🚀 สำคัญมาก: ห้ามใส่ 'Content-Type': 'application/json' ตรงนี้เด็ดขาด!
+      // เพราะเรากำลังส่งไฟล์แบบ FormData ให้ปล่อยว่างไว้เลย
+      'Authorization': `Bearer ${token}`
     },
-    body: formData // ส่ง FormData ที่แพ็กมาจากหน้า RequestForm.js
+    body: formDataToSend
   });
 
   if (!response.ok) {
-    const payload = await response.json().catch(() => ({}));
-    throw new Error(payload.message || 'Failed to submit request.');
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to submit project request');
   }
 
   return response.json();
@@ -84,12 +84,21 @@ export const submitProjectRequest = async (formData, token) => {
 // ==========================================
 
 export const fetchProjects = async (token) => {
-  // 🚨 ถ้าในไฟล์ของคุณไม่มีตัวแปร API_BASE_URL ให้เปลี่ยนเป็น 'http://localhost:4000/api/projects/all' แทนได้เลยครับ
-  const response = await fetch(`http://localhost:4000/api/projects/all`, {
-    headers: { Authorization: `Bearer ${token}` }
+  const response = await fetch('http://localhost:4000/api/projects/all', {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
   });
-  if (!response.ok) throw new Error('Failed to fetch projects');
-  return response.json();
+  
+  if (!response.ok) {
+    throw new Error('Failed to fetch projects');
+  }
+  
+  const result = await response.json();
+  
+  // 🚀 จุดสำคัญ: ดึงเอาเฉพาะ Array ที่อยู่ใน result.data ส่งกลับไปให้หน้าเว็บ
+  return result.data || []; 
 };
 
 export const updateProjectInDb = async (projectId, projectData, token) => {
@@ -102,5 +111,47 @@ export const updateProjectInDb = async (projectId, projectData, token) => {
     body: JSON.stringify(projectData)
   });
   if (!response.ok) throw new Error('Failed to update project');
+  return response.json();
+};
+// ==========================================
+// API สำหรับระบบ Request & Manager Approval
+// ==========================================
+const BASE_URL = 'http://localhost:4000/api'; // ปรับให้ตรงกับ Port ของ Backend คุณ
+
+// 1. ส่งฟอร์ม Request ใหม่
+export const submitNewRequest = async (requestData, token) => {
+  const response = await fetch(`${BASE_URL}/projects`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(requestData),
+  });
+  if (!response.ok) throw new Error('ไม่สามารถส่งคำขอได้');
+  return response.json();
+};
+
+// 2. ดึงรายการที่รออนุมัติ (สำหรับ Manager)
+export const fetchPendingRequests = async (token) => {
+  const response = await fetch(`${BASE_URL}/projects/pending`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!response.ok) throw new Error('ดึงข้อมูลผิดพลาด');
+  const result = await response.json();
+  return result.data; 
+};
+
+// 3. Manager กดอนุมัติ
+export const approveProjectRequest = async (projectId, managerId, token) => {
+  const response = await fetch(`${BASE_URL}/projects/${projectId}/approve`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ manager_id: managerId }),
+  });
+  if (!response.ok) throw new Error('เกิดข้อผิดพลาดในการอนุมัติ');
   return response.json();
 };
