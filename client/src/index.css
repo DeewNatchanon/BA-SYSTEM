@@ -1109,3 +1109,82 @@ fieldset {
 
 .notif-title-small { font-weight: 700; color: var(--text); font-size: 0.9rem; margin-bottom: 4px;}
 .notif-text-small { color: var(--muted); font-size: 0.8rem; line-height: 1.4; }
+/* =========================================
+   🌙 THEME & DARK MODE VARIABLES
+   ========================================= */
+:root, [data-theme="light"], [data-theme="hospital"] {
+  --bg-color: #f4f7f6;
+  --card-bg: #ffffff;
+  --border-color: #e2e8f0;
+  --text-color: #334155;
+  --text-muted: #64748b;
+  --blue: #0072bb;
+  --blue-dark: #0f2b4b;
+  --table-bg: #ffffff;
+  --table-header-bg: #f8fafc;
+  --table-header-text: #0f2b4b;
+  --table-row-hover: #f1f5f9;
+  --input-bg: #ffffff;
+  --modal-overlay: rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] {
+  --bg-color: #0f172a;
+  --card-bg: #1e293b;
+  --border-color: #334155;
+  --text-color: #f8fafc;
+  --text-muted: #94a3b8;
+  --blue: #3b82f6;
+  --blue-dark: #60a5fa;
+  --table-bg: #1e293b;
+  --table-header-bg: #0f172a;
+  --table-header-text: #f8fafc;
+  --table-row-hover: #334155;
+  --input-bg: #0f172a;
+  --modal-overlay: rgba(15, 23, 42, 0.8);
+}
+
+/* บังคับใช้สีตาม Theme ในจุดที่กลืนไปกับพื้นหลัง */
+body, .app-main { background-color: transparent; color: var(--text-color); }
+h1, h2, h3, h4, p, span, div, label, strong { color: inherit; } 
+
+.content-card, .settings-card, .notif-popup-dropdown, .pdf-preview-card, .topbar { 
+  background-color: var(--card-bg) !important; 
+  border-color: var(--border-color) !important; 
+}
+
+/* แก้ปุ่ม ☰ ให้มีสีสว่างในโหมดมืด */
+.hamburger-btn, .action-icon-btn, .system-name, .page-heading { color: var(--text-color) !important; }
+
+/* แก้ตาราง */
+.portfolio-table { background-color: var(--card-bg); }
+.portfolio-table th { background-color: var(--table-header-bg) !important; color: var(--table-header-text) !important; border-bottom: 2px solid var(--border-color); }
+.portfolio-table td { background-color: var(--card-bg) !important; color: var(--text-color) !important; border-bottom: 1px solid var(--border-color) !important; }
+.portfolio-table tbody tr:hover td { background-color: var(--table-row-hover) !important; }
+
+/* แก้ Input */
+input, select, textarea, .date-input { 
+  background-color: var(--input-bg) !important; 
+  color: var(--text-color) !important; 
+  border: 1px solid var(--border-color) !important; 
+}
+/* บังคับแค่หัวตาราง Portfolio (ไม่ยุ่งกับตารางค่าใช้จ่าย) */
+.portfolio-table th {
+  background-color: var(--blue-dark) !important;
+  color: #ffffff !important;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.2) !important;
+}/* =========================================
+   🚀 บังคับหัวตารางทุกหน้าให้เป็นสีเข้ม และ "ล้างการไล่สี (Gradient) เดิมทิ้ง"
+   ========================================= */
+.portfolio-table th,
+.project-portfolio-table th {
+  /* ต้องใช้คำว่า background เฉยๆ (ห้ามมี -color) เพื่อบังคับลบ Gradient สีขาวทิ้ง */
+  background: #0f2b4b !important; 
+  color: #ffffff !important;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+/* ปรับให้สีน้ำเงินสว่างขึ้นนิดนึงในโหมดมืด จะได้เข้ากับ Theme */
+[data-theme="dark"] {
+  --blue-dark: #1e3a8a;
+}

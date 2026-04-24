@@ -33,8 +33,26 @@ const createUser = async ({ username, passwordHash, role = 'employee' }) => {
   return result.rows[0] || null;
 };
 
+// 🚀 ฟังก์ชันอัปเดตรหัสผ่าน
+const updateUserPassword = async (userId, newPasswordHash) => {
+  const query = `UPDATE users SET password_hash = $1 WHERE id = $2`;
+  await pool.query(query, [newPasswordHash, userId]);
+};
+
+// 🚀 ฟังก์ชันอัปเดตชื่อผู้ใช้
+const updateUsername = async (oldUsername, newUsername) => {
+  const query = `UPDATE users SET username = $1 WHERE username = $2 RETURNING *`;
+  const result = await pool.query(query, [newUsername, oldUsername]);
+  if (result.rowCount === 0) {
+    throw new Error('ไม่พบข้อมูลผู้ใช้เดิมในระบบ ทำให้ไม่สามารถเปลี่ยนชื่อได้');
+  }
+};
+
+// 🚀 รวมการ Export ไว้ที่เดียว
 module.exports = {
   findUserByUsername,
   listUsers,
-  createUser
+  createUser,
+  updateUserPassword,
+  updateUsername
 };

@@ -3,11 +3,9 @@ const router = express.Router();
 const pool = require('../config/db'); 
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs'); // 🚀 เพิ่มโมดูลจัดการไฟล์
+const fs = require('fs');
 
-// ==========================================
-// 🚀 สร้างโฟลเดอร์อัตโนมัติถ้ายังไม่มี (แก้ปัญหาส่งฟอร์มไม่ได้)
-// ==========================================
+// 🚀 สร้างโฟลเดอร์เก็บไฟล์อัตโนมัติ
 const uploadDir = 'uploads/approved_docs/';
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
@@ -24,52 +22,38 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-// ==========================================
-// 1. API ส่งฟอร์ม Request (รองรับไฟล์แนบ)
-// ==========================================
+// 1. API ส่งฟอร์ม Request
 router.post('/projects', upload.single('approvedDocument'), async (req, res) => {
   try {
     const requestData = JSON.parse(req.body.requestData);
     const { name, site, category, description, requester_id, form_data, status } = requestData;
     const document_path = req.file ? req.file.path : null; 
-    
     const reqId = `REQ-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${Math.floor(Math.random() * 1000)}`;
 
     await pool.query('BEGIN');
-
-    const insertProjectQuery = `
+    const insertQuery = `
       INSERT INTO projects (id, name, site, category, description, requester_id, status, form_data, document_path)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      RETURNING *;
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *;
     `;
-    
     const finalStatus = status || 'Pending Approval';
-
-    const projectResult = await pool.query(insertProjectQuery, [
+    const projectResult = await pool.query(insertQuery, [
       reqId, name, site, category, description, requester_id, finalStatus, form_data, document_path
     ]);
-
     await pool.query('COMMIT');
     res.status(201).json({ success: true, data: projectResult.rows[0] });
-
   } catch (error) {
     await pool.query('ROLLBACK');
-    console.error('Error submitting request:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// ==========================================
 // 2. API ดึงงานรออนุมัติ (Manager Dashboard)
-// ==========================================
 router.get('/projects/pending', async (req, res) => {
   try {
     const query = `
       SELECT p.id, p.name, p.site, p.category, p.description, p.created_at, p.form_data, p.document_path, u.username AS requester_name
-      FROM projects p
-      LEFT JOIN users u ON p.requester_id = u.id
-      WHERE p.status = 'Pending Approval'
-      ORDER BY p.created_at DESC;
+      FROM projects p LEFT JOIN users u ON p.requester_id = u.id
+      WHERE p.status = 'Pending Approval' ORDER BY p.created_at DESC;
     `;
     const result = await pool.query(query);
     res.status(200).json({ success: true, data: result.rows });
@@ -78,75 +62,60 @@ router.get('/projects/pending', async (req, res) => {
   }
 });
 
-// ==========================================
-// 🚀 3. API ดึงงานทั้งหมด (แก้บั๊ก 404 หน้า Portfolio) 🚀
-// ==========================================
+// 3. API ดึงงานทั้งหมด (Project Portfolio)
 router.get('/projects/all', async (req, res) => {
   try {
     const query = `
-      SELECT p.*, u.username AS requester_name
-      FROM projects p
-      LEFT JOIN users u ON p.requester_id = u.id
-      ORDER BY p.created_at DESC;
+      SELECT p.*, u.username AS requester_name FROM projects p
+      LEFT JOIN users u ON p.requester_id = u.id ORDER BY p.created_at DESC;
     `;
     const result = await pool.query(query);
     res.status(200).json({ success: true, data: result.rows });
   } catch (error) {
-    console.error('Error fetching all projects:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// ==========================================
-// 4. API อนุมัติงาน (ป้องกันบั๊ก 500 / NaN เด็ดขาด)
-// ==========================================
+// 4. API อนุมัติงาน (Manager อนุมัติ)
 router.put('/projects/:id/approve', async (req, res) => {
   const projectId = req.params.id;
   const { manager_id, assignee, phase, startDate, endDate, manDay, remark, form_data } = req.body;
-
   try {
     await pool.query('BEGIN');
-
-    // นำ form_data เดิม มาผสมกับข้อมูลประเมินเวลา
     const updatedFormData = {
       ...(form_data || {}),
-      compliance: {
-        ...(form_data?.compliance || {}),
-        baStartDate: startDate,
-        baEndDate: endDate,
-        manDay: manDay
-      },
+      compliance: { ...(form_data?.compliance || {}), baStartDate: startDate, baEndDate: endDate, manDay: manDay },
       approval_remark: remark,
       assigned_to: assignee
     };
-
     const updateQuery = `
-      UPDATE projects 
-      SET status = 'Initiate', 
-          phase = $1, 
-          manager_id = $2, 
-          form_data = $3,
-          updated_at = NOW()
-      WHERE id = $4
-      RETURNING requester_id;
+      UPDATE projects SET status = 'Initiate', phase = $1, manager_id = $2, form_data = $3, updated_at = NOW()
+      WHERE id = $4;
     `;
-
-    // 🚀 จุดที่แก้ปัญหา: ตรวจสอบและกรองค่า NaN ทิ้งแบบเด็ดขาด!
-    let safeManagerId = parseInt(manager_id);
-    if (isNaN(safeManagerId)) {
-      safeManagerId = null; // ถ้าแปลงเป็นตัวเลขไม่ได้ ให้บันทึกเป็น null แทน Database จะได้ไม่พัง
-    }
-
-    const projectResult = await pool.query(updateQuery, [
-      phase, safeManagerId, updatedFormData, projectId
-    ]);
-
+    await pool.query(updateQuery, [phase, parseInt(manager_id) || null, updatedFormData, projectId]);
     await pool.query('COMMIT');
-    res.status(200).json({ success: true, message: 'อนุมัติและมอบหมายงานเรียบร้อย' });
-
+    res.status(200).json({ success: true });
   } catch (error) {
     await pool.query('ROLLBACK');
-    console.error('Approval error:', error); 
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 🚀 5. API อัปเดตความคืบหน้า (พนักงานอัปเดต) -> แก้ Error 404
+router.put('/projects/update/:id', async (req, res) => {
+  const projectId = req.params.id;
+  const { status, phase, form_data } = req.body;
+  try {
+    await pool.query('BEGIN');
+    const updateQuery = `
+      UPDATE projects SET status = $1, phase = $2, form_data = $3, updated_at = NOW()
+      WHERE id = $4 RETURNING *;
+    `;
+    const result = await pool.query(updateQuery, [status, phase, form_data, projectId]);
+    await pool.query('COMMIT');
+    res.status(200).json({ success: true, data: result.rows[0] });
+  } catch (error) {
+    await pool.query('ROLLBACK');
     res.status(500).json({ success: false, error: error.message });
   }
 });

@@ -47,7 +47,8 @@ app.use(
   })
 );
 app.use('/api/projects', projectRoutes);
-
+app.use('/api/users', userRoutes); 
+app.use('/api/auth', authRoutes);
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
