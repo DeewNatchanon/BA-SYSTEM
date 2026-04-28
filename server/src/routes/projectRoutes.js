@@ -101,21 +101,45 @@ router.put('/projects/:id/approve', async (req, res) => {
   }
 });
 
-// 🚀 5. API อัปเดตความคืบหน้า (พนักงานอัปเดต) -> แก้ Error 404
-router.put('/projects/update/:id', async (req, res) => {
+// 🚀 5. API อัปเดตความคืบหน้า (พนักงานอัปเดต) -> รองรับการแนบไฟล์หลักฐาน
+router.put('/projects/update/:id', upload.single('progressFile'), async (req, res) => {
   const projectId = req.params.id;
-  const { status, phase, form_data } = req.body;
+  
+  // 🚀 แกะข้อมูลที่ส่งมา (ถ้ามีไฟล์แนบมา ข้อมูลจะถูกห่อเป็น String ต้องแปลงกลับเป็น Object)
+  let projectData = req.body;
+  if (req.body.projectData) {
+    try { projectData = JSON.parse(req.body.projectData); } 
+    catch (e) { projectData = req.body; }
+  }
+
+  const { status, phase, form_data } = projectData;
+
   try {
     await pool.query('BEGIN');
+    
+    let updatedFormData = form_data || {};
+    
+    // 🚀 ถ้าระบบเจอว่ามีการแนบไฟล์หลักฐานมาด้วย ให้เซฟที่อยู่ไฟล์ลงใน database
+    if (req.file) {
+      updatedFormData = {
+        ...updatedFormData,
+        tracking: {
+          ...(updatedFormData.tracking || {}),
+          progressFile: req.file.path // บันทึกที่อยู่ไฟล์
+        }
+      };
+    }
+
     const updateQuery = `
       UPDATE projects SET status = $1, phase = $2, form_data = $3, updated_at = NOW()
       WHERE id = $4 RETURNING *;
     `;
-    const result = await pool.query(updateQuery, [status, phase, form_data, projectId]);
+    const result = await pool.query(updateQuery, [status, phase, updatedFormData, projectId]);
     await pool.query('COMMIT');
     res.status(200).json({ success: true, data: result.rows[0] });
   } catch (error) {
     await pool.query('ROLLBACK');
+    console.error("Error updating project:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 });

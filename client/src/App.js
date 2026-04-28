@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, NavLink } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, NavLink, Navigate } from 'react-router-dom';
+import Dashboard from './pages/Dashboard';
 import RequestForm from './pages/RequestForm';
 import ProjectPortfolio from './pages/ProjectPortfolio';
 import ApplicationPortfolio from './pages/ApplicationPortfolio';
@@ -10,11 +11,12 @@ import {
 } from './api/authApi';
 import './index.css';
 import ManagerDashboard from './pages/ManagerDashboard';
+import Swal from 'sweetalert2';
 
 const EyeIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>;
 const EyeOffIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>;
 const LogoutIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>;
-const SettingsIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
+const SettingsIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 0-2.83l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
 const BellIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>;
 
 function App() {
@@ -166,14 +168,20 @@ function App() {
         ? await registerWithPassword(username.trim(), password, registerRole, managerCode)
         : await loginWithPassword(username.trim(), password);
       saveAuthSession(data); setSession(data);
-      showToast(`ยินดีต้อนรับ, ${data.user.username}`, 'success');
+      // 🚀 SweetAlert2
+      Swal.fire({
+        title: 'ยินดีต้อนรับ',
+        text: `เข้าสู่ระบบสำเร็จ ${data.user.username}`,
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false
+      });
     } catch (err) { setAuthError(err.message); }
     finally { setIsAuthenticating(false); }
   };
 
   const handleLogout = () => {
     clearAuthSession(); setSession(null); setIsMobileMenuOpen(false);
-    showToast('ออกจากระบบแล้ว', 'info');
   };
 
   const handleChangePassword = async () => {
@@ -185,27 +193,32 @@ function App() {
     try {
       await changePassword(currentPwd, newPwd, session.token);
       setCurrentPwd(''); setNewPwd(''); setConfirmNewPwd('');
-      setPwdSuccess('เปลี่ยนรหัสผ่านสำเร็จแล้ว ✅');
-      showToast('เปลี่ยนรหัสผ่านสำเร็จ', 'success');
+      // 🚀 SweetAlert2
+      Swal.fire('สำเร็จ', 'เปลี่ยนรหัสผ่านสำเร็จแล้ว', 'success');
+      closeSettings();
     } catch (err) { setPwdError(err.message || 'รหัสผ่านปัจจุบันไม่ถูกต้อง'); }
     finally { setPwdLoading(false); }
   };
 
-  const handleSaveBaSettings = () => {
-    localStorage.setItem('ba-system-settings', JSON.stringify(baSettings));
-    showToast('บันทึกการตั้งค่า BA เรียบร้อย ✅', 'success');
-  };
-
   const handleSaveProfile = async () => {
-    if (!editUsername.trim()) return showToast('ชื่อผู้ใช้ไม่ถูกต้อง', 'error');
+    if (!editUsername.trim()) {
+      Swal.fire('ผิดพลาด', 'ชื่อผู้ใช้ไม่ถูกต้อง', 'error');
+      return;
+    }
     
     try {
       await updateUserProfile(currentUser.id, editUsername.trim(), session.token);
       setIsEditingProfile(false);
-      alert('เปลี่ยนชื่อผู้ใช้สำเร็จ! เพื่อความปลอดภัย กรุณาเข้าสู่ระบบใหม่อีกครั้งด้วยชื่อผู้ใช้ใหม่ของคุณ');
-      handleLogout();
+      // 🚀 SweetAlert2
+      Swal.fire({
+        title: 'สำเร็จ!',
+        text: 'เปลี่ยนชื่อผู้ใช้สำเร็จ! เพื่อความปลอดภัย กรุณาเข้าสู่ระบบใหม่อีกครั้ง',
+        icon: 'success'
+      }).then(() => {
+        handleLogout();
+      });
     } catch (error) {
-      showToast('เกิดข้อผิดพลาด: ' + error.message, 'error');
+      Swal.fire('เกิดข้อผิดพลาด', error.message, 'error');
     }
   };
 
@@ -255,6 +268,14 @@ function App() {
       background: '#f0fdf4', border: '1px solid #bbf7d0',
       color: '#15803d', fontSize: '0.85rem', fontWeight: 500,
     },
+  };
+
+  // 🚀 ระบบป้องกันหน้า Manager Dashboard สำหรับพนักงาน
+  const ProtectedManagerRoute = ({ children }) => {
+    if (currentUser?.role !== 'manager') {
+      return <Navigate to="/" replace />;
+    }
+    return children;
   };
 
   if (!currentUser) {
@@ -334,7 +355,8 @@ function App() {
 
   return (
     <Router>
-      <div className="app-container" style={backgroundStyle}>
+      {/* 🚀 ดักจับการคลิกทุกจุดบนหน้าจอ ถ้าผู้ใช้กดพื้นหลัง กล่องแจ้งเตือนจะหุบเองทันที */}
+      <div className="app-container" style={backgroundStyle} onClick={() => setIsNotifExpanded(false)}>
 
         <header className="topbar print-hidden">
           <div className="topbar-left">
@@ -352,7 +374,7 @@ function App() {
             </div>
           </div>
 
-          <button className="hamburger-btn" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} style={{ position: 'relative' }}>
+          <button className="hamburger-btn" onClick={(e) => { e.stopPropagation(); setIsMobileMenuOpen(!isMobileMenuOpen); }} style={{ position: 'relative' }}>
             {isMobileMenuOpen ? '✕' : '☰'}
             {unreadCount > 0 && !isMobileMenuOpen && (
               <span style={{
@@ -364,78 +386,51 @@ function App() {
             )}
           </button>
 
-          {/* 🚀 แก้ไข Sidebar Profile ตรงนี้ให้สวยงาม พื้นหลังแยกชัดเจน และจัด Flex Box ป้องกันตกบรรทัด */}
-          <div className={`topbar-sidebar ${isMobileMenuOpen ? 'open' : ''}`} style={{
-            background: 'var(--card-bg, #ffffff)', 
-            borderRight: '1px solid var(--border-color, #e2e8f0)',
-            boxShadow: '4px 0 24px rgba(0, 0, 0, 0.08)'
-          }}>
+          <div className={`topbar-sidebar ${isMobileMenuOpen ? 'open' : ''}`}>
             
-            <div className="sidebar-profile" style={{
-              display: 'flex', alignItems: 'center', padding: '24px 20px',
-              borderBottom: '1px solid var(--border-color, #e2e8f0)',
-              gap: '12px'
-            }}>
+            <div className="sidebar-profile">
+              <div className="user-avatar">{currentUser?.username?.charAt(0)?.toUpperCase()}</div>
               
-              <div className="user-avatar" style={{
-                width: '46px', height: '46px', borderRadius: '12px', flexShrink: 0,
-                background: 'linear-gradient(135deg, #0072bb, #005a9e)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '1.3rem', fontWeight: '800', color: '#ffffff',
-                boxShadow: '0 4px 10px rgba(0, 114, 187, 0.3)'
-              }}>
-                {currentUser?.username?.charAt(0)?.toUpperCase()}
-              </div>
-
               <div className="user-details" onClick={() => { setIsSettingsOpen(true); setIsMobileMenuOpen(false); }}
-                style={{ cursor: 'pointer', flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', overflow: 'hidden' }}>
-                
-                <span className="username" style={{ 
-                  color: 'var(--text-color)', fontWeight: '800', fontSize: '1.05rem',
-                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
-                }}>
-                  {currentUser?.username}
-                </span>
-                
-                <span className="user-role" style={{
-                  display: 'flex', alignItems: 'center', gap: '4px',
-                  fontSize: '0.68rem', fontWeight: '800', padding: '4px 10px',
-                  borderRadius: '20px', width: 'fit-content',
-                  background: currentUser?.role === 'manager' ? '#fef3c7' : '#dbeafe',
-                  color: currentUser?.role === 'manager' ? '#92400e' : '#1d4ed8',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
-                }}>
-                  <span style={{ fontSize: '0.8rem', display: 'flex' }}>
-                    {roleLabel === 'Manager' ? '🏅' : '👤'}
-                  </span>
-                  <span style={{ letterSpacing: '0.5px' }}>
-                    {roleLabel === 'Manager' ? 'MANAGER' : 'EMPLOYEE'}
-                  </span>
-                </span>
+                style={{ cursor: 'pointer', flex: 1 }}>
+                <span className="username">{currentUser?.username}</span>
+                <span className="user-role">{roleLabel}</span>
               </div>
-
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
+              
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                 <div style={{ position: 'relative' }}>
-                  <button className="action-icon-btn" onClick={e => { e.stopPropagation(); setIsNotifExpanded(!isNotifExpanded); }}>
+                  <button className="action-icon-btn"
+                    onClick={e => { e.stopPropagation(); setIsNotifExpanded(!isNotifExpanded); }}>
                     <BellIcon />
                     {unreadCount > 0 && <span className="notif-badge">{unreadCount}</span>}
                   </button>
                   {isNotifExpanded && (
-                    <div className="notif-popup-dropdown" onClick={e => e.stopPropagation()}>
-                      <div className="notif-header">
-                        <h4 style={{ color: 'var(--text-color)' }}>การแจ้งเตือน</h4>
+                    <div className="notif-popup-dropdown" onClick={e => e.stopPropagation()} style={{
+                      position: 'absolute',
+                      top: 'calc(100% + 10px)',
+                      right: '0',
+                      width: '240px',
+                      zIndex: 9999,
+                      background: 'var(--card-bg, #ffffff)',
+                      border: '1px solid var(--border-color, #e2e8f0)',
+                      borderRadius: '12px',
+                      boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
+                      overflow: 'hidden'
+                    }}>
+                      <div className="notif-header" style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-color, #e2e8f0)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <h4 style={{ margin: 0, color: 'var(--text-color)', fontSize: '0.9rem' }}>การแจ้งเตือน</h4>
                         {unreadCount > 0 && (
-                          <button className="mark-read-btn" onClick={handleMarkAllAsRead}>อ่านทั้งหมด</button>
+                          <button className="mark-read-btn" onClick={handleMarkAllAsRead} style={{ background: 'none', border: 'none', color: 'var(--blue)', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>อ่านทั้งหมด</button>
                         )}
                       </div>
-                      <div className="sidebar-notif-list">
+                      <div className="sidebar-notif-list" style={{ maxHeight: '300px', overflowY: 'auto' }}>
                         {notifications.length > 0 ? notifications.map(n => (
-                          <div key={n.id} className={`sidebar-notif-item ${n.read ? '' : 'unread'}`}>
-                            <div className="notif-dot-small" style={{ opacity: n.read ? 0 : 1 }} />
+                          <div key={n.id} className={`sidebar-notif-item ${n.read ? '' : 'unread'}`} style={{ padding: '12px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', gap: '10px' }}>
+                            <div className="notif-dot-small" style={{ opacity: n.read ? 0 : 1, width: '8px', height: '8px', background: 'var(--blue)', borderRadius: '50%', marginTop: '6px', flexShrink: 0 }} />
                             <div className="notif-info">
-                              <div className="notif-title-small" style={{ color: 'var(--text-color)' }}>{n.title}</div>
-                              <div className="notif-text-small" style={{ color: 'var(--text-muted)' }}>{n.text}</div>
-                              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px' }}>{n.time}</div>
+                              <div className="notif-title-small" style={{ color: 'var(--text-color)', fontWeight: 'bold', fontSize: '0.85rem' }}>{n.title}</div>
+                              <div className="notif-text-small" style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '4px', lineHeight: '1.4' }}>{n.text}</div>
+                              <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '6px' }}>{n.time}</div>
                             </div>
                           </div>
                         )) : (
@@ -447,33 +442,56 @@ function App() {
                     </div>
                   )}
                 </div>
-                <button className="action-icon-btn" onClick={e => { e.stopPropagation(); setIsSettingsOpen(true); setIsMobileMenuOpen(false); }}>
+                <button className="action-icon-btn"
+                  onClick={e => { e.stopPropagation(); setIsSettingsOpen(true); setIsMobileMenuOpen(false); }}>
                   <SettingsIcon />
                 </button>
               </div>
             </div>
 
+            {/* 🚀 ย้าย Dashboard มาเป็นหน้าแรก และย้าย Request Form ไปที่ /request */}
             <nav className="sidebar-nav">
+              <NavLink to="/" className="nav-item" end onClick={() => setIsMobileMenuOpen(false)}>📊 Dashboard</NavLink>
               {currentUser?.role === 'manager' && (
                 <NavLink to="/manager-dashboard" className="nav-item" onClick={() => setIsMobileMenuOpen(false)}>
-                  Manager Dashboard
+                  🛡️ Manager Dashboard
                 </NavLink>
               )}
-              <NavLink to="/" className="nav-item" end onClick={() => setIsMobileMenuOpen(false)}>Request Form</NavLink>
-              <NavLink to="/projects" className="nav-item" onClick={() => setIsMobileMenuOpen(false)}>Project Portfolio</NavLink>
-              <NavLink to="/applications" className="nav-item" onClick={() => setIsMobileMenuOpen(false)}>App Portfolio</NavLink>
+              <NavLink to="/request" className="nav-item" onClick={() => setIsMobileMenuOpen(false)}>📝 Request Form</NavLink>
+              <NavLink to="/projects" className="nav-item" onClick={() => setIsMobileMenuOpen(false)}>📋 Project Portfolio</NavLink>
+              <NavLink to="/applications" className="nav-item" onClick={() => setIsMobileMenuOpen(false)}>💻 App Portfolio</NavLink>
             </nav>
 
-            <button className="logout-btn" onClick={handleLogout}><LogoutIcon /> Logout</button>
+            <button className="logout-btn" onClick={() => {
+              Swal.fire({
+                title: 'ออกจากระบบ?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: 'ยืนยัน',
+                cancelButtonText: 'ยกเลิก'
+              }).then((result) => {
+                if (result.isConfirmed) handleLogout();
+              });
+            }}>
+              <LogoutIcon /> Logout
+            </button>
           </div>
         </header>
 
-        <main className="app-main" onClick={() => setIsNotifExpanded(false)}>
+        <main className="app-main">
           <Routes>
-            <Route path="/manager-dashboard" element={<ManagerDashboard currentUser={currentUser} />} />
-            <Route path="/" element={<RequestForm currentUser={currentUser} />} />
+            <Route path="/" element={<Dashboard currentUser={currentUser} />} />
+            <Route path="/request" element={<RequestForm currentUser={currentUser} />} />
             <Route path="/projects" element={<ProjectPortfolio currentUser={currentUser} />} />
             <Route path="/applications" element={<ApplicationPortfolio currentUser={currentUser} />} />
+            {/* 🚀 ป้องกันพนักงานเข้า Manager Dashboard */}
+            <Route path="/manager-dashboard" element={
+              <ProtectedManagerRoute>
+                <ManagerDashboard currentUser={currentUser} />
+              </ProtectedManagerRoute>
+            } />
           </Routes>
         </main>
 
@@ -526,14 +544,12 @@ function App() {
                   background: 'var(--card-bg, #fff)', borderRadius: '14px',
                   padding: '18px', border: '1px solid var(--border-color, #e2e8f0)',
                 }}>
-                  {/* Section label */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
                     <span style={{ fontSize: '0.95rem' }}>👤</span>
                     <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-color)' }}>โปรไฟล์</span>
                     <div style={{ flex: 1, height: '1px', background: 'var(--border-color, #e2e8f0)' }} />
                   </div>
 
-                  {/* Avatar row */}
                   <div style={{
                     display: 'flex', alignItems: 'center', gap: '12px',
                     padding: '12px 14px', borderRadius: '12px',
@@ -563,7 +579,6 @@ function App() {
                     </div>
                   </div>
 
-                  {/* Username edit */}
                   <label style={s.label}>ชื่อผู้ใช้งาน</label>
                   {isEditingProfile ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -613,7 +628,6 @@ function App() {
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {/* Current */}
                     <div>
                       <label style={s.label}>รหัสผ่านปัจจุบัน</label>
                       <div style={s.inputRow}>
@@ -626,7 +640,6 @@ function App() {
                       </div>
                     </div>
 
-                    {/* New */}
                     <div>
                       <label style={s.label}>รหัสผ่านใหม่</label>
                       <div style={s.inputRow}>
@@ -654,7 +667,6 @@ function App() {
                       )}
                     </div>
 
-                    {/* Confirm */}
                     <div>
                       <label style={s.label}>ยืนยันรหัสผ่านใหม่</label>
                       <div style={{ ...s.inputRow, borderColor: confirmNewPwd && newPwd !== confirmNewPwd ? '#fca5a5' : 'var(--border-color, #e2e8f0)' }}>
@@ -724,13 +736,11 @@ function App() {
                   </div>
                 </div>
 
-                {/* bottom padding */}
                 <div style={{ height: '4px' }} />
               </div>
             </div>
           </div>
         )}
-        {/* ===================== END SETTINGS MODAL ===================== */}
 
         <div className={`toast-notification ${toast.visible ? 'show' : ''} ${toast.type}`}>{toast.message}</div>
       </div>

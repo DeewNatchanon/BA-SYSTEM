@@ -93,15 +93,43 @@ export const fetchProjects = async (token) => {
   return result.data || []; 
 };
 
-export const updateProjectInDb = async (projectId, projectData, token) => {
+export const updateProjectInDb = async (projectId, projectData, arg3, arg4) => {
+  // 🚀 ระบบตรวจจับอัจฉริยะ: เพื่อไม่ให้ไฟล์อื่นที่เรียกใช้ฟังก์ชันนี้พัง
+  let file = null;
+  let token = null;
+
+  if (typeof arg3 === 'string') {
+    // กรณีไม่มีการแนบไฟล์ (เช่นมาจากหน้า App Portfolio)
+    token = arg3;
+  } else {
+    // กรณีมีไฟล์แนบมาจากหน้า Project Portfolio
+    file = arg3;
+    token = arg4;
+  }
+
+  let body;
+  let headers = {
+    'Authorization': `Bearer ${token}`
+  };
+
+  // 🚀 ถ้ามีไฟล์ ให้แปลงแพ็กเกจเป็น FormData เพื่อส่งไฟล์ให้ Backend
+  if (file) {
+    const formData = new FormData();
+    formData.append('projectData', JSON.stringify(projectData));
+    formData.append('progressFile', file);
+    body = formData;
+  } else {
+    // ถ้าไม่มีไฟล์ ส่งเป็น JSON ปกติ
+    headers['Content-Type'] = 'application/json';
+    body = JSON.stringify(projectData);
+  }
+
   const response = await fetch(`http://localhost:4000/api/projects/update/${projectId}`, {
     method: 'PUT',
-    headers: { 
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}` 
-    },
-    body: JSON.stringify(projectData)
+    headers,
+    body
   });
+
   if (!response.ok) throw new Error('Failed to update project');
   return response.json();
 };

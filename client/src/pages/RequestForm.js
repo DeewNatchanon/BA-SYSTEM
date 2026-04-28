@@ -4,6 +4,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 import { pdf } from '@react-pdf/renderer';
 import RequestFormPdf from '../pdf/RequestFormPdf';
 import { submitProjectRequest } from '../api/authApi'; 
+import Swal from 'sweetalert2';
 
 function RequestForm({ currentUser }) {
   const createBlankCost = () => ({
@@ -166,13 +167,23 @@ function RequestForm({ currentUser }) {
     formData.resources.includes('โรงพยาบาลจ้าง Vendor');
 
   const handleClearForm = () => {
-    if (window.confirm('คุณต้องการล้างข้อมูลทั้งหมดใช่หรือไม่?')) {
-      localStorage.removeItem('ba-system.request-draft');
-      setFormData({
-        ...initialFormData,
-        requestDate: new Date().toISOString().split('T')[0]
-      });
-    }
+    Swal.fire({
+      title: 'ล้างข้อมูล?',
+      text: 'คุณต้องการล้างข้อมูลทั้งหมดใช่หรือไม่?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'ใช่, ล้างข้อมูล',
+      cancelButtonText: 'ยกเลิก',
+      confirmButtonColor: '#ef4444'
+    }).then((res) => {
+      if (res.isConfirmed) {
+        localStorage.removeItem('ba-system.request-draft');
+        setFormData({
+          ...initialFormData,
+          requestDate: new Date().toISOString().split('T')[0]
+        });
+      }
+    });
   };
 
   const handleFileChange = (e) => {
@@ -182,10 +193,10 @@ function RequestForm({ currentUser }) {
   };
 
   const handleFinalSubmit = async () => {
-    if (!selectedFile) return alert("กรุณาแนบไฟล์เอกสารก่อนกดยืนยัน");
+    if (!selectedFile) return Swal.fire("แจ้งเตือน", "กรุณาแนบไฟล์เอกสารก่อนกดยืนยัน", "warning");
     
     if (!currentUser || !currentUser.id) {
-      return alert("ไม่พบข้อมูลผู้ใช้งาน กรุณาเข้าสู่ระบบใหม่");
+      return Swal.fire("เกิดข้อผิดพลาด", "ไม่พบข้อมูลผู้ใช้งาน กรุณาเข้าสู่ระบบใหม่", "error");
     }
 
     setIsSubmitting(true);
@@ -194,27 +205,27 @@ function RequestForm({ currentUser }) {
       const sessionData = sessionRaw ? JSON.parse(sessionRaw) : null;
       const token = sessionData?.token; 
 
-      // 1. จัดเตรียมข้อมูล Text
-      // 1. จัดเตรียมข้อมูล Text
       const requestData = {
         name: formData.projectName || 'Untitled Project',
         site: formData.requesterSite || 'N/A',
         category: formData.projectCategory.join(', ') || 'N/A',
         description: formData.projectDetail || 'N/A',
-        status: 'Pending Approval', // 🚀 3. เพิ่มบรรทัดนี้! บังคับสถานะให้ตรงเป๊ะ
+        status: 'Pending Approval',
         requester_id: currentUser?.id,
         form_data: formData 
       };
 
-      // 2. แพ็คไฟล์ + ข้อมูล Text เข้าด้วยกัน (FormData)
       const formDataToSend = new FormData();
-      formDataToSend.append('approvedDocument', selectedFile); // แนบไฟล์
-      formDataToSend.append('requestData', JSON.stringify(requestData)); // แนบข้อมูล
+      formDataToSend.append('approvedDocument', selectedFile); 
+      formDataToSend.append('requestData', JSON.stringify(requestData)); 
 
-      // 3. ยิง API ด้วยฟังก์ชันที่รองรับการแนบไฟล์
       await submitProjectRequest(formDataToSend, token); 
 
-      alert('บันทึกข้อมูลและแนบไฟล์เข้าระบบสำเร็จ!');
+      Swal.fire({
+        title: 'สำเร็จ!',
+        text: 'บันทึกข้อมูลและแนบไฟล์เข้าระบบสำเร็จ!',
+        icon: 'success'
+      });
       handleCloseModal(); 
       
       localStorage.removeItem('ba-system.request-draft');
@@ -222,7 +233,7 @@ function RequestForm({ currentUser }) {
       
     } catch (error) {
       console.error('Submission error:', error);
-      alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' + error.message);
+      Swal.fire('เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' + error.message, 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -252,7 +263,7 @@ function RequestForm({ currentUser }) {
       setIsCombinedModalOpen(true); 
     } catch (error) {
       console.error('PDF preview failed', error);
-      alert('ไม่สามารถสร้างพรีวิว PDF ได้');
+      Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถสร้างพรีวิว PDF ได้', 'error');
     } finally {
       setIsPreviewing(false);
     }
@@ -267,11 +278,15 @@ function RequestForm({ currentUser }) {
 
   return (
     <div className="page-wrap page-request print-area">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h1 className="page-heading" style={{ margin: 0 }}>IT Project Request Form</h1>
+      </div>
+      <div className="page-rule print-hidden"></div>
+
       <form onSubmit={handleOpenCombinedModal} className="request-form">
         <div className="print-page-block">
-          <h1 className="page-heading">IT Project Request Form</h1>
           
-          <section className="form-section requester-section print-keep">
+          <section className="form-section requester-section print-keep" style={{ background: 'var(--card-bg)', borderRadius: '24px', padding: '32px', boxShadow: '0 10px 30px rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.04)', marginBottom: '24px' }}>
             <div className="print-header">
               <img src="/logo.png" alt="Greenline Synergy" className="print-logo" />
               <div className="print-header-text">
@@ -279,7 +294,9 @@ function RequestForm({ currentUser }) {
                 <div className="print-subtitle">Greenline Synergy</div>
               </div>
             </div>
-            <div className="section-title">Requester only</div>
+            <div className="section-title" style={{ fontSize: '1.2rem', color: 'var(--blue-dark)', borderBottom: '2px solid var(--border-color)', paddingBottom: '10px', marginBottom: '20px' }}>
+              Requester only
+            </div>
 
             <div className="form-row">
               <div className="form-group">
@@ -505,7 +522,7 @@ function RequestForm({ currentUser }) {
           </section>
         </div>
 
-        <section className="form-section gls-section print-break-before">
+        <section className="form-section gls-section print-break-before" style={{ background: 'var(--card-bg)', borderRadius: '24px', padding: '32px', boxShadow: '0 10px 30px rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.04)' }}>
           <div className="print-header">
             <img src="/logo.png" alt="Greenline Synergy" className="print-logo" />
             <div className="print-header-text">
@@ -513,8 +530,11 @@ function RequestForm({ currentUser }) {
               <div className="print-subtitle">Greenline Synergy</div>
             </div>
           </div>
-          <div className="section-title">GLS IT only</div>
-          <fieldset className="role-fieldset">
+          <div className="section-title" style={{ fontSize: '1.2rem', color: 'var(--blue-dark)', borderBottom: '2px solid var(--border-color)', paddingBottom: '10px', marginBottom: '20px' }}>
+            GLS IT only
+          </div>
+
+          <fieldset className="role-fieldset" style={{ border: 'none', padding: 0, margin: 0 }}>
             <div className="form-row">
               <div className="form-group full-width">
                 <label>Project Category: <span className="note-label">(หมวดหมู่โปรเจ็ค)</span></label>
@@ -649,7 +669,7 @@ function RequestForm({ currentUser }) {
               </div>
             </div>
 
-            <h4>Timeline</h4>
+            <h4 style={{ margin: '20px 0 10px', color: 'var(--text-color)' }}>Timeline</h4>
             <div className="form-row">
               <div className="form-group">
                 <label>Start Date: <span className="note-label">(วันเริ่มโครงการ)</span></label>
@@ -676,10 +696,10 @@ function RequestForm({ currentUser }) {
             <div className="form-row">
               <div className="form-group full-width">
                 <label>Project Cost: <span className="note-label">(ต้นทุนของโปรเจ็ค)</span></label>
-                <div className="cost-table-wrapper">
-                  <table className="cost-table">
+                <div className="cost-table-wrapper" style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+                  <table className="cost-table" style={{ margin: 0 }}>
                     <thead>
-                      <tr>
+                      <tr style={{ background: 'var(--bg-color)' }}>
                         <th>ลำดับที่</th>
                         <th>รายการค่าใช้จ่าย</th>
                         <th>QTY</th>
@@ -698,6 +718,7 @@ function RequestForm({ currentUser }) {
                               placeholder="รายการค่าใช้จ่าย"
                               value={row.item}
                               onChange={(e) => handleProjectCostChange(index, 'item', e.target.value)}
+                              style={{ border: '1px solid var(--border-color)', borderRadius: '6px', padding: '6px' }}
                             />
                           </td>
                           <td>
@@ -706,6 +727,7 @@ function RequestForm({ currentUser }) {
                               placeholder="QTY"
                               value={row.qty}
                               onChange={(e) => handleProjectCostChange(index, 'qty', e.target.value)}
+                              style={{ border: '1px solid var(--border-color)', borderRadius: '6px', padding: '6px' }}
                             />
                           </td>
                           <td>
@@ -714,6 +736,7 @@ function RequestForm({ currentUser }) {
                               placeholder="ค่าใช้จ่าย(บาท)"
                               value={row.cost}
                               onChange={(e) => handleProjectCostChange(index, 'cost', e.target.value)}
+                              style={{ border: '1px solid var(--border-color)', borderRadius: '6px', padding: '6px' }}
                             />
                           </td>
                           <td>
@@ -730,6 +753,7 @@ function RequestForm({ currentUser }) {
                               type="button"
                               className="btn btn-tertiary print-hidden"
                               onClick={() => handleRemoveProjectCost(index)}
+                              style={{ padding: '6px 12px', color: '#ef4444' }}
                             >
                               ลบ
                             </button>
@@ -739,7 +763,7 @@ function RequestForm({ currentUser }) {
                     </tbody>
                   </table>
                 </div>
-                <button type="button" className="btn btn-secondary print-hidden" onClick={handleAddProjectCost}>Add Row</button>
+                <button type="button" className="btn btn-secondary print-hidden" onClick={handleAddProjectCost} style={{ marginTop: '10px' }}>Add Row</button>
               </div>
             </div>
 
@@ -792,11 +816,14 @@ function RequestForm({ currentUser }) {
           </fieldset>
         </section>
 
-        <div className="form-row button-row" style={{ marginTop: '30px', gap: '10px' }}>
-          <button type="submit" className="btn btn-primary" style={{ width: 'auto' }} disabled={isPreviewing}>
+        {/* 🚀 ปุ่มกดยืนยัน (แก้ไขพื้นหลังโปร่งใส ชิดขวาสวยงาม) */}
+        <div className="form-row button-row print-hidden" style={{ marginTop: '30px', gap: '16px', display: 'flex', justifyContent: 'flex-end' }}>
+          <button type="button" className="btn btn-tertiary" onClick={handleClearForm} style={{ padding: '12px 24px', borderRadius: '12px', background: '#ffffff', border: '1px solid #cbd5e1', color: '#475569', fontWeight: 'bold', cursor: 'pointer' }}>
+            ล้างข้อมูล (Clear)
+          </button>
+          <button type="submit" className="btn btn-primary" style={{ width: 'auto', padding: '12px 32px', borderRadius: '12px', fontSize: '1.05rem', fontWeight: 700, cursor: 'pointer' }} disabled={isPreviewing}>
             {isPreviewing ? 'กำลังประมวลผล...' : 'พรีวิวและแนบเอกสาร (Preview & Submit)'}
           </button>
-          <button type="button" className="btn btn-tertiary" onClick={handleClearForm}>Clear</button>
         </div>
       </form>
 
@@ -806,43 +833,49 @@ function RequestForm({ currentUser }) {
       {isCombinedModalOpen && (
         <div className="pdf-preview-overlay" style={{zIndex: 9999}}>
           <div className="pdf-preview-card" style={{ 
-            width: '90%', maxWidth: '1000px', height: '85vh', padding: '24px', 
-            display: 'flex', flexDirection: 'column' 
+            width: '95%', maxWidth: '1100px', height: '90vh', padding: 0, 
+            display: 'flex', flexDirection: 'column', borderRadius: '24px', overflow: 'hidden', background: 'var(--card-bg)'
           }}>
             {/* ส่วนหัว Modal */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, color: 'var(--blue-dark)', fontSize: '1.4rem' }}>ตรวจสอบและแนบเอกสารอนุมัติ</h3>
-              <button type="button" className="btn btn-tertiary" onClick={handleCloseModal} style={{ fontSize: '1.2rem', padding: '5px 10px' }}>✕</button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px 30px', background: 'var(--card-bg)', borderBottom: '1px solid var(--border-color)' }}>
+              <h3 style={{ margin: 0, color: 'var(--text-color)', fontSize: '1.4rem' }}>📝 ตรวจสอบและแนบเอกสารอนุมัติ</h3>
+              <button type="button" className="btn btn-tertiary" onClick={handleCloseModal} style={{ fontSize: '1.2rem', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '12px', background: 'var(--bg-color)', border: 'none' }}>✕</button>
             </div>
 
             {/* ส่วนเนื้อหา 2 ฝั่ง */}
-            <div style={{ display: 'flex', gap: '20px', flex: 1, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', gap: '24px', flex: 1, overflow: 'hidden', padding: '30px', background: 'var(--bg-secondary, #f8fafc)' }}>
               
               {/* ฝั่งซ้าย: ดูตัวอย่าง PDF */}
-              <div style={{ flex: 1.5, border: '1px solid #ddd', borderRadius: '8px', overflow: 'hidden', background: '#f5f5f5' }}>
+              <div style={{ flex: 1.5, border: '1px solid var(--border-color)', borderRadius: '16px', overflow: 'hidden', background: 'var(--card-bg)', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
                 {previewUrl ? (
                   <iframe title="PDF Preview" src={previewUrl} style={{width: '100%', height: '100%', border: 'none'}} />
                 ) : (
-                  <div style={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%'}}>กำลังโหลดเอกสาร...</div>
+                  <div style={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: 'var(--text-muted)'}}>กำลังโหลดเอกสาร...</div>
                 )}
               </div>
 
               {/* ฝั่งขวา: เครื่องมือ (Print -> Upload) */}
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto' }}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto' }}>
                 
-                <div style={{ background: 'var(--surface-2)', padding: '20px', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                  <h4 style={{ margin: '0 0 10px 0', color: 'var(--blue-dark)' }}>ขั้นตอนที่ 1: พิมพ์เอกสาร</h4>
-                  <p style={{ fontSize: '0.9rem', color: 'var(--muted)', marginBottom: '15px' }}>
+                <div style={{ background: 'var(--card-bg)', padding: '24px', borderRadius: '16px', border: '1px solid var(--border-color)', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
+                  <h4 style={{ margin: '0 0 10px 0', color: 'var(--text-color)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{background: 'var(--blue)', color: '#fff', width: '24px', height: '24px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem'}}>1</span>
+                    พิมพ์เอกสาร
+                  </h4>
+                  <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '16px' }}>
                     ดาวน์โหลดหรือพิมพ์เอกสารนี้ เพื่อนำไปให้ผู้มีอำนาจเซ็นอนุมัติตามลำดับขั้น
                   </p>
-                  <button type="button" className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center' }} onClick={handleDownloadPreview}>
+                  <button type="button" className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center', padding: '12px', borderRadius: '10px', background: 'var(--bg-color)', border: '1px solid var(--blue)', color: 'var(--blue)', fontWeight: 600 }} onClick={handleDownloadPreview}>
                     📥 ดาวน์โหลด / พิมพ์ PDF
                   </button>
                 </div>
 
-                <div style={{ background: 'var(--surface-2)', padding: '20px', borderRadius: '8px', border: '1px solid var(--border)', flex: 1 }}>
-                  <h4 style={{ margin: '0 0 10px 0', color: 'var(--blue-dark)' }}>ขั้นตอนที่ 2: อัปโหลดและส่งเข้าระบบ</h4>
-                  <p style={{ fontSize: '0.9rem', color: 'var(--muted)', marginBottom: '15px' }}>
+                <div style={{ background: 'var(--card-bg)', padding: '24px', borderRadius: '16px', border: '1px solid var(--border-color)', flex: 1, boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
+                  <h4 style={{ margin: '0 0 10px 0', color: 'var(--text-color)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{background: '#10b981', color: '#fff', width: '24px', height: '24px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem'}}>2</span>
+                    อัปโหลดและส่งเข้าระบบ
+                  </h4>
+                  <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '16px' }}>
                     เมื่อได้รับการเซ็นอนุมัติเรียบร้อยแล้ว ให้อัปโหลดไฟล์เอกสาร (PDF หรือรูปภาพ) ที่นี่
                   </p>
                   
@@ -851,14 +884,14 @@ function RequestForm({ currentUser }) {
                     accept=".pdf,image/*" 
                     onChange={handleFileChange} 
                     style={{ 
-                      width: '100%', padding: '12px', border: '2px dashed var(--blue)', 
-                      borderRadius: '8px', background: '#fff', cursor: 'pointer'
+                      width: '100%', padding: '14px', border: '2px dashed var(--blue)', 
+                      borderRadius: '12px', background: 'rgba(14, 165, 233, 0.05)', cursor: 'pointer', color: 'var(--text-color)'
                     }} 
                   />
                   
                   {selectedFile && (
-                    <div style={{ marginTop: '15px', padding: '10px', background: '#e8f5e9', borderRadius: '6px', border: '1px solid #c8e6c9' }}>
-                      <p style={{ color: '#2e7d32', fontSize: '0.85rem', fontWeight: 600, margin: 0 }}>
+                    <div style={{ marginTop: '16px', padding: '12px 16px', background: '#d1fae5', borderRadius: '10px', border: '1px solid #a7f3d0' }}>
+                      <p style={{ color: '#047857', fontSize: '0.9rem', fontWeight: 600, margin: 0 }}>
                         ✅ เลือกไฟล์แล้ว: {selectedFile.name}
                       </p>
                     </div>
@@ -869,12 +902,12 @@ function RequestForm({ currentUser }) {
             </div>
 
             {/* ส่วนท้าย Modal (ปุ่มยืนยัน) */}
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #eee' }}>
-              <button type="button" className="btn btn-tertiary" onClick={handleCloseModal} disabled={isSubmitting}>
+            <div style={{ display: 'flex', gap: '16px', justifyContent: 'flex-end', padding: '20px 30px', borderTop: '1px solid var(--border-color)', background: 'var(--card-bg)' }}>
+              <button type="button" className="btn btn-tertiary" onClick={handleCloseModal} disabled={isSubmitting} style={{ padding: '12px 24px', borderRadius: '10px', background: 'var(--bg-color)' }}>
                 ยกเลิก (Cancel)
               </button>
-              <button type="button" className="btn btn-primary" onClick={handleFinalSubmit} disabled={isSubmitting || !selectedFile}>
-                {isSubmitting ? 'กำลังส่งข้อมูล...' : 'ยืนยันและบันทึก (Submit)'}
+              <button type="button" className="btn btn-primary" onClick={handleFinalSubmit} disabled={isSubmitting || !selectedFile} style={{ padding: '12px 32px', borderRadius: '10px', fontWeight: 700 }}>
+                {isSubmitting ? 'กำลังส่งข้อมูล...' : '📤 ยืนยันและส่งคำขอ (Submit)'}
               </button>
             </div>
           </div>
