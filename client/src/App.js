@@ -43,12 +43,14 @@ const LogoutIcon = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
 );
 const SettingsIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+    <circle cx="12" cy="12" r="3"/>
+  </svg>
 );
 const BellIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
 );
-// นำ EyeIcon ออกเนื่องจากไม่มีฟิลด์รหัสผ่านแล้ว
 
 const ProtectedManagerRoute = ({ role, children }) => {
   if (role !== "manager" && role !== "ceo") return <Navigate to="/" replace />;
@@ -163,6 +165,7 @@ function App() {
       if (!currentUser || !session?.token) return;
       try {
         let newNotifs = [];
+        
         if (currentUser.role === "manager" || currentUser.role === "ceo") {
           const pending = await fetchPendingRequests(session.token);
           if (pending?.length > 0) {
@@ -172,18 +175,18 @@ function App() {
                 title: "🔔 รอการอนุมัติ",
                 text: `โปรเจกต์ ${req.name} (${req.id}) รอให้คุณตรวจสอบ`,
                 time: formatNotificationTime(req.created_at),
+                rawDate: new Date(req.created_at.endsWith("Z") ? req.created_at : `${req.created_at}Z`), // 🚀 เก็บเวลาจริงไว้เรียง
                 read: false,
                 linkPath: "/manager-dashboard",
               }),
             );
           }
         }
+        
         const allProjects = await fetchProjects(session.token);
         if (allProjects?.length > 0) {
           allProjects
             .filter((p) => p.updated_at && p.status !== "Pending Approval")
-            .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
-            .slice(0, 5)
             .forEach((p) => {
               if (
                 currentUser.role === "manager" ||
@@ -197,16 +200,22 @@ function App() {
                   title: "📝 มีการอัปเดต",
                   text: `[${p.id}] ความคืบหน้า ${progress}%`,
                   time: formatNotificationTime(p.updated_at),
+                  rawDate: new Date(p.updated_at.endsWith("Z") ? p.updated_at : `${p.updated_at}Z`), // 🚀 เก็บเวลาจริงไว้เรียง
                   read: false,
                   linkPath: "/projects",
                 });
               }
             });
         }
-        const readIds =
-          JSON.parse(
-            localStorage.getItem(`readNotifs_${currentUser.username}`),
-          ) || [];
+
+        // 🚀 จับการแจ้งเตือนทั้งหมดมาเรียงลำดับเวลา (ใหม่สุดอยู่บนสุด) 🚀
+        newNotifs.sort((a, b) => b.rawDate - a.rawDate);
+        
+        // กรองเอาเฉพาะ 15 รายการล่าสุด เพื่อไม่ให้รกจนเกินไป (ไม่บังคับ แต่แนะนำครับ)
+        newNotifs = newNotifs.slice(0, 15);
+
+        const readIds = JSON.parse(localStorage.getItem(`readNotifs_${currentUser.username}`)) || [];
+        
         setNotifications(
           newNotifs.map((n) => ({ ...n, read: readIds.includes(n.id) })),
         );
@@ -273,17 +282,6 @@ function App() {
 
   const closeSettings = () => {
     setIsSettingsOpen(false);
-  };
-
-  // UI Helper variables for login page
-  const eyeBtnStyle = {
-    background: "none",
-    border: "none",
-    padding: "0 14px",
-    cursor: "pointer",
-    color: "var(--text-muted)",
-    display: "flex",
-    alignItems: "center",
   };
 
   if (!currentUser)
@@ -418,6 +416,7 @@ function App() {
               <div style={{ position: "relative" }}>
                 <button
                   className="action-icon-btn"
+                  style={{ flexShrink: 0 }}
                   onClick={(e) => {
                     e.stopPropagation();
                     setIsNotifExpanded(!isNotifExpanded);
@@ -573,6 +572,7 @@ function App() {
               </div>
               <button
                 className="action-icon-btn"
+                style={{ flexShrink: 0 }}
                 onClick={(e) => {
                   e.stopPropagation();
                   setIsSettingsOpen(true);
@@ -596,7 +596,6 @@ function App() {
                   {currentUser?.role === "manager" ? "Manager" : currentUser?.role === "ceo" ? "Executive" : "Employee"}
                 </span>
               </div>
-              {/* 🚀 รูปโปรไฟล์แบบตัวอักษร 🚀 */}
               <div className="user-avatar" style={{ background: "linear-gradient(135deg, var(--blue), var(--blue-dark))" }}>
                 {currentUser?.username ? currentUser.username.charAt(0).toUpperCase() : "U"}
               </div>
@@ -725,7 +724,6 @@ function App() {
           </Routes>
         </main>
 
-        {/* 🚀 หน้าต่างการตั้งค่า (Settings Modal) อ่านอย่างเดียว + ธีม 🚀 */}
         {isSettingsOpen && (
           <div className="pdf-preview-overlay" onClick={closeSettings}>
             <div
@@ -814,7 +812,6 @@ function App() {
                   background: "var(--bg-color)",
                 }}
               >
-                {/* --- 👤 ส่วน Profile แบบดูได้อย่างเดียว --- */}
                 <div
                   style={{
                     background: "var(--card-bg)",
@@ -906,7 +903,6 @@ function App() {
                   </div>
                 </div>
 
-                {/* --- 🔒 ส่วน Security & Authentication แบบแจ้งเตือนส่วนกลาง --- */}
                 <div
                   style={{
                     background: "var(--card-bg)",
@@ -945,7 +941,6 @@ function App() {
                   </div>
                 </div>
 
-                {/* --- 🎨 ส่วน Preferences (Theme) ยังคงใช้งานได้ปกติ --- */}
                 <div
                   style={{
                     background: "var(--card-bg)",
