@@ -3,6 +3,7 @@ import DatePicker from'react-datepicker';
 import'react-datepicker/dist/react-datepicker.css';
 import{fetchPendingRequests,approveProjectRequest,updateProjectInDb}from'../api/authApi';
 import Swal from'sweetalert2';
+
 // inline filter helper (page-scoped)
 function getNested(obj, path){
   if(!path) return undefined;
@@ -63,6 +64,12 @@ function ManagerDashboard({currentUser}){
 
   const [searchQuery,setSearchQuery]=useState('');
   const [filterCategory,setFilterCategory]=useState('All');
+  const [sortBy,setSortBy]=useState('name');
+  const [sortOrder,setSortOrder]=useState('asc');
+  const [filterSite,setFilterSite]=useState('All');
+  const [filterStatus,setFilterStatus]=useState('All');
+  const [filterPhase,setFilterPhase]=useState('All');
+  const [showFilters,setShowFilters]=useState(false);
 
   useEffect(()=>{loadRequests();},[]);
 
@@ -113,8 +120,6 @@ function ManagerDashboard({currentUser}){
             const finalData={manager_id:currentUser?.id,assignee:approvalData.assignee,phase:approvalData.phase,startDate:approvalData.startDate,endDate:approvalData.endDate,manDay:approvalData.manDay,remark:approvalData.remark,status:'Initiate',form_data:selectedRequest.form_data};
             await approveProjectRequest(selectedRequest.id,finalData,token);
           }else{
-            
-            // 🚀 FIX: ให้คำนวณและปรับเปอร์เซ็นต์หลอดความคืบหน้า "เฉพาะตอนที่อนุมัติแล้วเท่านั้น"
             const newStatus = selectedRequest.form_data.tracking.pendingStatus;
             const newPhase = selectedRequest.form_data.tracking.pendingPhase;
             
@@ -134,7 +139,7 @@ function ManagerDashboard({currentUser}){
                     approval_remark: approvalData.remark,
                     tracking:{
                         ...selectedRequest.form_data.tracking,
-                        completionPercent: approvedPercent, // อัปเดต % เข้าไปตรงนี้
+                        completionPercent: approvedPercent, 
                         isPendingApproval: false,
                         pendingStatus: null,
                         pendingPhase: null
@@ -160,7 +165,6 @@ function ManagerDashboard({currentUser}){
             const finalData={...selectedRequest,status:'Rejected',form_data:{...selectedRequest.form_data,approval_remark:approvalData.remark}};
             await updateProjectInDb(selectedRequest.id,finalData,null,token);
           }else{
-            // 🚀 FIX: คำนวณเปอร์เซ็นต์ย้อนกลับตาม Phase เดิม
             let revertedPercent=0;
             if(selectedRequest.status==='Go-live'||selectedRequest.phase==='Go-live')revertedPercent=100;
             else if(selectedRequest.phase==='Requirement')revertedPercent=25;
@@ -182,47 +186,203 @@ function ManagerDashboard({currentUser}){
   const statusRequests=pendingRequests.filter(r=>r.status!=='Pending Approval'&&r.form_data?.tracking?.isPendingApproval);
   const displayData=activeTab==='new'?newRequests:statusRequests;
 
+  const uniqueCategories = useMemo(() => {
+    const cats = [...new Set(newRequests.map(r => r.category).filter(Boolean))];
+    return cats.sort((a,b) => a.localeCompare(b, 'th'));
+  }, [newRequests]);
+
+  const uniqueSites = useMemo(() => {
+    const sites = [...new Set(displayData.map(r => r.site).filter(Boolean))];
+    return sites.sort((a,b) => a.localeCompare(b, 'th'));
+  }, [displayData]);
+
+  const uniqueStatuses = useMemo(() => {
+    const statuses = [...new Set(statusRequests.map(r => r.form_data?.tracking?.pendingStatus).filter(Boolean))];
+    return statuses.sort((a,b) => a.localeCompare(b, 'th'));
+  }, [statusRequests]);
+
+  const uniquePhases = useMemo(() => {
+    const phases = [...new Set(statusRequests.map(r => r.form_data?.tracking?.pendingPhase).filter(Boolean))];
+    return phases.sort((a,b) => a.localeCompare(b, 'th'));
+  }, [statusRequests]);
+
+  const sortData = (data) => {
+    if (!sortBy) return data;
+    return [...data].sort((a, b) => {
+      let aVal = a[sortBy] || '';
+      let bVal = b[sortBy] || '';
+      if (sortBy === 'name') {
+        aVal = a.name || '';
+        bVal = b.name || '';
+      }
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
+        const cmp = aVal.localeCompare(bVal, ['th', 'en']);
+        return sortOrder === 'asc' ? cmp : -cmp;
+      }
+      return sortOrder === 'asc' ? (aVal > bVal ? 1 : -1) : (aVal > bVal ? -1 : 1);
+    });
+  };
+
   const displayedRequests = useMemo(()=>{
-    return filterRows(displayData,{
+    let filtered = filterRows(displayData,{
       searchQuery: searchQuery,
-      filters: { category: filterCategory },
+      filters: { 
+        category: activeTab === 'new' && filterCategory !== 'All' ? filterCategory : null,
+        site: filterSite !== 'All' ? filterSite : null
+      },
       searchableFields: ['id','name','form_data.tracking.glsManager','form_data.assigned_to']
     });
-  },[displayData,searchQuery,filterCategory]);
+
+    if (activeTab === 'status') {
+      if (filterStatus !== 'All') {
+        filtered = filtered.filter(r => r.form_data?.tracking?.pendingStatus === filterStatus);
+      }
+      if (filterPhase !== 'All') {
+        filtered = filtered.filter(r => r.form_data?.tracking?.pendingPhase === filterPhase);
+      }
+    }
+
+    return sortData(filtered);
+  },[displayData,searchQuery,filterCategory,filterSite,filterStatus,filterPhase,sortBy,sortOrder,activeTab]);
+
+  const hasActiveFilter = filterCategory !== 'All' || filterSite !== 'All' || filterStatus !== 'All' || filterPhase !== 'All';
 
   return(
     <div className="page-wrap page-project">
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'20px'}}><h1 className="page-heading" style={{margin:0}}>{isCEO ? 'Executive Dashboard (รายการรอพิจารณา)' : 'Manager Dashboard (รออนุมัติ)'}</h1></div>
-      <div className="page-rule"/>
-      <div style={{display:'flex',gap:'15px',marginBottom:'20px'}}>
-        <button onClick={()=>setActiveTab('new')} style={{padding:'12px 24px',borderRadius:'12px',border:'none',background:activeTab==='new'?'var(--blue)':'var(--card-bg)',color:activeTab==='new'?'#fff':'var(--text-muted)',fontWeight:700,cursor:'pointer',boxShadow:'0 4px 10px rgba(0,0,0,0.05)',transition:'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'}}>🆕 คำขอโปรเจกต์ใหม่ ({newRequests.length})</button>
-        <button onClick={()=>setActiveTab('status')} style={{padding:'12px 24px',borderRadius:'12px',border:'none',background:activeTab==='status'?'var(--blue)':'var(--card-bg)',color:activeTab==='status'?'#fff':'var(--text-muted)',fontWeight:700,cursor:'pointer',boxShadow:'0 4px 10px rgba(0,0,0,0.05)',transition:'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'}}>🔄 คำขอเปลี่ยนสถานะ ({statusRequests.length})</button>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'20px'}}>
+        <h1 className="page-heading" style={{margin:0}}>{isCEO ? 'Executive Dashboard (รายการรอพิจารณา)' : 'Manager Dashboard (รออนุมัติ)'}</h1>
       </div>
-      <section className="content-card">
-        <div style={{display:'flex',flexWrap:'wrap',gap:'12px',alignItems:'center',marginBottom:'12px'}}>
-          <div style={{flex:'1 1 260px',display:'flex',alignItems:'center',background:'var(--card-bg)',borderRadius:'8px',padding:'0 12px',border:'1px solid var(--border-color)'}}>
-            <span style={{color:'var(--text-muted)'}}>🔎</span>
-            <input value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} placeholder="ค้นหา ID, ชื่อโครงการ หรือผู้รับผิดชอบ..." style={{width:'100%',border:'none',background:'transparent',padding:'10px',outline:'none',color:'var(--text-color)'}}/>
+      <div className="page-rule"/>
+      
+      <section className="content-card" style={{ padding: '24px', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' }}>
+        
+        {/* 🚀 Minimal Top-Right Toolbar (Tabs + Filters) 🚀 */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '16px', position: 'relative', zIndex: 20, flexWrap: 'wrap', gap: '12px' }}>
+          
+          {/* Left: Minimal Tabs */}
+          <div style={{ display: 'flex', gap: '6px', background: 'var(--bg-color)', padding: '4px', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+            <button 
+              onClick={()=>{setActiveTab('new'); setShowFilters(false);}} 
+              style={{ padding:'6px 14px', borderRadius:'8px', border:'none', background: activeTab==='new' ? 'var(--card-bg)' : 'transparent', color: activeTab==='new' ? 'var(--blue)' : 'var(--text-muted)', fontWeight: activeTab==='new' ? 700 : 600, cursor: 'pointer', transition: 'all 0.2s', boxShadow: activeTab==='new' ? '0 1px 3px rgba(0,0,0,0.05)' : 'none', fontSize: '0.85rem' }}>
+              🆕 คำขอใหม่ ({newRequests.length})
+            </button>
+            <button 
+              onClick={()=>{setActiveTab('status'); setShowFilters(false);}} 
+              style={{ padding:'6px 14px', borderRadius:'8px', border:'none', background: activeTab==='status' ? 'var(--card-bg)' : 'transparent', color: activeTab==='status' ? 'var(--blue)' : 'var(--text-muted)', fontWeight: activeTab==='status' ? 700 : 600, cursor: 'pointer', transition: 'all 0.2s', boxShadow: activeTab==='status' ? '0 1px 3px rgba(0,0,0,0.05)' : 'none', fontSize: '0.85rem' }}>
+              🔄 เปลี่ยนสถานะ ({statusRequests.length})
+            </button>
           </div>
-          <select value={filterCategory} onChange={e=>setFilterCategory(e.target.value)} style={{padding:'10px 12px',borderRadius:'8px',border:'1px solid var(--border-color)',background:'var(--card-bg)',color:'var(--text-color)'}}>
-            <option value="All">หมวดหมู่: ทุกค่า</option>
-            <option value="Support Application">Support Application</option>
-            <option value="New System">New System</option>
-          </select>
-          <button onClick={()=>{setSearchQuery('');setFilterCategory('All');}} className="btn btn-tertiary" style={{padding:'8px 12px'}}>รีเซ็ต</button>
-          <div style={{marginLeft:'auto',color:'var(--text-muted)',fontWeight:700}}>{displayedRequests.length} / {displayData.length} ผลลัพธ์</div>
+
+          {/* Right: Minimal Search & Filter Button */}
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {/* 🚀 แก้ไขกล่องค้นหาให้ใช้ textIndent หลบไอคอน แทนการใช้ padding ที่โดน !important ทับ 🚀 */}
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <span style={{ position: 'absolute', left: '12px', fontSize: '0.95rem', color: '#94a3b8', zIndex: 2, pointerEvents: 'none' }}>🔍</span>
+              <input 
+                value={searchQuery} 
+                onChange={e=>setSearchQuery(e.target.value)} 
+                placeholder="ค้นหา..." 
+                style={{ 
+                  borderRadius:'20px', 
+                  border:'1px solid var(--border-color)', 
+                  background:'var(--input-bg)', 
+                  color:'var(--text-color)', 
+                  fontSize:'0.85rem', 
+                  width:'130px', 
+                  outline:'none', 
+                  transition:'all 0.3s ease', 
+                  margin: 0,
+                  textIndent: '24px' /* 🎯 ใช้ตัวนี้ดันข้อความให้หลบไอคอนแว่นขยาย */
+                }} 
+                onFocus={(e) => { e.target.style.width = '200px'; e.target.style.borderColor = 'var(--blue)'; }} 
+                onBlur={(e) => { e.target.style.width = '130px'; e.target.style.borderColor = 'var(--border-color)'; }} 
+              />
+            </div>
+            
+            <button 
+              onClick={() => setShowFilters(!showFilters)} 
+              style={{ padding:'6px 14px', borderRadius:'20px', border: showFilters || hasActiveFilter ? '1px solid var(--blue)' : '1px solid var(--border-color)', background: showFilters || hasActiveFilter ? 'rgba(2, 132, 199, 0.05)' : 'var(--card-bg)', color: showFilters || hasActiveFilter ? 'var(--blue)' : 'var(--text-muted)', fontSize:'0.85rem', fontWeight: 600, cursor:'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s', height: '100%' }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+              Filter
+              {hasActiveFilter && <span style={{ width: '6px', height: '6px', background: '#ef4444', borderRadius: '50%', display: 'inline-block' }}></span>}
+            </button>
+          </div>
+
+          {/* Floating Popover Menu (ซ่อน dropdowns ไว้ในนี้) */}
+          {showFilters && (
+            <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '8px', background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '16px', width: '260px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column', gap: '12px', zIndex: 100 }}>
+               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '4px' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-color)' }}>ตั้งค่าตัวกรอง</span>
+                  {hasActiveFilter && (
+                    <span onClick={()=>{setFilterCategory('All');setFilterSite('All');setFilterStatus('All');setFilterPhase('All');}} style={{ fontSize: '0.75rem', color: '#ef4444', cursor: 'pointer', fontWeight: 600, background: '#fef2f2', padding: '2px 6px', borderRadius: '4px' }}>ล้างทั้งหมด</span>
+                  )}
+               </div>
+               
+               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                 <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>จัดเรียงข้อมูล (Sort)</label>
+                 <div style={{ display: 'flex', gap: '8px' }}>
+                   <select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{ flex: 1, padding:'6px 10px', borderRadius:'6px', border:'1px solid var(--border-color)', fontSize:'0.8rem', background: 'var(--input-bg)', color: 'var(--text-color)', margin: 0, outline: 'none' }}>
+                     <option value="name">ชื่อ (Name)</option>
+                     <option value="id">รหัส (ID)</option>
+                     {activeTab === 'new' && <option value="category">ประเภท</option>}
+                   </select>
+                   <button onClick={()=>setSortOrder(sortOrder==='asc'?'desc':'asc')} style={{ padding:'6px', borderRadius:'6px', border:'1px solid var(--border-color)', background:'var(--input-bg)', cursor:'pointer', width: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                     {sortOrder==='asc'?'⬆️':'⬇️'}
+                   </button>
+                 </div>
+               </div>
+
+               {activeTab === 'new' && (
+                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                   <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>ประเภท (Category)</label>
+                   <select value={filterCategory} onChange={e=>setFilterCategory(e.target.value)} style={{ padding:'6px 10px', borderRadius:'6px', border:'1px solid var(--border-color)', fontSize:'0.8rem', background: 'var(--input-bg)', color: 'var(--text-color)', margin: 0, outline: 'none' }}>
+                     <option value="All">ทั้งหมด</option>
+                     {uniqueCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                   </select>
+                 </div>
+               )}
+
+               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                 <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>ไซต์ (Site)</label>
+                 <select value={filterSite} onChange={e=>setFilterSite(e.target.value)} style={{ padding:'6px 10px', borderRadius:'6px', border:'1px solid var(--border-color)', fontSize:'0.8rem', background: 'var(--input-bg)', color: 'var(--text-color)', margin: 0, outline: 'none' }}>
+                   <option value="All">ทั้งหมด</option>
+                   {uniqueSites.map(site => <option key={site} value={site}>{site}</option>)}
+                 </select>
+               </div>
+
+               {activeTab === 'status' && (
+                 <>
+                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                     <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>สถานะ (Status)</label>
+                     <select value={filterStatus} onChange={e=>setFilterStatus(e.target.value)} style={{ padding:'6px 10px', borderRadius:'6px', border:'1px solid var(--border-color)', fontSize:'0.8rem', background: 'var(--input-bg)', color: 'var(--text-color)', margin: 0, outline: 'none' }}>
+                       <option value="All">ทั้งหมด</option>
+                       {uniqueStatuses.map(status => <option key={status} value={status}>{status}</option>)}
+                     </select>
+                   </div>
+                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                     <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>ขั้นตอน (Phase)</label>
+                     <select value={filterPhase} onChange={e=>setFilterPhase(e.target.value)} style={{ padding:'6px 10px', borderRadius:'6px', border:'1px solid var(--border-color)', fontSize:'0.8rem', background: 'var(--input-bg)', color: 'var(--text-color)', margin: 0, outline: 'none' }}>
+                       <option value="All">ทั้งหมด</option>
+                       {uniquePhases.map(phase => <option key={phase} value={phase}>{phase}</option>)}
+                     </select>
+                   </div>
+                 </>
+               )}
+            </div>
+          )}
         </div>
 
-        <div className="table-wrap">
+        <div className="table-wrap" style={{ zIndex: 1, position: 'relative' }}>
           {isLoading?<div style={{padding:'40px',textAlign:'center',color:'var(--text-muted)'}}>กำลังโหลดข้อมูลคำขอ...</div>:displayData.length===0?<div style={{padding:'60px',textAlign:'center',color:'var(--text-muted)'}}><div style={{fontSize:'3rem',marginBottom:'10px'}}>🎉</div><div>ไม่มีคำขอในหมวดหมู่นี้ที่ต้องรอการพิจารณา</div></div>:(
-            <table className="portfolio-table project-portfolio-table">
-              <thead><tr><th style={{background:'var(--bg-color)',color:'var(--text-color)'}}>Project ID</th><th style={{background:'var(--bg-color)',color:'var(--text-color)'}}>Project Name</th>{activeTab==='new'?<><th style={{background:'var(--bg-color)',color:'var(--text-color)'}}>Category</th><th style={{background:'var(--bg-color)',color:'var(--text-color)'}}>Site</th></>:<><th style={{background:'var(--bg-color)',color:'var(--text-color)'}}>ขอเปลี่ยนเป็นสถานะ</th><th style={{background:'var(--bg-color)',color:'var(--text-color)'}}>ขอเปลี่ยนขั้นตอน (Phase)</th></>}<th style={{textAlign:'center',background:'var(--bg-color)',color:'var(--text-color)'}}>Action</th></tr></thead>
+            <table className="portfolio-table project-portfolio-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead><tr><th style={{background:'var(--bg-color)',color:'var(--text-color)', padding: '14px', borderBottom: '2px solid var(--border-color)'}}>Project ID</th><th style={{background:'var(--bg-color)',color:'var(--text-color)', padding: '14px', borderBottom: '2px solid var(--border-color)'}}>Project Name</th>{activeTab==='new'?<><th style={{background:'var(--bg-color)',color:'var(--text-color)', padding: '14px', borderBottom: '2px solid var(--border-color)'}}>Category</th><th style={{background:'var(--bg-color)',color:'var(--text-color)', padding: '14px', borderBottom: '2px solid var(--border-color)'}}>Site</th></>:<><th style={{background:'var(--bg-color)',color:'var(--text-color)', padding: '14px', borderBottom: '2px solid var(--border-color)'}}>ขอเปลี่ยนเป็นสถานะ</th><th style={{background:'var(--bg-color)',color:'var(--text-color)', padding: '14px', borderBottom: '2px solid var(--border-color)'}}>ขอเปลี่ยนขั้นตอน (Phase)</th></>}<th style={{textAlign:'center',background:'var(--bg-color)',color:'var(--text-color)', padding: '14px', borderBottom: '2px solid var(--border-color)'}}>Action</th></tr></thead>
               <tbody>
                 {displayedRequests.map(request=>(
-                  <tr key={request.id}>
-                    <td style={{color:'var(--blue)',fontWeight:600}}>{request.id}</td><td style={{fontWeight:600}}>{request.name}</td>
-                    {activeTab==='new'?<><td>{request.category}</td><td>{request.site}</td></>:<><td><span style={{color:'#16a34a',fontWeight:'bold'}}>{request.form_data?.tracking?.pendingStatus}</span></td><td><span style={{color:'#0ea5e9',fontWeight:'bold'}}>{request.form_data?.tracking?.pendingPhase}</span></td></>}
-                    <td style={{textAlign:'center'}}><button className="btn btn-primary" onClick={()=>handleOpenApproval(request)} style={{padding:'8px 15px',borderRadius:'8px',fontWeight:600}}>🔍 ตรวจสอบ</button></td>
+                  <tr key={request.id} style={{ borderBottom: '1px solid var(--border-color)', transition: 'background-color 0.2s ease', cursor: 'default' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-secondary, #f8fafc)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                    <td style={{color:'var(--blue)',fontWeight:600, padding: '16px 14px'}}>{request.id}</td><td style={{fontWeight:600, padding: '16px 14px'}}>{request.name}</td>
+                    {activeTab==='new'?<><td style={{padding: '16px 14px'}}><span style={{background: 'var(--bg-color)', padding: '4px 10px', borderRadius: '6px', fontSize: '0.85rem', border: '1px solid var(--border-color)'}}>{request.category}</span></td><td style={{padding: '16px 14px'}}>{request.site}</td></>:<><td style={{padding: '16px 14px'}}><span style={{background: 'rgba(22, 163, 74, 0.1)', color:'#16a34a',fontWeight:'bold', padding: '6px 12px', borderRadius: '8px', border: '1px solid rgba(22, 163, 74, 0.2)'}}>{request.form_data?.tracking?.pendingStatus}</span></td><td style={{padding: '16px 14px'}}><span style={{background: 'rgba(14, 165, 233, 0.1)', color:'#0ea5e9',fontWeight:'bold', padding: '6px 12px', borderRadius: '8px', border: '1px solid rgba(14, 165, 233, 0.2)'}}>{request.form_data?.tracking?.pendingPhase}</span></td></>}
+                    <td style={{textAlign:'center', padding: '16px 14px'}}><button className="btn btn-primary" onClick={()=>handleOpenApproval(request)} style={{padding:'8px 16px',borderRadius:'10px',fontWeight:600, boxShadow: '0 2px 4px rgba(14,165,233,0.2)', transition: 'transform 0.1s'}} onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'} onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}>🔍 ตรวจสอบ</button></td>
                   </tr>
                 ))}
               </tbody>
@@ -231,17 +391,14 @@ function ManagerDashboard({currentUser}){
         </div>
       </section>
 
+      {/* ----------------- MODAL SECTION (REMAINS EXACTLY THE SAME) ----------------- */}
       {isApprovalModalOpen&&selectedRequest&&(
         <div className="pdf-preview-overlay" style={{zIndex:1040}}>
           <div className="pdf-preview-card" style={{width:'95%',maxWidth:'1100px',height:'90vh',display:'flex',flexDirection:'column',borderRadius:'24px',overflow:'hidden',padding:0}}>
-            
-            {/* 1. HEADER */}
             <div style={{padding:'20px 30px',background:'var(--card-bg)',borderBottom:'1px solid var(--border-color)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                 <h3 style={{margin:0,color:'var(--text-color)',fontSize:'1.4rem'}}>📝 ตรวจสอบและพิจารณา: {selectedRequest.name}</h3>
                 <button onClick={()=>setIsApprovalModalOpen(false)} style={{color:'var(--text-muted)',background:'var(--bg-color)',border:'none',width:'36px',height:'36px',borderRadius:'10px',fontSize:'1.2rem',cursor:'pointer'}}>✕</button>
             </div>
-            
-            {/* 2. BODY */}
             <div style={{display:'flex',flex:1,overflow:'hidden',background:'var(--bg-color)'}}>
               <div style={{flex:1.5,padding:'30px',overflowY:'auto',borderRight:'1px solid var(--border-color)',background:'var(--card-bg)'}}>
                 <h4 style={{color:'var(--blue)',borderBottom:'1px solid rgba(14, 165, 233, 0.2)',boxShadow:'0 1px 0 rgba(14, 165, 233, 0.1)',paddingBottom:'10px',fontSize:'1.1rem'}}>📌 ข้อมูลจากผู้ขอ (Request Detail)</h4>
@@ -277,13 +434,10 @@ function ManagerDashboard({currentUser}){
                         <div style={{background:'#dcfce7',padding:'20px',borderRadius:'12px',textAlign:'center',marginBottom:'20px',border:'1px solid #86efac',boxShadow:'inset 0 0 0 1px rgba(22, 101, 52, 0.1)'}}><p style={{margin:'0 0 5px 0',color:'#166534',fontSize:'0.9rem'}}>พนักงานขอเปลี่ยนสถานะเป็น:</p><h2 style={{margin:0,color:'#15803d',fontSize:'2rem'}}>{selectedRequest.form_data.tracking.pendingStatus}</h2><p style={{margin:'5px 0 0 0',color:'#166534'}}>Phase: {selectedRequest.form_data.tracking.pendingPhase}</p></div>
                         }
                         <div className="form-group"><label style={{fontWeight:600,color:'var(--text-color)'}}>หมายเหตุ / ข้อสั่งการ (จะแสดงให้พนักงานเห็น)</label><textarea rows="3" placeholder="ระบุเหตุผลในการปฏิเสธ หรือคำสั่งการเพิ่มเติม..." value={approvalData.remark} onChange={(e)=>setApprovalData({...approvalData,remark:e.target.value})} style={{background:'#fff',border:'1px solid var(--border-color)',padding:'12px',borderRadius:'10px'}}/></div>
-                        {/* 🚀 ย้ายปุ่มออกจากตรงนี้แล้ว 🚀 */}
                     </>
                 )}
               </div>
             </div>
-
-            {/* 🚀 3. FOOTER: แถบปุ่มกดด้านล่างสุดที่จะแสดงเสมอ ไม่ว่าจะเลื่อนเนื้อหาไปแค่ไหนก็ตาม */}
             <div style={{padding:'20px 30px',borderTop:'1px solid var(--border-color)',background:'var(--card-bg)',display:'flex',justifyContent:'flex-end',gap:'12px',zIndex:10}}>
               <button type="button" className="btn btn-tertiary" onClick={()=>setIsApprovalModalOpen(false)}>ยกเลิก (Cancel)</button>
               {!isCEO && (
@@ -293,7 +447,6 @@ function ManagerDashboard({currentUser}){
                  </>
               )}
             </div>
-
           </div>
         </div>
       )}

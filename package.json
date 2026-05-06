@@ -1,5 +1,6 @@
 {
   "dependencies": {
-    "@react-pdf/renderer": "^3.4.5"
+    "@react-pdf/renderer": "^3.4.5",
+    "axios": "^1.16.0"
   }
 }

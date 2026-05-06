@@ -3,6 +3,7 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { fetchProjects, updateProjectInDb } from "../api/authApi";
 import Swal from "sweetalert2";
+
 // inline filter helper (copied per-page to use real data structures)
 function getNested(obj, path) {
   if (!path) return undefined;
@@ -112,6 +113,9 @@ function ProjectPortfolio({ currentUser }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
   const [filterPhase, setFilterPhase] = useState("All");
+  const [sortBy, setSortBy] = useState("name");
+  const [sortOrder, setSortOrder] = useState("asc");
+  const [showFilters, setShowFilters] = useState(false);
 
   const [isLoading, setIsLoading] = useState(true);
   const [selectedProject, setSelectedProject] = useState(null);
@@ -556,11 +560,40 @@ function ProjectPortfolio({ currentUser }) {
       selectedProject.phase !== editFormData.phase);
   const isPendingUpdate = editFormData?.tracking?.isPendingApproval;
 
-  /* 🚀 วิเคราะห์สถิติภาพรวมสำหรับแถบ Executive Summary 🚀 */
+  const uniqueStatuses = useMemo(() => {
+    const statuses = [...new Set(projects.map(p => p.status).filter(Boolean))];
+    return statuses.sort((a,b) => a.localeCompare(b, 'th'));
+  }, [projects]);
+
+  const uniquePhases = useMemo(() => {
+    const phases = [...new Set(projects.map(p => p.phase).filter(Boolean))];
+    return phases.sort((a,b) => a.localeCompare(b, 'th'));
+  }, [projects]);
+
+  const sortData = (data) => {
+    if (!sortBy) return data;
+    return [...data].sort((a, b) => {
+      let aVal = a[sortBy] || '';
+      let bVal = b[sortBy] || '';
+      if (sortBy === 'name') {
+        aVal = a.name || '';
+        bVal = b.name || '';
+      }
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
+        const cmp = aVal.localeCompare(bVal, ['th', 'en']);
+        return sortOrder === 'asc' ? cmp : -cmp;
+      }
+      return sortOrder === 'asc' ? (aVal > bVal ? 1 : -1) : (aVal > bVal ? -1 : 1);
+    });
+  };
+
   const displayedProjects = useMemo(() => {
-    return filterRows(projects, {
+    let filtered = filterRows(projects, {
       searchQuery: searchQuery,
-      filters: { status: filterStatus, phase: filterPhase },
+      filters: { 
+        status: filterStatus !== 'All' ? filterStatus : null, 
+        phase: filterPhase !== 'All' ? filterPhase : null 
+      },
       searchableFields: [
         "id",
         "name",
@@ -568,7 +601,8 @@ function ProjectPortfolio({ currentUser }) {
         "form_data.assigned_to",
       ],
     });
-  }, [projects, searchQuery, filterStatus, filterPhase]);
+    return sortData(filtered);
+  }, [projects, searchQuery, filterStatus, filterPhase, sortBy, sortOrder]);
 
   const stats = {
     total: projects.length,
@@ -580,6 +614,8 @@ function ProjectPortfolio({ currentUser }) {
       (p) => p.status === "Go-live" || p.phase === "Go-live",
     ).length,
   };
+
+  const hasActiveFilter = filterStatus !== 'All' || filterPhase !== 'All';
 
   if (isLoading)
     return (
@@ -601,17 +637,15 @@ function ProjectPortfolio({ currentUser }) {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
+          marginBottom: "12px",
         }}
       >
-        <h1
-          className="page-heading"
-          style={{ margin: 0, textShadow: "0 2px 10px rgba(255,255,255,0.8)" }}
-        >
+        <h1 className="page-heading" style={{ margin: 0 }}>
           Project Portfolio
         </h1>
       </div>
 
-      {/* 🚀 Executive Summary Dashboard (แสดงเฉพาะ CEO และ Manager) 🚀 */}
+      {/* 🚀 Executive Summary Dashboard 🚀 */}
       {(isCEO || isManager) && (
         <div
           style={{
@@ -746,141 +780,125 @@ function ProjectPortfolio({ currentUser }) {
         </div>
       )}
 
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "12px",
-          marginBottom: "12px",
-          alignItems: "center",
-        }}
-      >
-        <div
-          style={{
-            flex: "1 1 260px",
-            display: "flex",
-            alignItems: "center",
-            background: "var(--card-bg)",
-            borderRadius: "8px",
-            padding: "0 12px",
-            border: "1px solid var(--border-color)",
-          }}
-        >
-          <span style={{ color: "var(--text-muted)" }}>🔎</span>
-          <input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="ค้นหา ID, ชื่อ หรือ ผู้รับผิดชอบ..."
-            style={{
-              width: "100%",
-              border: "none",
-              background: "transparent",
-              padding: "10px",
-              outline: "none",
-              color: "var(--text-color)",
-              fontSize: "0.95rem",
-            }}
-          />
-        </div>
-        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            style={{
-              padding: "10px 12px",
-              borderRadius: "8px",
-              border: "1px solid var(--border-color)",
-              background: "var(--card-bg)",
-              color: "var(--text-color)",
-              fontWeight: 700,
-            }}
-          >
-            <option value="All">สถานะ: ทุกค่า</option>
-            <option value="Initiate">Initiate</option>
-            <option value="Active">Active</option>
-            <option value="Hold">Hold</option>
-            <option value="Go-live">Go-live</option>
-          </select>
-          <select
-            value={filterPhase}
-            onChange={(e) => setFilterPhase(e.target.value)}
-            style={{
-              padding: "10px 12px",
-              borderRadius: "8px",
-              border: "1px solid var(--border-color)",
-              background: "var(--card-bg)",
-              color: "var(--text-color)",
-              fontWeight: 700,
-            }}
-          >
-            <option value="All">Phase: ทุกค่า</option>
-            <option value="Requirement">Requirement</option>
-            <option value="Preparation">Preparation</option>
-            <option value="Development/Implement">Development</option>
-            <option value="UAT">UAT</option>
-            <option value="Go-live">Go-live</option>
-          </select>
-          <button
-            onClick={() => {
-              setSearchQuery("");
-              setFilterStatus("All");
-              setFilterPhase("All");
-            }}
-            className="btn btn-tertiary"
-            style={{ padding: "8px 12px" }}
-          >
-            รีเซ็ต
-          </button>
-        </div>
-        <div
-          style={{
-            marginLeft: "auto",
-            color: "var(--text-muted)",
-            fontWeight: 700,
-          }}
-        >
-          {displayedProjects.length} / {projects.length} ผลลัพธ์
-        </div>
+      {/* 🚀 Minimal Top-Right Toolbar (Filters) 🚀 */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '8px', position: 'relative', zIndex: 20 }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {/* Search Input with textIndent */}
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <span style={{ position: 'absolute', left: '12px', fontSize: '0.95rem', color: '#94a3b8', zIndex: 2, pointerEvents: 'none' }}>🔍</span>
+              <input 
+                value={searchQuery} 
+                onChange={e=>setSearchQuery(e.target.value)} 
+                placeholder="ค้นหา..." 
+                style={{ 
+                  borderRadius:'20px', 
+                  border:'1px solid var(--border-color)', 
+                  background:'var(--input-bg)', 
+                  color:'var(--text-color)', 
+                  fontSize:'0.85rem', 
+                  width:'130px', 
+                  outline:'none', 
+                  transition:'all 0.3s ease', 
+                  margin: 0,
+                  textIndent: '24px' 
+                }} 
+                onFocus={(e) => { e.target.style.width = '200px'; e.target.style.borderColor = 'var(--blue)'; }} 
+                onBlur={(e) => { e.target.style.width = '130px'; e.target.style.borderColor = 'var(--border-color)'; }} 
+              />
+            </div>
+            
+            {/* Filter Toggle Button */}
+            <button 
+              onClick={() => setShowFilters(!showFilters)} 
+              style={{ padding:'6px 14px', borderRadius:'20px', border: showFilters || hasActiveFilter ? '1px solid var(--blue)' : '1px solid var(--border-color)', background: showFilters || hasActiveFilter ? 'rgba(2, 132, 199, 0.05)' : 'var(--card-bg)', color: showFilters || hasActiveFilter ? 'var(--blue)' : 'var(--text-muted)', fontSize:'0.85rem', fontWeight: 600, cursor:'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s', height: '100%' }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+              Filter
+              {hasActiveFilter && <span style={{ width: '6px', height: '6px', background: '#ef4444', borderRadius: '50%', display: 'inline-block' }}></span>}
+            </button>
+          </div>
+
+          {/* Floating Popover Menu */}
+          {showFilters && (
+            <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '8px', background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '16px', width: '260px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column', gap: '12px', zIndex: 100 }}>
+               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '4px' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-color)' }}>ตั้งค่าตัวกรอง</span>
+                  {hasActiveFilter && (
+                    <span onClick={()=>{setFilterStatus('All');setFilterPhase('All');}} style={{ fontSize: '0.75rem', color: '#ef4444', cursor: 'pointer', fontWeight: 600, background: '#fef2f2', padding: '2px 6px', borderRadius: '4px' }}>ล้างทั้งหมด</span>
+                  )}
+               </div>
+               
+               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                 <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>จัดเรียงข้อมูล (Sort)</label>
+                 <div style={{ display: 'flex', gap: '8px' }}>
+                   <select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{ flex: 1, padding:'6px 10px', borderRadius:'6px', border:'1px solid var(--border-color)', fontSize:'0.8rem', background: 'var(--input-bg)', color: 'var(--text-color)', margin: 0, outline: 'none' }}>
+                     <option value="name">ชื่อ (Name)</option>
+                     <option value="id">รหัส (ID)</option>
+                     <option value="status">สถานะ (Status)</option>
+                     <option value="phase">ขั้นตอน (Phase)</option>
+                   </select>
+                   <button onClick={()=>setSortOrder(sortOrder==='asc'?'desc':'asc')} style={{ padding:'6px', borderRadius:'6px', border:'1px solid var(--border-color)', background:'var(--input-bg)', cursor:'pointer', width: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                     {sortOrder==='asc'?'⬆️':'⬇️'}
+                   </button>
+                 </div>
+               </div>
+
+               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                 <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>สถานะ (Status)</label>
+                 <select value={filterStatus} onChange={e=>setFilterStatus(e.target.value)} style={{ padding:'6px 10px', borderRadius:'6px', border:'1px solid var(--border-color)', fontSize:'0.8rem', background: 'var(--input-bg)', color: 'var(--text-color)', margin: 0, outline: 'none' }}>
+                   <option value="All">ทั้งหมด</option>
+                   {uniqueStatuses.map(status => <option key={status} value={status}>{status}</option>)}
+                 </select>
+               </div>
+
+               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                 <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>ขั้นตอน (Phase)</label>
+                 <select value={filterPhase} onChange={e=>setFilterPhase(e.target.value)} style={{ padding:'6px 10px', borderRadius:'6px', border:'1px solid var(--border-color)', fontSize:'0.8rem', background: 'var(--input-bg)', color: 'var(--text-color)', margin: 0, outline: 'none' }}>
+                   <option value="All">ทั้งหมด</option>
+                   {uniquePhases.map(phase => <option key={phase} value={phase}>{phase}</option>)}
+                 </select>
+               </div>
+            </div>
+          )}
       </div>
 
-      <div className="table-wrap">
-        <table className="portfolio-table">
+      <div className="table-wrap" style={{ width: '100%', overflowX: 'auto', position: 'relative', zIndex: 1, border: 'none', background: 'var(--card-bg)', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
-              <th>รหัสโครงการ (ID)</th>
-              <th>ชื่อโครงการ (Project Name)</th>
-              <th>ผู้รับผิดชอบ (Assignee)</th>
-              <th>สถานะ (Status)</th>
-              <th>ขั้นตอน (Phase)</th>
-              <th style={{ textAlign: "center" }}>ความคืบหน้า (%)</th>
-              {!isCEO && <th style={{ textAlign: "center" }}>Action</th>}
+              <th style={{ padding: '16px 14px', borderBottom: '2px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', textAlign: 'left', background: 'transparent' }}>รหัสโครงการ (ID)</th>
+              <th style={{ padding: '16px 14px', borderBottom: '2px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', textAlign: 'left', background: 'transparent' }}>ชื่อโครงการ (Project Name)</th>
+              <th style={{ padding: '16px 14px', borderBottom: '2px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', textAlign: 'left', background: 'transparent' }}>ผู้รับผิดชอบ (Assignee)</th>
+              <th style={{ padding: '16px 14px', borderBottom: '2px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', textAlign: 'left', background: 'transparent' }}>สถานะ (Status)</th>
+              <th style={{ padding: '16px 14px', borderBottom: '2px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', textAlign: 'left', background: 'transparent' }}>ขั้นตอน (Phase)</th>
+              <th style={{ padding: '16px 14px', borderBottom: '2px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', textAlign: 'center', background: 'transparent' }}>ความคืบหน้า (%)</th>
+              {!isCEO && <th style={{ padding: '16px 14px', borderBottom: '2px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', textAlign: 'center', background: 'transparent' }}>Action</th>}
             </tr>
           </thead>
           <tbody>
             {displayedProjects.map((p) => (
-              <tr key={p.id}>
-                <td style={{ fontWeight: 700 }}>{p.id}</td>
-                <td>
+              <tr key={p.id} style={{ borderBottom: '1px solid var(--border-color)', transition: 'background-color 0.2s ease', cursor: 'default' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--table-row-hover)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                <td style={{ padding: '16px 14px', fontWeight: 700, background: 'transparent', fontSize: '0.85rem' }}>{p.id}</td>
+                <td style={{ padding: '16px 14px', background: 'transparent', fontSize: '0.85rem' }}>
                   <span
                     onClick={() => handleViewProject(p)}
                     style={{
-                      color: "var(--bhp-sky)",
+                      color: "var(--blue)",
                       cursor: "pointer",
                       fontWeight: "700",
-                      textDecoration: "underline",
                     }}
                   >
                     {p.name}
                   </span>
                 </td>
-                <td>
+                <td style={{ padding: '16px 14px', background: 'transparent', fontSize: '0.85rem' }}>
                   <span style={{ color: "#d32f2f", fontWeight: "700" }}>
                     {p.form_data?.tracking?.glsManager ||
                       p.form_data?.assigned_to ||
                       "-"}
                   </span>
                 </td>
-                <td>
+                <td style={{ padding: '16px 14px', background: 'transparent', fontSize: '0.85rem' }}>
                   <div
                     style={{
                       display: "flex",
@@ -910,8 +928,8 @@ function ProjectPortfolio({ currentUser }) {
                     )}
                   </div>
                 </td>
-                <td style={{ color: "var(--text-muted)" }}>{p.phase || "-"}</td>
-                <td style={{ textAlign: "center" }}>
+                <td style={{ padding: '16px 14px', color: "var(--text-muted)", background: 'transparent', fontSize: '0.85rem' }}>{p.phase || "-"}</td>
+                <td style={{ padding: '16px 14px', textAlign: "center", background: 'transparent' }}>
                   <div
                     style={{
                       display: "flex",
@@ -958,7 +976,7 @@ function ProjectPortfolio({ currentUser }) {
                   </div>
                 </td>
                 {!isCEO && (
-                  <td style={{ textAlign: "center" }}>
+                  <td style={{ padding: '16px 14px', textAlign: "center", background: 'transparent' }}>
                     <div
                       style={{
                         display: "flex",
@@ -1111,6 +1129,8 @@ function ProjectPortfolio({ currentUser }) {
                 borderBottom: "1px solid var(--border-color)",
                 background: "var(--card-bg)",
                 overflowX: "auto",
+                overflowY: "hidden", 
+                scrollbarWidth: "none", 
               }}
             >
               {[
@@ -1149,8 +1169,7 @@ function ProjectPortfolio({ currentUser }) {
                 overflowY: "auto",
                 flex: 1,
                 lineHeight: "1.6",
-                background:
-                  "linear-gradient(180deg, var(--bg-color), var(--bg-secondary, #f8fafc))",
+                background: "var(--bg-color)", 
               }}
             >
               {activeTab === "overview" && (

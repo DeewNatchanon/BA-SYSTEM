@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useRef } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -17,9 +17,7 @@ import {
   loginWithPassword,
   saveAuthSession,
   fetchProjects,
-  fetchPendingRequests,
-  changePassword,
-  updateUserProfile,
+  fetchPendingRequests
 } from "./api/authApi";
 import "./index.css";
 import ManagerDashboard from "./pages/ManagerDashboard";
@@ -27,174 +25,30 @@ import Swal from "sweetalert2";
 
 /* 🚀 SVG Icons สวยๆ สำหรับเมนู 🚀 */
 const DashIcon = () => (
-  <svg
-    width="22"
-    height="22"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <rect x="3" y="3" width="7" height="7" rx="1" />
-    <rect x="14" y="3" width="7" height="7" rx="1" />
-    <rect x="14" y="14" width="7" height="7" rx="1" />
-    <rect x="3" y="14" width="7" height="7" rx="1" />
-  </svg>
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /></svg>
 );
 const ManagerIcon = () => (
-  <svg
-    width="22"
-    height="22"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-  </svg>
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
 );
 const FormIcon = () => (
-  <svg
-    width="22"
-    height="22"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-    <polyline points="14 2 14 8 20 8" />
-    <line x1="12" y1="18" x2="12" y2="12" />
-    <line x1="9" y1="15" x2="15" y2="15" />
-  </svg>
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="12" y1="18" x2="12" y2="12" /><line x1="9" y1="15" x2="15" y2="15" /></svg>
 );
 const ProjectIcon = () => (
-  <svg
-    width="22"
-    height="22"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-  </svg>
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
 );
 const AppIcon = () => (
-  <svg
-    width="22"
-    height="22"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-    <line x1="8" y1="21" x2="16" y2="21" />
-    <line x1="12" y1="17" x2="12" y2="21" />
-  </svg>
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>
 );
 const LogoutIcon = () => (
-  <svg
-    width="22"
-    height="22"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-    <polyline points="16 17 21 12 16 7" />
-    <line x1="21" y1="12" x2="9" y2="12" />
-  </svg>
-);
-const CameraIcon = () => (
-  <svg
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-    <circle cx="12" cy="13" r="4" />
-  </svg>
-);
-const EyeIcon = () => (
-  <svg
-    width="18"
-    height="18"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-    <circle cx="12" cy="12" r="3" />
-  </svg>
-);
-const EyeOffIcon = () => (
-  <svg
-    width="18"
-    height="18"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-    <line x1="1" y1="1" x2="23" y2="23" />
-  </svg>
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
 );
 const SettingsIcon = () => (
-  <svg
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <circle cx="12" cy="12" r="3" />
-    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-  </svg>
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>
 );
 const BellIcon = () => (
-  <svg
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-  </svg>
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
 );
+// นำ EyeIcon ออกเนื่องจากไม่มีฟิลด์รหัสผ่านแล้ว
 
 const ProtectedManagerRoute = ({ role, children }) => {
   if (role !== "manager" && role !== "ceo") return <Navigate to="/" replace />;
@@ -245,41 +99,23 @@ function App() {
   const [isNotifExpanded, setIsNotifExpanded] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const unreadCount = notifications.filter((n) => !n.read).length;
-  const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [editUsername, setEditUsername] = useState("");
-  const [currentPwd, setCurrentPwd] = useState("");
-  const [newPwd, setNewPwd] = useState("");
-  const [confirmNewPwd, setConfirmNewPwd] = useState("");
-  const [showCurrentPwd, setShowCurrentPwd] = useState(false);
-  const [showNewPwd, setShowNewPwd] = useState(false);
-  const [showConfirmPwd, setShowConfirmPwd] = useState(false);
-  const [pwdLoading, setPwdLoading] = useState(false);
-  const [pwdError, setPwdError] = useState("");
-  const [pwdSuccess, setPwdSuccess] = useState("");
-
-  // 🚀 จัดการเรื่องรูป Avatar
-  const [tempAvatar, setTempAvatar] = useState(null);
-  const fileInputRef = useRef(null);
-  const settingsFileInputRef = useRef(null);
 
   const currentUser = session?.user || null;
   const roleLabel = useMemo(
     () =>
       currentUser?.role === "manager"
-        ? "Manager"
+        ? "🏅 Manager"
         : currentUser?.role === "ceo"
-          ? "CEO"
-          : "Employee",
+          ? "👑 Executive"
+          : "👤 Employee",
     [currentUser],
   );
-
-  // 🚀 ดึงรูปมาจาก Database (จาก session) ถ้าไม่มีถึงจะใช้ temp
-  const displayAvatar = tempAvatar || currentUser?.avatar || null;
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem("ba-system-theme", theme);
   }, [theme]);
+
   const showToast = (message, type = "info") => {
     setToast({ visible: true, message, type });
     setTimeout(
@@ -287,10 +123,12 @@ function App() {
       3000,
     );
   };
+
   const getBackgroundOverlay = (t) =>
     t === "dark"
-      ? "rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.9)"
-      : "rgba(241, 245, 249, 0.7), rgba(241, 245, 249, 0.7)";
+      ? "rgba(15, 23, 42, 0.92), rgba(15, 23, 42, 0.92)"
+      : "rgba(241, 245, 249, 0.75), rgba(241, 245, 249, 0.75)";
+      
   const backgroundStyle = {
     backgroundImage: `linear-gradient(${getBackgroundOverlay(theme)}), url(${process.env.PUBLIC_URL}/bangkok-hospital-phuket.jpg)`,
     backgroundSize: "cover",
@@ -426,161 +264,26 @@ function App() {
       setIsAuthenticating(false);
     }
   };
+
   const handleLogout = () => {
     clearAuthSession();
     setSession(null);
     setIsMobileMenuOpen(false);
   };
-  const handleChangePassword = async () => {
-    setPwdError("");
-    setPwdSuccess("");
-    if (!currentPwd || !newPwd || !confirmNewPwd)
-      return setPwdError("กรุณากรอกข้อมูลให้ครบทุกช่อง");
-    if (newPwd.length < 6)
-      return setPwdError("รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัวอักษร");
-    if (newPwd !== confirmNewPwd)
-      return setPwdError("รหัสผ่านใหม่และยืนยันไม่ตรงกัน");
-    setPwdLoading(true);
-    try {
-      await changePassword(currentPwd, newPwd, session.token);
-      setCurrentPwd("");
-      setNewPwd("");
-      setConfirmNewPwd("");
-      Swal.fire("สำเร็จ", "เปลี่ยนรหัสผ่านสำเร็จแล้ว", "success");
-      closeSettings();
-    } catch (err) {
-      setPwdError(err.message || "รหัสผ่านปัจจุบันไม่ถูกต้อง");
-    } finally {
-      setPwdLoading(false);
-    }
-  };
+
   const closeSettings = () => {
     setIsSettingsOpen(false);
-    setIsEditingProfile(false);
-    setPwdError("");
-    setPwdSuccess("");
   };
 
-  // 🚀 ฟังก์ชันแปลงรูปภาพเป็น Base64 และบันทึกทันที (ถ้าอยู่ในหน้า Settings)
-  const handleAvatarChange = async (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        const base64Img = event.target.result;
-        setTempAvatar(base64Img);
-
-        // ถ้าเป็นการแก้ผ่านหน้า Settings ให้อัปเดต Database ทันที
-        if (isSettingsOpen) {
-          try {
-            await updateUserProfile(
-              currentUser.id,
-              currentUser.username,
-              base64Img,
-              session.token,
-            );
-
-            // อัปเดตข้อมูล Session แบบไม่ต้องล็อกเอาต์
-            const updatedUser = { ...currentUser, avatar: base64Img };
-            const nextSession = { token: session.token, user: updatedUser };
-            saveAuthSession(nextSession);
-            setSession(nextSession);
-
-            showToast("อัปเดตรูปลงฐานข้อมูลเรียบร้อยแล้ว", "success");
-          } catch (err) {
-            Swal.fire("ผิดพลาด", "อัปเดตไม่สำเร็จ โปรดลองอีกครั้ง", "error");
-          }
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  // 🚀 บันทึกชื่อผู้ใช้ (เฉพาะเปลี่ยนชื่อ)
-  const handleSaveProfile = async () => {
-    if (!editUsername.trim()) {
-      Swal.fire("ผิดพลาด", "ชื่อผู้ใช้ไม่ถูกต้อง", "error");
-      return;
-    }
-    try {
-      await updateUserProfile(
-        currentUser.id,
-        editUsername.trim(),
-        displayAvatar,
-        session.token,
-      );
-      setIsEditingProfile(false);
-      Swal.fire({
-        title: "สำเร็จ!",
-        text: "เปลี่ยนชื่อผู้ใช้สำเร็จ! เพื่อความปลอดภัย กรุณาเข้าสู่ระบบใหม่อีกครั้ง",
-        icon: "success",
-        confirmButtonColor: "#0284c7",
-      }).then(() => {
-        handleLogout();
-      });
-    } catch (error) {
-      Swal.fire("เกิดข้อผิดพลาด", error.message, "error");
-    }
-  };
-
-  const s = {
-    label: {
-      display: "block",
-      fontSize: "0.85rem",
-      fontWeight: 700,
-      color: "var(--text-muted)",
-      marginBottom: "8px",
-    },
-    input: {
-      width: "100%",
-      padding: "12px 14px",
-      border: "1.5px solid var(--border-color)",
-      borderRadius: "10px",
-      fontSize: "0.95rem",
-      background: "var(--input-bg)",
-      color: "var(--text-color)",
-      outline: "none",
-      transition: "all 0.2s",
-    },
-    inputRow: {
-      display: "flex",
-      alignItems: "center",
-      border: "1.5px solid var(--border-color)",
-      borderRadius: "10px",
-      overflow: "hidden",
-      background: "var(--input-bg)",
-    },
-    eyeBtn: {
-      background: "none",
-      border: "none",
-      padding: "0 14px",
-      cursor: "pointer",
-      color: "var(--text-muted)",
-      display: "flex",
-      alignItems: "center",
-    },
-    primaryBtn: {
-      width: "100%",
-      padding: "14px",
-      background: "var(--blue)",
-      color: "#fff",
-      border: "none",
-      borderRadius: "10px",
-      fontSize: "1rem",
-      fontWeight: 700,
-      cursor: "pointer",
-      transition: "all 0.2s",
-      boxShadow: "var(--shadow-sm)",
-    },
-    errorBox: {
-      padding: "12px",
-      borderRadius: "10px",
-      background: "rgba(239, 68, 68, 0.1)",
-      border: "1px solid rgba(239, 68, 68, 0.3)",
-      color: "#ef4444",
-      fontSize: "0.9rem",
-      fontWeight: 600,
-    },
+  // UI Helper variables for login page
+  const eyeBtnStyle = {
+    background: "none",
+    border: "none",
+    padding: "0 14px",
+    cursor: "pointer",
+    color: "var(--text-muted)",
+    display: "flex",
+    alignItems: "center",
   };
 
   if (!currentUser)
@@ -635,7 +338,13 @@ function App() {
                   onClick={() => setShowPassword(!showPassword)}
                   tabIndex="-1"
                 >
-                  {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    {showPassword ? (
+                      <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></>
+                    ) : (
+                      <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></>
+                    )}
+                  </svg>
                 </button>
               </div>
             </div>
@@ -883,21 +592,13 @@ function App() {
                 <span className="username">
                   {currentUser?.username || "Unknown User"}
                 </span>
-                <span className="user-role">{roleLabel}</span>
+                <span className="user-role">
+                  {currentUser?.role === "manager" ? "Manager" : currentUser?.role === "ceo" ? "Executive" : "Employee"}
+                </span>
               </div>
-              {/* 🚀 รูปโปรไฟล์ตรงมุมขวาบน (ดึงจากฐานข้อมูล) 🚀 */}
-              <div
-                className="user-avatar"
-                style={{
-                  background: displayAvatar
-                    ? `url(${displayAvatar}) center/cover`
-                    : "var(--blue)",
-                }}
-              >
-                {!displayAvatar &&
-                  (currentUser?.username
-                    ? currentUser.username.charAt(0).toUpperCase()
-                    : "U")}
+              {/* 🚀 รูปโปรไฟล์แบบตัวอักษร 🚀 */}
+              <div className="user-avatar" style={{ background: "linear-gradient(135deg, var(--blue), var(--blue-dark))" }}>
+                {currentUser?.username ? currentUser.username.charAt(0).toUpperCase() : "U"}
               </div>
             </div>
 
@@ -1024,7 +725,7 @@ function App() {
           </Routes>
         </main>
 
-        {/* 🚀 หน้าต่างการตั้งค่า (Settings Modal) ปรับ UI ใหม่ 🚀 */}
+        {/* 🚀 หน้าต่างการตั้งค่า (Settings Modal) อ่านอย่างเดียว + ธีม 🚀 */}
         {isSettingsOpen && (
           <div className="pdf-preview-overlay" onClick={closeSettings}>
             <div
@@ -1113,6 +814,7 @@ function App() {
                   background: "var(--bg-color)",
                 }}
               >
+                {/* --- 👤 ส่วน Profile แบบดูได้อย่างเดียว --- */}
                 <div
                   style={{
                     background: "var(--card-bg)",
@@ -1127,7 +829,7 @@ function App() {
                       display: "flex",
                       alignItems: "center",
                       gap: "8px",
-                      marginBottom: "20px",
+                      marginBottom: "16px",
                     }}
                   >
                     <span style={{ fontSize: "1.1rem" }}>👤</span>
@@ -1138,15 +840,8 @@ function App() {
                         color: "var(--text-color)",
                       }}
                     >
-                      Profile
+                      Profile Information
                     </span>
-                    <div
-                      style={{
-                        flex: 1,
-                        height: "1px",
-                        background: "var(--border-color)",
-                      }}
-                    />
                   </div>
 
                   <div
@@ -1154,68 +849,36 @@ function App() {
                       display: "flex",
                       alignItems: "center",
                       gap: "20px",
-                      padding: "16px",
+                      padding: "20px",
                       borderRadius: "16px",
                       background: "var(--table-header-bg)",
                       border: "1px solid var(--border-color)",
-                      marginBottom: "20px",
                     }}
                   >
                     <div
-                      onClick={() => settingsFileInputRef.current.click()}
                       style={{
                         width: "64px",
                         height: "64px",
                         borderRadius: "50%",
                         flexShrink: 0,
-                        background: displayAvatar
-                          ? `url(${displayAvatar}) center/cover`
-                          : "var(--blue)",
+                        background: "linear-gradient(135deg, var(--blue), var(--blue-dark))",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                         fontSize: "1.8rem",
                         fontWeight: 700,
                         color: "#fff",
-                        cursor: "pointer",
-                        position: "relative",
-                        overflow: "hidden",
                         boxShadow: "var(--shadow-sm)",
                         border: "2px solid var(--card-bg)",
                       }}
-                      title="Click to update avatar"
                     >
-                      {!displayAvatar &&
-                        currentUser?.username?.charAt(0)?.toUpperCase()}
-                      <div
-                        style={{
-                          position: "absolute",
-                          bottom: 0,
-                          left: 0,
-                          right: 0,
-                          background: "rgba(2, 132, 199, 0.8)",
-                          height: "22px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <CameraIcon />
-                      </div>
+                      {currentUser?.username?.charAt(0)?.toUpperCase() || "U"}
                     </div>
-                    <input
-                      type="file"
-                      ref={settingsFileInputRef}
-                      onChange={handleAvatarChange}
-                      accept="image/*"
-                      style={{ display: "none" }}
-                    />
-
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div
                         style={{
                           fontWeight: 800,
-                          fontSize: "1.1rem",
+                          fontSize: "1.15rem",
                           color: "var(--text-color)",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
@@ -1230,122 +893,20 @@ function App() {
                           marginTop: "6px",
                           fontSize: "0.75rem",
                           fontWeight: 700,
-                          padding: "4px 10px",
+                          padding: "4px 12px",
                           borderRadius: "20px",
                           background: "var(--blue-light)",
                           color: "var(--blue)",
+                          border: "1px solid rgba(2, 132, 199, 0.2)"
                         }}
                       >
-                        {currentUser?.role === "manager"
-                          ? "🏅 Manager"
-                          : currentUser?.role === "ceo"
-                            ? "👑 Executive"
-                            : "👤 Employee"}
+                        {roleLabel}
                       </span>
                     </div>
                   </div>
-
-                  <label style={s.label}>Username</label>
-                  {isEditingProfile ? (
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "12px",
-                      }}
-                    >
-                      <input
-                        style={s.input}
-                        value={editUsername}
-                        autoFocus
-                        onChange={(e) => setEditUsername(e.target.value)}
-                        onKeyDown={(e) =>
-                          e.key === "Enter" && handleSaveProfile()
-                        }
-                        placeholder="New username"
-                      />
-                      <div style={{ display: "flex", gap: "12px" }}>
-                        <button
-                          onClick={() => setIsEditingProfile(false)}
-                          style={{
-                            flex: 1,
-                            padding: "12px",
-                            border: "1.5px solid var(--border-color)",
-                            borderRadius: "10px",
-                            background: "var(--card-bg)",
-                            cursor: "pointer",
-                            color: "var(--text-color)",
-                            fontSize: "0.9rem",
-                            fontWeight: 600,
-                          }}
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={handleSaveProfile}
-                          style={{
-                            ...s.primaryBtn,
-                            width: "auto",
-                            flex: 1,
-                            marginTop: 0,
-                            padding: "12px",
-                          }}
-                        >
-                          Save
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: "12px",
-                        alignItems: "center",
-                      }}
-                    >
-                      <input
-                        style={{
-                          ...s.input,
-                          background: "var(--bg-color)",
-                          color: "var(--text-muted)",
-                          cursor: "not-allowed",
-                        }}
-                        value={currentUser?.username}
-                        readOnly
-                      />
-                      <button
-                        onClick={() => {
-                          setIsEditingProfile(true);
-                          setEditUsername(currentUser?.username);
-                        }}
-                        style={{
-                          flexShrink: 0,
-                          padding: "12px 20px",
-                          border: "1.5px solid var(--border-color)",
-                          borderRadius: "10px",
-                          background: "var(--card-bg)",
-                          color: "var(--text-color)",
-                          cursor: "pointer",
-                          fontWeight: 700,
-                          fontSize: "0.9rem",
-                          whiteSpace: "nowrap",
-                          transition: "all 0.2s",
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.borderColor = "var(--blue)";
-                          e.currentTarget.style.color = "var(--blue)";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.borderColor =
-                            "var(--border-color)";
-                          e.currentTarget.style.color = "var(--text-color)";
-                        }}
-                      >
-                        ✏️ Edit
-                      </button>
-                    </div>
-                  )}
                 </div>
+
+                {/* --- 🔒 ส่วน Security & Authentication แบบแจ้งเตือนส่วนกลาง --- */}
                 <div
                   style={{
                     background: "var(--card-bg)",
@@ -1360,7 +921,7 @@ function App() {
                       display: "flex",
                       alignItems: "center",
                       gap: "8px",
-                      marginBottom: "20px",
+                      marginBottom: "16px",
                     }}
                   >
                     <span style={{ fontSize: "1.1rem" }}>🔒</span>
@@ -1371,193 +932,20 @@ function App() {
                         color: "var(--text-color)",
                       }}
                     >
-                      Security
+                      Security & Authentication
                     </span>
-                    <div
-                      style={{
-                        flex: 1,
-                        height: "1px",
-                        background: "var(--border-color)",
-                      }}
-                    />
                   </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "16px",
-                    }}
-                  >
-                    <div>
-                      <label style={s.label}>Current Password</label>
-                      <div style={s.inputRow}>
-                        <input
-                          type={showCurrentPwd ? "text" : "password"}
-                          value={currentPwd}
-                          onChange={(e) => setCurrentPwd(e.target.value)}
-                          style={{
-                            flex: 1,
-                            border: "none",
-                            outline: "none",
-                            padding: "12px 14px",
-                            fontSize: "0.95rem",
-                            background: "transparent",
-                            color: "var(--text-color)",
-                          }}
-                        />
-                        <button
-                          type="button"
-                          style={s.eyeBtn}
-                          onClick={() => setShowCurrentPwd(!showCurrentPwd)}
-                        >
-                          {showCurrentPwd ? <EyeOffIcon /> : <EyeIcon />}
-                        </button>
-                      </div>
-                    </div>
-                    <div>
-                      <label style={s.label}>New Password</label>
-                      <div style={s.inputRow}>
-                        <input
-                          type={showNewPwd ? "text" : "password"}
-                          value={newPwd}
-                          onChange={(e) => setNewPwd(e.target.value)}
-                          style={{
-                            flex: 1,
-                            border: "none",
-                            outline: "none",
-                            padding: "12px 14px",
-                            fontSize: "0.95rem",
-                            background: "transparent",
-                            color: "var(--text-color)",
-                          }}
-                        />
-                        <button
-                          type="button"
-                          style={s.eyeBtn}
-                          onClick={() => setShowNewPwd(!showNewPwd)}
-                        >
-                          {showNewPwd ? <EyeOffIcon /> : <EyeIcon />}
-                        </button>
-                      </div>
-                      {newPwd.length > 0 && (
-                        <div
-                          style={{
-                            marginTop: "8px",
-                            display: "flex",
-                            gap: "6px",
-                            alignItems: "center",
-                          }}
-                        >
-                          {[1, 2, 3].map((i) => (
-                            <div
-                              key={i}
-                              style={{
-                                flex: 1,
-                                height: "6px",
-                                borderRadius: "6px",
-                                transition: "background 0.3s",
-                                background:
-                                  newPwd.length >= i * 4
-                                    ? i === 1
-                                      ? "#ef4444"
-                                      : i === 2
-                                        ? "#f59e0b"
-                                        : "#10b981"
-                                    : "var(--border-color)",
-                              }}
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <label style={s.label}>Confirm New Password</label>
-                      <div
-                        style={{
-                          ...s.inputRow,
-                          borderColor:
-                            confirmNewPwd && newPwd !== confirmNewPwd
-                              ? "#ef4444"
-                              : "var(--border-color)",
-                        }}
-                      >
-                        <input
-                          type={showConfirmPwd ? "text" : "password"}
-                          value={confirmNewPwd}
-                          onChange={(e) => setConfirmNewPwd(e.target.value)}
-                          style={{
-                            flex: 1,
-                            border: "none",
-                            outline: "none",
-                            padding: "12px 14px",
-                            fontSize: "0.95rem",
-                            background: "transparent",
-                            color: "var(--text-color)",
-                          }}
-                        />
-                        <button
-                          type="button"
-                          style={s.eyeBtn}
-                          onClick={() => setShowConfirmPwd(!showConfirmPwd)}
-                        >
-                          {showConfirmPwd ? <EyeOffIcon /> : <EyeIcon />}
-                        </button>
-                      </div>
-                      {confirmNewPwd && newPwd !== confirmNewPwd && (
-                        <p
-                          style={{
-                            fontSize: "0.8rem",
-                            color: "#ef4444",
-                            margin: "6px 0 0",
-                            fontWeight: 600,
-                          }}
-                        >
-                          ⚠️ Passwords do not match
-                        </p>
-                      )}
-                      {confirmNewPwd && newPwd === confirmNewPwd && (
-                        <p
-                          style={{
-                            fontSize: "0.8rem",
-                            color: "#10b981",
-                            margin: "6px 0 0",
-                            fontWeight: 600,
-                          }}
-                        >
-                          ✅ Passwords match
-                        </p>
-                      )}
-                    </div>
+                  
+                  <div style={{ background: "rgba(2, 132, 199, 0.05)", border: "1px solid rgba(2, 132, 199, 0.2)", borderRadius: "12px", padding: "20px" }}>
+                     <h4 style={{ margin: "0 0 8px 0", color: "var(--blue-dark)", fontSize: "0.95rem" }}>บัญชีถูกจัดการโดยส่วนกลาง</h4>
+                     <p style={{ margin: 0, color: "var(--text-muted)", fontSize: "0.85rem", lineHeight: 1.6 }}>
+                       ข้อมูลโปรไฟล์และรหัสผ่านของคุณถูกเชื่อมโยงกับระบบสารสนเทศส่วนกลางของโรงพยาบาล เพื่อความปลอดภัย คุณไม่สามารถแก้ไขได้จากหน้านี้<br/><br/>
+                       หากต้องการรีเซ็ตรหัสผ่าน หรือแก้ไขข้อมูลส่วนตัว กรุณาติดต่อ <strong>IT Support (โทร. 1234)</strong>
+                     </p>
                   </div>
-                  {pwdError && (
-                    <div style={{ ...s.errorBox, marginTop: "16px" }}>
-                      {pwdError}
-                    </div>
-                  )}
-                  {pwdSuccess && (
-                    <div
-                      style={{
-                        padding: "12px",
-                        borderRadius: "10px",
-                        background: "rgba(16, 185, 129, 0.1)",
-                        border: "1px solid rgba(16, 185, 129, 0.3)",
-                        color: "#10b981",
-                        fontSize: "0.9rem",
-                        fontWeight: 600,
-                        marginTop: "16px",
-                      }}
-                    >
-                      {pwdSuccess}
-                    </div>
-                  )}
-                  <button
-                    style={{ ...s.primaryBtn, marginTop: "20px" }}
-                    onClick={handleChangePassword}
-                    disabled={pwdLoading}
-                  >
-                    {pwdLoading ? "⏳ Updating..." : "Update Password"}
-                  </button>
                 </div>
+
+                {/* --- 🎨 ส่วน Preferences (Theme) ยังคงใช้งานได้ปกติ --- */}
                 <div
                   style={{
                     background: "var(--card-bg)",
@@ -1572,7 +960,7 @@ function App() {
                       display: "flex",
                       alignItems: "center",
                       gap: "8px",
-                      marginBottom: "20px",
+                      marginBottom: "16px",
                     }}
                   >
                     <span style={{ fontSize: "1.1rem" }}>🎨</span>
@@ -1585,13 +973,6 @@ function App() {
                     >
                       Preferences
                     </span>
-                    <div
-                      style={{
-                        flex: 1,
-                        height: "1px",
-                        background: "var(--border-color)",
-                      }}
-                    />
                   </div>
                   <div
                     style={{

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { fetchProjects, updateProjectInDb } from "../api/authApi";
 import Swal from "sweetalert2";
 
-// inline filter helper (kept per-page to match page data shape)
+// inline filter helper
 function getNested(obj, path) {
   if (!path) return undefined;
   const parts = String(path).split(".");
@@ -61,84 +61,21 @@ function filterRows(
   });
 }
 
-// 🚀 ชุดไอคอน SVG แบบมืออาชีพ เรียบหรู (Enterprise Grade)
+// 🚀 ชุดไอคอน SVG แบบมืออาชีพ เรียบหรู
 const GenIcon = () => (
-  <svg
-    width="18"
-    height="18"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-    <line x1="3" y1="9" x2="21" y2="9" />
-    <line x1="9" y1="21" x2="9" y2="9" />
-  </svg>
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><line x1="3" y1="9" x2="21" y2="9" /><line x1="9" y1="21" x2="9" y2="9" /></svg>
 );
 const TechIcon = () => (
-  <svg
-    width="18"
-    height="18"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-    <line x1="8" y1="21" x2="16" y2="21" />
-    <line x1="12" y1="17" x2="12" y2="21" />
-  </svg>
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>
 );
 const SupportIcon = () => (
-  <svg
-    width="18"
-    height="18"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-    <circle cx="9" cy="7" r="4" />
-    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-  </svg>
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
 );
 const SecurityIcon = () => (
-  <svg
-    width="18"
-    height="18"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-  </svg>
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
 );
 const HistoryIcon = () => (
-  <svg
-    width="18"
-    height="18"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <circle cx="12" cy="12" r="10" />
-    <polyline points="12 6 12 12 16 14" />
-  </svg>
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
 );
 
 function ApplicationPortfolio({ currentUser }) {
@@ -151,9 +88,11 @@ function ApplicationPortfolio({ currentUser }) {
   const [editFormData, setEditFormData] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  // 🚀 State สำหรับระบบ Filter (ใช้แบบเดียวกับหน้าอื่นๆ)
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState({ status: "All", category: "All" });
+  const [sortBy, setSortBy] = useState("name");
+  const [sortOrder, setSortOrder] = useState("asc");
+  const [showFilters, setShowFilters] = useState(false);
 
   const isManager = currentUser?.role === "manager";
   const isCEO = currentUser?.role === "ceo";
@@ -262,6 +201,7 @@ function ApplicationPortfolio({ currentUser }) {
     setIsEditing(false);
     setIsViewModalOpen(true);
   };
+
   const handleCloseModal = () => {
     if (isEditing) {
       Swal.fire({
@@ -286,6 +226,7 @@ function ApplicationPortfolio({ currentUser }) {
       setIsEditing(false);
     }
   };
+
   const handleStartEdit = () => {
     setEditFormData({
       ...selectedApp,
@@ -299,12 +240,14 @@ function ApplicationPortfolio({ currentUser }) {
     });
     setIsEditing(true);
   };
+
   const handleNestedChange = (section, field, value) => {
     setEditFormData((prev) => ({
       ...prev,
       [section]: { ...prev[section], [field]: value },
     }));
   };
+
   const handlePdpaChange = (key, checked) => {
     setEditFormData((prev) => ({
       ...prev,
@@ -314,6 +257,7 @@ function ApplicationPortfolio({ currentUser }) {
       },
     }));
   };
+
   const handleRopaChange = (field, value) => {
     setEditFormData((prev) => ({
       ...prev,
@@ -384,7 +328,6 @@ function ApplicationPortfolio({ currentUser }) {
     return app.form_data?.tracking?.appId || app.form_data?.appId || app.id;
   };
 
-  // 🚀 ดึงหมวดหมู่ทั้งหมดที่มีอยู่จริงมาทำ Dropdown Filter
   const uniqueCategories = useMemo(
     () => [
       ...new Set(allData.map((item) => item.category || "Support Application")),
@@ -392,10 +335,35 @@ function ApplicationPortfolio({ currentUser }) {
     [allData],
   );
 
+  const uniqueStatuses = useMemo(() => {
+    const statuses = [...new Set(allData.map(a => a.status).filter(Boolean))];
+    return statuses.sort((a,b) => a.localeCompare(b, 'th'));
+  }, [allData]);
+
+  const sortData = (data) => {
+    if (!sortBy) return data;
+    return [...data].sort((a, b) => {
+      let aVal = a[sortBy] || '';
+      let bVal = b[sortBy] || '';
+      if (sortBy === 'name') {
+        aVal = a.name || '';
+        bVal = b.name || '';
+      }
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
+        const cmp = aVal.localeCompare(bVal, ['th', 'en']);
+        return sortOrder === 'asc' ? cmp : -cmp;
+      }
+      return sortOrder === 'asc' ? (aVal > bVal ? 1 : -1) : (aVal > bVal ? -1 : 1);
+    });
+  };
+
   const displayedApps = useMemo(() => {
-    return filterRows(allData, {
+    let filtered = filterRows(allData, {
       searchQuery: searchTerm,
-      filters: { status: filters.status, category: filters.category },
+      filters: { 
+        status: filters.status !== 'All' ? filters.status : null, 
+        category: filters.category !== 'All' ? filters.category : null 
+      },
       searchableFields: [
         "id",
         "name",
@@ -404,7 +372,10 @@ function ApplicationPortfolio({ currentUser }) {
         "site",
       ],
     });
-  }, [allData, searchTerm, filters]);
+    return sortData(filtered);
+  }, [allData, searchTerm, filters, sortBy, sortOrder]);
+
+  const hasActiveFilter = filters.status !== 'All' || filters.category !== 'All';
 
   if (isLoading)
     return (
@@ -420,449 +391,357 @@ function ApplicationPortfolio({ currentUser }) {
     );
 
   return (
-    <div className="page-wrap page-app">
+    <div className="page-wrap page-app" style={{ gap: "16px" }}>
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: "20px",
+          marginBottom: "12px",
         }}
       >
         <h1 className="page-heading" style={{ margin: 0 }}>
           Application Portfolio
         </h1>
       </div>
-      <div className="page-rule" />
-
-      <section
-        style={{
-          background: "var(--card-bg)",
-          borderRadius: "24px",
-          padding: "24px",
-          boxShadow: "0 10px 30px rgba(0,0,0,0.03)",
-          border: "1px solid rgba(0,0,0,0.04)",
-          transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "12px",
-            background: "var(--bg-color)",
-            padding: "12px",
-            borderRadius: "12px",
-            border: "1px solid var(--border-color)",
-            marginBottom: "20px",
-            alignItems: "center",
-          }}
-        >
-          <div
-            style={{
-              flex: "1 1 260px",
-              display: "flex",
-              alignItems: "center",
-              background: "var(--card-bg)",
-              borderRadius: "8px",
-              padding: "0 12px",
-              border: "1px solid var(--border-color)",
-            }}
-          >
-            <span style={{ color: "var(--text-muted)" }}>🔍</span>
-            <input
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="ค้นหา App ID หรือ ชื่อแอปพลิเคชัน..."
-              style={{
-                width: "100%",
-                border: "none",
-                background: "transparent",
-                padding: "10px",
-                outline: "none",
-                color: "var(--text-color)",
-                fontSize: "0.95rem",
-              }}
+      
+      {/* Minimal Top-Right Toolbar (Search + Filters Popover) */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '16px', position: 'relative', zIndex: 20 }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <span style={{ position: 'absolute', left: '12px', fontSize: '0.95rem', color: '#94a3b8', zIndex: 2, pointerEvents: 'none' }}>🔍</span>
+            <input 
+              value={searchTerm} 
+              onChange={(e) => setSearchTerm(e.target.value)} 
+              placeholder="ค้นหา..." 
+              style={{ 
+                borderRadius:'20px', 
+                border:'1px solid var(--border-color)', 
+                background:'var(--card-bg)', 
+                color:'var(--text-color)', 
+                fontSize:'0.85rem', 
+                width:'130px', 
+                outline:'none', 
+                transition:'all 0.3s ease', 
+                margin: 0,
+                textIndent: '24px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+              }} 
+              onFocus={(e) => { e.target.style.width = '200px'; e.target.style.borderColor = 'var(--blue)'; e.target.style.background = 'var(--input-bg)'; }} 
+              onBlur={(e) => { e.target.style.width = '130px'; e.target.style.borderColor = 'var(--border-color)'; e.target.style.background = 'var(--card-bg)'; }} 
             />
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <label
-              style={{
-                fontSize: "0.85rem",
-                fontWeight: 600,
-                color: "var(--text-muted)",
-              }}
-            >
-              Status:
-            </label>
-            <select
-              value={filters.status}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, status: e.target.value }))
-              }
-              style={{
-                padding: "10px 14px",
-                borderRadius: "8px",
-                border: "1px solid var(--border-color)",
-                background: "var(--card-bg)",
-                color: "var(--text-color)",
-                outline: "none",
-                cursor: "pointer",
-                fontWeight: 600,
-              }}
-            >
-              <option value="All">ทั้งหมด (All)</option>
-              <option value="Active">Active</option>
-              <option value="Hold">Hold</option>
-              <option value="Inactive">Inactive</option>
-              <option value="Initiate">Initiate</option>
-              <option value="Go-live">Go-live</option>
-            </select>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <label
-              style={{
-                fontSize: "0.85rem",
-                fontWeight: 600,
-                color: "var(--text-muted)",
-              }}
-            >
-              Category:
-            </label>
-            <select
-              value={filters.category}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, category: e.target.value }))
-              }
-              style={{
-                padding: "10px 14px",
-                borderRadius: "8px",
-                border: "1px solid var(--border-color)",
-                background: "var(--card-bg)",
-                color: "var(--text-color)",
-                outline: "none",
-                cursor: "pointer",
-                fontWeight: 600,
-              }}
-            >
-              <option value="All">ทั้งหมด (All)</option>
-              {uniqueCategories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div
-            style={{
-              marginLeft: "auto",
-              color: "var(--text-muted)",
-              fontWeight: 700,
-            }}
+          
+          <button 
+            onClick={() => setShowFilters(!showFilters)} 
+            style={{ padding:'6px 14px', borderRadius:'20px', border: showFilters || hasActiveFilter ? '1px solid var(--blue)' : '1px solid var(--border-color)', background: showFilters || hasActiveFilter ? 'rgba(2, 132, 199, 0.05)' : 'var(--card-bg)', color: showFilters || hasActiveFilter ? 'var(--blue)' : 'var(--text-muted)', fontSize:'0.85rem', fontWeight: 600, cursor:'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s', height: '100%', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}
           >
-            {displayedApps.length} / {allData.length} ผลลัพธ์
-          </div>
-          <div>
-            <button
-              onClick={() => {
-                setSearchTerm("");
-                setFilters({ status: "All", category: "All" });
-              }}
-              className="btn btn-tertiary"
-              style={{ padding: "8px 12px" }}
-            >
-              รีเซ็ต
-            </button>
-          </div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+            Filter
+            {hasActiveFilter && <span style={{ width: '6px', height: '6px', background: '#ef4444', borderRadius: '50%', display: 'inline-block' }}></span>}
+          </button>
         </div>
 
-        <div className="table-wrap">
-          <table className="portfolio-table project-portfolio-table">
-            <thead>
-              <tr>
-                <th
-                  style={{
-                    background: "var(--bg-color)",
-                    color: "var(--text-color)",
-                  }}
-                >
-                  App ID
-                </th>
-                <th
-                  style={{
-                    background: "var(--bg-color)",
-                    color: "var(--text-color)",
-                  }}
-                >
-                  Name / Site
-                </th>
-                <th
-                  style={{
-                    background: "var(--bg-color)",
-                    color: "var(--text-color)",
-                  }}
-                >
-                  Category
-                </th>
-                <th
-                  style={{
-                    background: "var(--bg-color)",
-                    color: "var(--text-color)",
-                  }}
-                >
-                  Status
-                </th>
-                <th
-                  style={{
-                    background: "var(--bg-color)",
-                    color: "var(--text-color)",
-                  }}
-                >
-                  Tech Summary
-                </th>
-                <th
-                  style={{
-                    textAlign: "center",
-                    background: "var(--bg-color)",
-                    color: "var(--text-color)",
-                  }}
-                >
-                  Security
-                </th>
-                <th
-                  style={{
-                    textAlign: "center",
-                    background: "var(--bg-color)",
-                    color: "var(--text-color)",
-                  }}
-                >
-                  Action
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {displayedApps.length > 0 ? (
-                displayedApps.map((app) => {
-                  const hasPdpa =
-                    app.compliance?.pdpa &&
-                    Object.values(app.compliance.pdpa).some(
-                      (val) => val === true,
-                    );
-                  const hasRopa =
-                    app.compliance?.ropa &&
-                    Object.values(app.compliance.ropa).some(
-                      (val) => typeof val === "string" && val.trim() !== "",
-                    );
-                  const isNewSystem =
-                    app.project_type === "New System" ||
-                    app.project_type === "New";
-                  return (
-                    <tr key={app.id}>
-                      <td style={{ color: "var(--blue)", fontWeight: 600 }}>
-                        {getAppIdDisplay(app)}
-                      </td>
-                      <td>
-                        <span
-                          onClick={() => handleViewDetails(app)}
-                          style={{
-                            color: "var(--text-color)",
-                            cursor: "pointer",
-                            fontWeight: "600",
-                            transition: "color 0.2s",
-                          }}
-                          onMouseEnter={(e) =>
-                            (e.target.style.color = "var(--blue)")
-                          }
-                          onMouseLeave={(e) =>
-                            (e.target.style.color = "var(--text-color)")
-                          }
-                        >
-                          {app.name}
+        {showFilters && (
+          <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '8px', background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '20px', width: '280px', boxShadow: '0 10px 30px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column', gap: '16px', zIndex: 100 }}>
+             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px', marginBottom: '4px' }}>
+                <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-color)' }}>ตั้งค่าตัวกรอง</span>
+                {hasActiveFilter && (
+                  <span onClick={()=>{setFilters({ status: "All", category: "All" });}} style={{ fontSize: '0.75rem', color: '#ef4444', cursor: 'pointer', fontWeight: 700, background: '#fef2f2', padding: '4px 8px', borderRadius: '6px' }}>ล้างทั้งหมด</span>
+                )}
+             </div>
+             
+             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+               <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>จัดเรียงข้อมูล (Sort)</label>
+               <div style={{ display: 'flex', gap: '8px' }}>
+                 <select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{ flex: 1, padding:'8px 12px', borderRadius:'8px', border:'1px solid var(--border-color)', fontSize:'0.85rem', background: 'var(--input-bg)', color: 'var(--text-color)', margin: 0, outline: 'none', boxShadow: 'none' }}>
+                   <option value="name">ชื่อ (Name)</option>
+                   <option value="id">รหัส (ID)</option>
+                   <option value="status">สถานะ (Status)</option>
+                   <option value="category">ประเภท (Category)</option>
+                 </select>
+                 <button onClick={()=>setSortOrder(sortOrder==='asc'?'desc':'asc')} style={{ padding:'8px', borderRadius:'8px', border:'1px solid var(--border-color)', background:'var(--input-bg)', cursor:'pointer', width: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'none', color: 'var(--text-color)' }}>
+                   {sortOrder==='asc'?'⬆️':'⬇️'}
+                 </button>
+               </div>
+             </div>
+
+             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+               <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>สถานะ (Status)</label>
+               <select value={filters.status} onChange={e=>setFilters({ ...filters, status: e.target.value })} style={{ padding:'8px 12px', borderRadius:'8px', border:'1px solid var(--border-color)', fontSize:'0.85rem', background: 'var(--input-bg)', color: 'var(--text-color)', margin: 0, outline: 'none', boxShadow: 'none' }}>
+                 <option value="All">ทั้งหมด</option>
+                 {uniqueStatuses.map(status => <option key={status} value={status}>{status}</option>)}
+               </select>
+             </div>
+
+             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+               <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>ประเภท (Category)</label>
+               <select value={filters.category} onChange={e=>setFilters({ ...filters, category: e.target.value })} style={{ padding:'8px 12px', borderRadius:'8px', border:'1px solid var(--border-color)', fontSize:'0.85rem', background: 'var(--input-bg)', color: 'var(--text-color)', margin: 0, outline: 'none', boxShadow: 'none' }}>
+                 <option value="All">ทั้งหมด</option>
+                 {uniqueCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+               </select>
+             </div>
+          </div>
+        )}
+      </div>
+
+      <div className="table-wrap" style={{ width: '100%', overflowX: 'auto', position: 'relative', zIndex: 1, border: 'none', background: 'var(--card-bg)', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr>
+              <th style={{ padding: '20px 24px', borderBottom: '2px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', textAlign: 'left', background: 'transparent' }}>
+                รหัสระบบ (App ID)
+              </th>
+              <th style={{ padding: '20px 24px', borderBottom: '2px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', textAlign: 'left', background: 'transparent' }}>
+                ชื่อระบบ / ไซต์ (Name / Site)
+              </th>
+              <th style={{ padding: '20px 24px', borderBottom: '2px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', textAlign: 'left', background: 'transparent' }}>
+                ประเภท (Category)
+              </th>
+              <th style={{ padding: '20px 24px', borderBottom: '2px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', textAlign: 'left', background: 'transparent' }}>
+                สถานะ (Status)
+              </th>
+              <th style={{ padding: '20px 24px', borderBottom: '2px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', textAlign: 'left', background: 'transparent' }}>
+                เทคโนโลยี (Tech Summary)
+              </th>
+              <th style={{ padding: '20px 24px', borderBottom: '2px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', textAlign: 'center', background: 'transparent' }}>
+                ความปลอดภัย (Security)
+              </th>
+              <th style={{ padding: '20px 24px', borderBottom: '2px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', textAlign: 'center', background: 'transparent' }}>
+                Action
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {displayedApps.length > 0 ? (
+              displayedApps.map((app) => {
+                const hasPdpa =
+                  app.compliance?.pdpa &&
+                  Object.values(app.compliance.pdpa).some(
+                    (val) => val === true,
+                  );
+                const hasRopa =
+                  app.compliance?.ropa &&
+                  Object.values(app.compliance.ropa).some(
+                    (val) => typeof val === "string" && val.trim() !== "",
+                  );
+                const isNewSystem =
+                  app.project_type === "New System" ||
+                  app.project_type === "New";
+                return (
+                  <tr key={app.id} style={{ borderBottom: '1px solid var(--border-color)', transition: 'background-color 0.2s ease', cursor: 'default' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--table-row-hover)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                    <td style={{ color: "var(--blue)", fontWeight: 700, padding: '16px 24px', background: 'transparent', fontSize: '0.85rem' }}>
+                      {getAppIdDisplay(app)}
+                    </td>
+                    <td style={{ padding: '16px 24px', background: 'transparent', fontSize: '0.85rem' }}>
+                      <span
+                        onClick={() => handleViewDetails(app)}
+                        style={{
+                          color: "var(--text-color)",
+                          cursor: "pointer",
+                          fontWeight: "700",
+                          transition: "color 0.2s",
+                        }}
+                        onMouseEnter={(e) =>
+                          (e.target.style.color = "var(--blue)")
+                        }
+                        onMouseLeave={(e) =>
+                          (e.target.style.color = "var(--text-color)")
+                        }
+                      >
+                        {app.name}
+                      </span>
+                      <div
+                        style={{
+                          color: "var(--text-muted)",
+                          fontSize: "0.75rem",
+                          marginTop: "4px",
+                          fontWeight: 600,
+                        }}
+                      >
+                        SITE:{" "}
+                        <span style={{ color: "var(--blue)" }}>
+                          {app.site || "-"}
                         </span>
-                        <div
-                          style={{
-                            color: "var(--text-muted)",
-                            fontSize: "0.75rem",
-                            marginTop: "4px",
-                            fontWeight: 600,
-                          }}
-                        >
-                          SITE:{" "}
-                          <span style={{ color: "var(--blue)" }}>
-                            {app.site || "-"}
-                          </span>
-                        </div>
-                      </td>
-                      <td>
-                        <div
-                          style={{
-                            color: "var(--text-color)",
-                            fontSize: "0.85rem",
-                            fontWeight: 600,
-                          }}
-                        >
-                          {app.category || "Support Application"}
-                        </div>
-                        <div
-                          style={{
-                            color: "var(--text-muted)",
-                            fontSize: "0.75rem",
-                            marginTop: "4px",
-                          }}
-                        >
-                          {isNewSystem ? "Inhouse (New)" : "Inhouse (Enhance)"}
-                        </div>
-                      </td>
-                      <td>
-                        <span
-                          style={{
-                            padding: "4px 12px",
-                            background: "rgba(16, 185, 129, 0.1)",
-                            color: "#10b981",
-                            border: "1px solid rgba(16, 185, 129, 0.3)",
-                            borderRadius: "20px",
-                            fontSize: "0.75rem",
-                            fontWeight: 700,
-                          }}
-                        >
-                          {app.status || "Active"}
-                        </span>
-                      </td>
-                      <td>
-                        <div
-                          style={{
-                            color: "var(--text-color)",
-                            fontSize: "0.85rem",
-                            fontWeight: 600,
-                          }}
-                        >
-                          {app.tech?.language || "-"}
-                        </div>
-                        <div
-                          style={{
-                            color: "var(--text-muted)",
-                            fontSize: "0.75rem",
-                            marginTop: "4px",
-                          }}
-                        >
-                          {app.tech?.platform || "Web Base"}
-                        </div>
-                      </td>
-                      <td style={{ textAlign: "center" }}>
-                        <div
-                          style={{
-                            display: "flex",
-                            gap: "6px",
-                            justifyContent: "center",
-                            flexWrap: "wrap",
-                          }}
-                        >
-                          {hasPdpa && (
-                            <div
-                              title="มีการจัดเก็บข้อมูล PDPA"
-                              style={{
-                                padding: "4px 8px",
-                                background: "rgba(245, 158, 11, 0.1)",
-                                color: "#f59e0b",
-                                borderRadius: "6px",
-                                fontSize: "0.7rem",
-                                fontWeight: 700,
-                                border: "1px solid rgba(245, 158, 11, 0.3)",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              🔒 PDPA
-                            </div>
-                          )}
-                          {hasRopa && (
-                            <div
-                              title="มีการบันทึก ROPA"
-                              style={{
-                                padding: "4px 8px",
-                                background: "rgba(14, 165, 233, 0.1)",
-                                color: "#0ea5e9",
-                                borderRadius: "6px",
-                                fontSize: "0.7rem",
-                                fontWeight: 700,
-                                border: "1px solid rgba(14, 165, 233, 0.3)",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              🛡️ ROPA
-                            </div>
-                          )}
-                          {!hasPdpa && !hasRopa && (
-                            <span style={{ color: "var(--text-muted)" }}>
-                              -
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td style={{ textAlign: "center" }}>
-                        <div
-                          style={{
-                            display: "flex",
-                            gap: "6px",
-                            justifyContent: "center",
-                            alignItems: "center",
-                          }}
-                        >
-                          <button
-                            onClick={() => handleViewDetails(app)}
-                            className="btn btn-primary"
+                      </div>
+                    </td>
+                    <td style={{ padding: '16px 24px', background: 'transparent', fontSize: '0.85rem' }}>
+                      <div
+                        style={{
+                          color: "var(--text-color)",
+                          fontSize: "0.85rem",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {app.category || "Support Application"}
+                      </div>
+                      <div
+                        style={{
+                          color: "var(--text-muted)",
+                          fontSize: "0.75rem",
+                          marginTop: "4px",
+                        }}
+                      >
+                        {isNewSystem ? "Inhouse (New)" : "Inhouse (Enhance)"}
+                      </div>
+                    </td>
+                    <td style={{ padding: '16px 24px', background: 'transparent' }}>
+                      <span
+                        style={{
+                          padding: "6px 14px",
+                          background: "rgba(16, 185, 129, 0.1)",
+                          color: "#10b981",
+                          border: "1px solid rgba(16, 185, 129, 0.2)",
+                          borderRadius: "20px",
+                          fontSize: "0.75rem",
+                          fontWeight: 700,
+                        }}
+                      >
+                        {app.status || "Active"}
+                      </span>
+                    </td>
+                    <td style={{ padding: '16px 24px', background: 'transparent' }}>
+                      <div
+                        style={{
+                          color: "var(--text-color)",
+                          fontSize: "0.85rem",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {app.tech?.language || "-"}
+                      </div>
+                      <div
+                        style={{
+                          color: "var(--text-muted)",
+                          fontSize: "0.75rem",
+                          marginTop: "4px",
+                        }}
+                      >
+                        {app.tech?.platform || "Web Base"}
+                      </div>
+                    </td>
+                    <td style={{ textAlign: "center", padding: '16px 24px', background: 'transparent' }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "6px",
+                          justifyContent: "center",
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        {hasPdpa && (
+                          <div
+                            title="มีการจัดเก็บข้อมูล PDPA"
                             style={{
-                              padding: "6px 14px",
+                              padding: "4px 10px",
+                              background: "rgba(245, 158, 11, 0.1)",
+                              color: "#f59e0b",
                               borderRadius: "8px",
-                              fontSize: "0.8rem",
-                              fontWeight: 600,
+                              fontSize: "0.7rem",
+                              fontWeight: 700,
+                              border: "1px solid rgba(245, 158, 11, 0.2)",
+                              whiteSpace: "nowrap",
                             }}
                           >
-                            🔍 View Details
+                            🔒 PDPA
+                          </div>
+                        )}
+                        {hasRopa && (
+                          <div
+                            title="มีการบันทึก ROPA"
+                            style={{
+                              padding: "4px 10px",
+                              background: "rgba(14, 165, 233, 0.1)",
+                              color: "#0ea5e9",
+                              borderRadius: "8px",
+                              fontSize: "0.7rem",
+                              fontWeight: 700,
+                              border: "1px solid rgba(14, 165, 233, 0.2)",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            🛡️ ROPA
+                          </div>
+                        )}
+                        {!hasPdpa && !hasRopa && (
+                          <span style={{ color: "var(--text-muted)" }}>
+                            -
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td style={{ textAlign: "center", padding: '16px 24px', background: 'transparent' }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "8px",
+                          justifyContent: "center",
+                          alignItems: "center",
+                        }}
+                      >
+                        <button
+                          onClick={() => handleViewDetails(app)}
+                          className="btn btn-primary"
+                          style={{
+                            padding: "8px 16px",
+                            borderRadius: "10px",
+                            fontSize: "0.8rem",
+                            fontWeight: 600,
+                            boxShadow: "0 2px 4px rgba(14,165,233,0.2)", 
+                            transition: "transform 0.1s"
+                          }}
+                          onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'} 
+                          onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                        >
+                          🔍 View Details
+                        </button>
+                        {isManager && (
+                          <button
+                            onClick={() => handleDeleteApp(app.id)}
+                            title="ลบข้อมูลแอปพลิเคชัน"
+                            style={{
+                              padding: "8px 12px",
+                              borderRadius: "10px",
+                              fontSize: "0.8rem",
+                              background: "rgba(239, 68, 68, 0.1)",
+                              color: "#ef4444",
+                              border: "1px solid rgba(239, 68, 68, 0.2)",
+                              cursor: "pointer",
+                              fontWeight: "bold",
+                              transition: "transform 0.1s"
+                            }}
+                            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'} 
+                            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                          >
+                            🗑️
                           </button>
-                          {isManager && (
-                            <button
-                              onClick={() => handleDeleteApp(app.id)}
-                              title="ลบข้อมูลแอปพลิเคชัน"
-                              style={{
-                                padding: "6px 10px",
-                                borderRadius: "8px",
-                                fontSize: "0.8rem",
-                                background: "#fef2f2",
-                                color: "#ef4444",
-                                border: "1px solid #fecaca",
-                                cursor: "pointer",
-                                fontWeight: "bold",
-                              }}
-                            >
-                              🗑️
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td
-                    colSpan="7"
-                    style={{
-                      textAlign: "center",
-                      padding: "60px",
-                      color: "var(--text-muted)",
-                    }}
-                  >
-                    ไม่พบข้อมูลแอปพลิเคชันที่ตรงกับเงื่อนไข
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr>
+                <td
+                  colSpan="7"
+                  style={{
+                    textAlign: "center",
+                    padding: "60px",
+                    color: "var(--text-muted)",
+                  }}
+                >
+                  ไม่พบข้อมูลแอปพลิเคชันที่ตรงกับเงื่อนไข
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
       {isViewModalOpen && selectedApp && (
-        <div className="pdf-preview-overlay" style={{ zIndex: 1040 }}>
+        <div className="pdf-preview-overlay" style={{ zIndex: 1050 }}>
           <div
             className="pdf-preview-card"
             style={{
@@ -934,7 +813,7 @@ function ApplicationPortfolio({ currentUser }) {
                     transition: "background 0.2s",
                   }}
                   onMouseEnter={(e) =>
-                    (e.currentTarget.style.background = "#fef2f2")
+                    (e.currentTarget.style.background = "var(--table-row-hover)")
                   }
                   onMouseLeave={(e) =>
                     (e.currentTarget.style.background = "var(--bg-color)")
@@ -954,6 +833,8 @@ function ApplicationPortfolio({ currentUser }) {
                 display: "flex",
                 gap: "12px",
                 overflowX: "auto",
+                overflowY: "hidden", /* 🚀 ซ่อน Scrollbar แนวตั้งที่โผล่มาเกิน 🚀 */
+                scrollbarWidth: "none", /* 🚀 ซ่อน Scrollbar แนวนอนใน Firefox 🚀 */
                 alignItems: "flex-end",
                 background: "var(--card-bg)",
               }}
@@ -1009,14 +890,13 @@ function ApplicationPortfolio({ currentUser }) {
                     transition: "all 0.2s ease",
                     position: "relative",
                     marginBottom:
-                      "-1px" /* 🚀 ซ้อนทับเส้นขอบล่างเพื่อให้ดูเป็นเส้นเดียวกันเป๊ะๆ */,
+                      "-1px"
                   }}
                 >
                   <span style={{ display: "flex", alignItems: "center" }}>
                     {tab.icon}
                   </span>
                   {tab.label}
-                  {/* 🚀 ขีดเส้นใต้สีตรงกับไอคอน เฉพาะตัวที่ถูก Active */}
                   {activeTab === tab.id && (
                     <div
                       style={{
@@ -1041,7 +921,7 @@ function ApplicationPortfolio({ currentUser }) {
                 flex: 1,
                 color: "var(--text-color)",
                 fontSize: "0.95rem",
-                background: "var(--bg-secondary, #f8fafc)",
+                background: "var(--bg-color)", 
               }}
             >
               {activeTab === "general" && (
