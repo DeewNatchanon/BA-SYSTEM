@@ -95,5 +95,5 @@ const changePassword = async (req, res, next) => {
 
 // 🚀 อย่าลืม Export changePassword
 module.exports = {
-  register, login, me, changePassword
+  register, login, me
 };

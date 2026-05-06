@@ -39,7 +39,16 @@ const styles = StyleSheet.create({
   },
   frameFill: { flex: 1 },
   logoRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  logo: { height: 18, width: 72, objectFit: 'contain' },
+  
+  /* 🚀 ใส่ objectFit: 'contain' กลับมา เพื่อรักษาสัดส่วนรูปให้เป๊ะ ไม่โดนบีบ/ยืด 🚀 */
+  logo: {
+    width: 160,       
+    height: 45,       
+    objectFit: 'contain',
+    marginBottom: 8,
+    marginLeft: 0
+  }, 
+  
   metaBlock: { fontSize: 8.6, textAlign: 'right', lineHeight: 1.25 },
   
   /* --- Style บรรทัดแรก (Title Bar) ปรับให้เหมือนรูป --- */
@@ -62,7 +71,7 @@ const styles = StyleSheet.create({
   titleRightCol: {
     width: '50%',
     justifyContent: 'center',
-    alignItems: 'flex-end', // ปรับเป็น flex-end เพื่อให้เนื้อหาชิดขวา
+    alignItems: 'flex-end',
     paddingRight: 8,
     paddingVertical: 3
   },
@@ -82,7 +91,9 @@ const styles = StyleSheet.create({
   fieldRowOuter: { width: '100%', borderBottomWidth: 1, borderBottomColor: '#000' },
   fieldRow: { flexDirection: 'row', alignItems: 'center', width: '100%', paddingHorizontal: 4 },
   fieldLabel: { width: '24%', fontSize: 8.8, lineHeight: 1.2, paddingRight: 6 },
-  fieldValue: { flex: 1, flexGrow: 1, minHeight: 14, minWidth: 0, backgroundColor: '#e6e6e6', paddingVertical: 2, paddingHorizontal: 3 },
+  
+  /* ช่อง Input สีเทาอ่อน #f2f2f2 */
+  fieldValue: { flex: 1, flexGrow: 1, minHeight: 14, minWidth: 0, backgroundColor: '#f2f2f2', paddingVertical: 2, paddingHorizontal: 3 },
   fieldValueMedium: { minHeight: 20 },
   fieldValueTall: { minHeight: 36 },
   fieldValueText: { fontSize: 9.8, lineHeight: 1.2 },
@@ -90,10 +101,10 @@ const styles = StyleSheet.create({
   splitRow: { flexDirection: 'row', width: '100%', paddingHorizontal: 4, gap: 6 },
   splitCell: { flex: 1, minWidth: 0, paddingVertical: 2 },
   inlineLabel: { fontSize: 8.8, marginBottom: 1 },
-  inlineValue: { minHeight: 14, backgroundColor: '#e6e6e6', paddingVertical: 2, paddingHorizontal: 3 },
+  inlineValue: { minHeight: 14, backgroundColor: '#f2f2f2', paddingVertical: 2, paddingHorizontal: 3 },
   inlineSingleRow: { flexDirection: 'row', alignItems: 'center', width: '100%', gap: 4 },
   inlineSingleLabel: { fontSize: 8.8 },
-  inlineSingleValue: { flex: 1, minHeight: 14, backgroundColor: '#e6e6e6', paddingVertical: 2, paddingHorizontal: 3 },
+  inlineSingleValue: { flex: 1, minHeight: 14, backgroundColor: '#f2f2f2', paddingVertical: 2, paddingHorizontal: 3 },
 
   /* --- Styles สำหรับหน้า 2 (GLS IT only) --- */
   glsRow: {
@@ -108,7 +119,7 @@ const styles = StyleSheet.create({
   glsLabelSub: { fontSize: 7.5, color: '#333' },
   glsContentCol: { flex: 1, padding: 4, justifyContent: 'center' },
   greyInputBox: {
-    backgroundColor: '#e6e6e6',
+    backgroundColor: '#f2f2f2', 
     minHeight: 14,
     flex: 1,
     paddingHorizontal: 4,
@@ -178,7 +189,6 @@ const formatDate = (value) => {
 const safeText = (value) => (value ? String(value) : '');
 const withColon = (label = '') => (label.trim().endsWith(':') ? label : `${label}:`);
 
-// ให้จุดไข่ปลาความยาวเท่ากัน เพื่อให้เรียงชิดขอบพอดี
 const getDotString = (text) => {
   if (text) return text;
   return '.............................................................';

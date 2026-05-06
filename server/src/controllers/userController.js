@@ -1,4 +1,3 @@
-// 🚀 นำเข้า updateUsername
 const { listUsers, updateUsername } = require('../repositories/userRepository');
 
 const getUsers = async (req, res, next) => {
@@ -11,15 +10,28 @@ const getUsers = async (req, res, next) => {
 };
 
 const updateUser = async (req, res) => {
-  // 🚀 อ่านชื่อเก่าจาก Token ป้องกันคนแอบเปลี่ยนชื่อคนอื่น
   const oldUsername = req.auth.username; 
   const newUsername = req.body.username; 
+  const avatar = req.body.avatar; // 🚀 รับรูปภาพ Base64 มาจาก Request
 
   try {
-    await updateUsername(oldUsername.toLowerCase(), newUsername.toLowerCase()); 
-    res.json({ message: 'อัปเดตข้อมูลโปรไฟล์สำเร็จ!' });
+    // 🚀 ส่งชื่อเก่า, ชื่อใหม่ และ รูปภาพ เข้าไปอัปเดตในฐานข้อมูล
+    const updatedUser = await updateUsername(
+      oldUsername.toLowerCase(), 
+      newUsername.toLowerCase(), 
+      avatar || null
+    ); 
+    
+    res.json({ 
+      message: 'อัปเดตข้อมูลโปรไฟล์สำเร็จ!',
+      user: {
+        id: updatedUser.id,
+        username: updatedUser.username,
+        avatar: updatedUser.avatar
+      }
+    });
   } catch (error) {
-    console.error(error);
+    console.error("Update User Error:", error);
     if (error.code === '23505') { 
         return res.status(400).json({ message: 'ชื่อผู้ใช้นี้มีคนใช้งานแล้ว กรุณาเลือกชื่ออื่น' });
     }

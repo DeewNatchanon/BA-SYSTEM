@@ -1,1190 +1,480 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Noto+Serif+Thai:wght@500;600;700&display=swap');
-
-:root {
-  color-scheme: light;
-  --page-bg: #eaf2fb;
-  --surface: #ffffff;
-  --surface-2: #f7fafc;
-  --line: #cfe0f2;
-  --text: #0f2b4b;
-  --muted: #4d6b8a;
-  --blue: #0072bb;
-  --blue-dark: #002d73;
-  --accent: #0f6abf;
-  --accent-soft: rgba(15, 106, 191, 0.12);
-  --green: #4caf50;
-  --yellow: #f3c64e;
-  --red: #e65b4f;
-  --ring: 0 0 0 3px rgba(15, 106, 191, 0.18);
-  --shadow: 0 10px 18px rgba(0, 45, 115, 0.15);
-}
-
-* { box-sizing: border-box; }
-
-body {
-  margin: 0;
-  font-family: "IBM Plex Sans Thai", "Segoe UI", sans-serif;
-  color: var(--text);
-  background: var(--page-bg);
-}
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Prompt:wght@400;500;600;700;800&display=swap');
 
 /* =========================================
-   1. LOGIN PAGE (PREMIUM GLASSMORPHISM)
+   1. VARIABLES & THEMING
+   ========================================= */
+:root, [data-theme="light"], [data-theme="hospital"] {
+  --bg-color: #f8fafc; --card-bg: #ffffff; --border-color: #e2e8f0;
+  --text-color: #0f172a; --text-muted: #64748b; --blue: #0284c7;
+  --blue-dark: #0369a1; --table-header-bg: #f1f5f9; --table-header-text: #475569;
+  --table-row-hover: #f8fafc; --input-bg: #ffffff;
+  --accent: #0f6abf; --accent-soft: rgba(15, 106, 191, 0.12);
+}
+[data-theme="dark"] {
+  --bg-color: #0f172a; --card-bg: #1e293b; --border-color: #334155;
+  --text-color: #f8fafc; --text-muted: #94a3b8; --blue: #38bdf8;
+  --blue-dark: #0ea5e9; --table-header-bg: #0f172a; --table-header-text: #94a3b8;
+  --table-row-hover: #334155; --input-bg: #0f172a;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: 'Plus Jakarta Sans', 'Prompt', sans-serif; background-color: var(--bg-color); color: var(--text-color); -webkit-font-smoothing: antialiased; line-height: 1.5; }
+
+/* =========================================
+   2. GLOBAL UX/UI OVERRIDES
+   ========================================= */
+.page-wrap { width: 100%; max-width: 1280px; margin: 0 auto; padding: 32px 24px; display: flex; flex-direction: column; gap: 8px !important; }
+.page-heading { font-size: 2.2rem !important; font-weight: 800 !important; color: var(--text-color) !important; margin: 0 !important; letter-spacing: -0.02em !important; }
+.page-wrap > div:first-child { margin-bottom: 8px !important; }
+
+.page-request > div:first-child,
+.page-project > div:first-child,
+.page-app > div:first-child { width: 100% !important; max-width: 980px !important; margin-left: auto !important; margin-right: auto !important; margin-bottom: 8px !important; }
+
+.content-card, section[style*="border-radius: 24px"], .form-section { 
+  border-radius: 12px !important; border: 1px solid var(--border-color) !important; 
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important; background: var(--card-bg) !important; padding: 24px !important; 
+}
+.pdf-preview-card { border-radius: 16px !important; border: 1px solid var(--border-color) !important; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25) !important; background: var(--card-bg) !important; overflow: hidden !important; }
+.pdf-preview-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.5) !important; backdrop-filter: blur(4px); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 24px; }
+
+/* Buttons */
+.btn { display: inline-flex !important; align-items: center !important; justify-content: center !important; gap: 8px !important; padding: 8px 16px !important; border-radius: 8px !important; font-weight: 600 !important; font-size: 0.85rem !important; cursor: pointer !important; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important; border: 1px solid transparent; white-space: nowrap !important; }
+.btn:hover { transform: translateY(-1px) !important; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1) !important; }
+.btn-primary { background: var(--blue) !important; color: #fff !important; }
+.btn-primary:hover:not(:disabled) { background: var(--blue-dark) !important; }
+.btn-secondary { background: var(--card-bg) !important; color: var(--text-color) !important; border-color: var(--border-color) !important; }
+.btn-secondary:hover:not(:disabled) { background: var(--table-row-hover) !important; }
+.btn-tertiary { background: transparent !important; color: var(--text-muted) !important; border: 1px solid var(--border-color) !important; }
+.btn-tertiary:hover:not(:disabled) { background: var(--table-row-hover) !important; color: var(--text-color) !important; }
+.btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none !important; }
+
+/* Inputs */
+input, select, textarea, .date-input { border-radius: 8px !important; border: 1px solid var(--border-color) !important; padding: 10px 12px !important; background: var(--input-bg) !important; color: var(--text-color) !important; font-size: 0.9rem !important; box-shadow: 0 1px 2px rgba(0,0,0,0.02) !important; outline: none !important; transition: all 0.2s !important; font-family: inherit !important; width: 100%; }
+input:focus, select:focus, textarea:focus { border-color: var(--blue) !important; box-shadow: 0 0 0 3px rgba(2,132,199,0.15) !important; }
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group label { font-size: 0.85rem; font-weight: 600; color: var(--text-color); margin: 0; }
+.form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 16px; }
+
+/* =========================================
+   3. REQUEST FORM STYLES 
+   ========================================= */
+.request-form { display: grid; gap: 1.5rem; }
+.form-section { background: var(--card-bg) !important; padding: 24px !important; border: 1px solid var(--border-color) !important; border-radius: 12px !important; box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important; width: min(980px, 100%) !important; margin: 0 auto !important; overflow: hidden !important; }
+.section-title { background: linear-gradient(135deg, var(--blue), var(--blue-dark)); color: #fff; padding: 14px 24px; margin: -24px -24px 24px -24px; font-weight: 700; font-size: 1.05rem; text-transform: uppercase; }
+.print-header { display: none !important; }
+.checkbox-group, .radio-group { display: flex; flex-wrap: wrap; gap: 12px; }
+.checkbox-item, .radio-item { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; cursor: pointer; color: var(--text-color); }
+.checkbox-item input, .radio-item input { width: auto !important; margin: 0 !important; cursor: pointer; }
+.cost-table-wrapper { overflow-x: auto; border: 1px solid var(--border-color); border-radius: 8px; margin-top: 8px; }
+.cost-table { width: 100%; border-collapse: collapse; background: var(--card-bg); }
+.cost-table th { background: var(--table-header-bg); padding: 12px; font-size: 0.85rem; font-weight: 600; text-align: left; border-bottom: 1px solid var(--border-color); color: var(--table-header-text); }
+.cost-table td { padding: 10px; border-bottom: 1px solid var(--border-color); }
+.approval-grid, .gls-approval-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-top: 24px; }
+.approval-card { border: 1px solid var(--border-color); border-radius: 8px; background: var(--card-bg); text-align: center; font-size: 0.8rem; overflow: hidden; }
+.approval-title { background: var(--table-header-bg); padding: 8px; font-weight: 700; border-bottom: 1px solid var(--border-color); color: var(--text-color); }
+.approval-sign { height: 80px; border-bottom: 1px solid var(--border-color); }
+.approval-name, .approval-date { padding: 6px; border-bottom: 1px solid var(--border-color); color: var(--text-color); }
+.approval-role { padding: 8px; font-weight: 600; font-size: 0.75rem; color: var(--text-muted); }
+
+/* =========================================
+   4. TOPBAR & SIDEBAR
+   ========================================= */
+.topbar { height: 64px !important; background: var(--card-bg) !important; border-bottom: 1px solid var(--border-color) !important; padding: 0 24px !important; display: flex !important; align-items: center !important; justify-content: space-between !important; z-index: 1000; position: sticky; top: 0; }
+.brand-container { display: flex; align-items: center; gap: 16px; }
+.hospital-logo { height: 38px !important; object-fit: contain; }
+.vertical-divider { width: 2px; height: 32px; background-color: var(--border-color); border-radius: 2px; }
+.system-identity { display: flex; align-items: center; gap: 12px; }
+.greenline-logo { height: 26px !important; object-fit: contain; }
+.system-text { display: flex; flex-direction: column; justify-content: center; }
+.system-name { font-weight: 800; font-size: 1.1rem; color: var(--text-color); line-height: 1.2; margin: 0; white-space: nowrap; }
+.location-tag { font-size: 0.7rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; white-space: nowrap; }
+
+/* 🚀 สไตล์ใหม่สำหรับ Profile และเมนูมุมขวาบนของ Topbar */
+.topbar-right { display: flex; align-items: center; gap: 16px; }
+.topbar-actions { display: flex; align-items: center; gap: 8px; }
+/* ✅ แบบใหม่: ใช้สไตล์ Capsule โค้งมน คลีนๆ อาศัยพื้นที่ว่างแทนการตีเส้นกั้น */
+.topbar-user { 
+  display: flex; 
+  align-items: center; 
+  gap: 12px; 
+  cursor: pointer; 
+  padding: 6px 14px; 
+  margin-left: 8px;
+  border-radius: 50px; 
+  background: transparent;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); 
+}
+
+/* ใส่ลูกเล่นเมื่อเอาเมาส์ชี้ (Hover Effect) แทนการใช้เส้นกั้นถาวร */
+.topbar-user:hover { 
+  background: var(--bg-color); /* แสดงพื้นหลังสีเทาอ่อนๆ เพื่อบอกว่าเป็นปุ่มกดได้ */
+  transform: translateY(-1px);
+}
+.user-avatar { width: 40px; height: 40px; background: var(--blue); color: white; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem; flex-shrink: 0; }
+.user-details { display: flex; flex-direction: column; justify-content: center; overflow: hidden; align-items: flex-start; }
+.user-details .username { font-weight: 700; color: var(--text-color); font-size: 0.95rem; margin: 0; line-height: 1.2; white-space: nowrap; }
+.user-details .user-role { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; padding: 2px 8px; border-radius: 12px; background: rgba(2, 132, 199, 0.1); color: var(--blue-dark); border: 1px solid rgba(2, 132, 199, 0.2); }
+
+.hamburger-btn { background: none; border: none; font-size: 1.8rem; color: var(--text-color); cursor: pointer; display: none; }
+
+.topbar-sidebar { 
+  position: fixed; top: 0; right: 0; width: 300px; height: 100vh; background: var(--card-bg); 
+  box-shadow: -1px 0 0 var(--border-color), -10px 0 30px rgba(0,0,0,0.05); 
+  transform: translateX(100%); transition: transform 0.3s; z-index: 1001; padding: 24px; display: flex; flex-direction: column; 
+}
+.topbar-sidebar.open { transform: translateX(0); }
+
+.action-icon-btn { background: var(--bg-color); border: 1px solid var(--border-color); color: var(--text-muted); width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; position: relative; }
+.action-icon-btn:hover { background: var(--table-row-hover); color: var(--blue); }
+
+.sidebar-nav { display: flex; flex-direction: column; gap: 8px; flex: 1; margin-top: 10px; }
+.nav-item { padding: 14px 16px; color: var(--text-muted); font-weight: 600; text-decoration: none; border-radius: 10px; transition: 0.2s; display: flex; align-items: center; gap: 10px; }
+.nav-item:hover, .nav-item.active { background: var(--table-row-hover); color: var(--blue); }
+.logout-btn { display: flex; align-items: center; justify-content: center; gap: 10px; background: #fff5f5; color: #ef4444; border: 1px solid #fecaca; padding: 14px; border-radius: 10px; font-weight: 700; font-size: 1rem; cursor: pointer; transition: all 0.2s ease; margin-top: auto; width: 100%; }
+.logout-btn:hover { background: #fef2f2; }
+
+/* 🚀 จัดการ Responsive: ซ่อนชื่อและขีดกั้นในจอมือถือ */
+@media (max-width: 1024px) {
+  .hamburger-btn { display: flex !important; }
+  .user-details { display: none !important; }
+  .topbar-user { padding-left: 0; border-left: none; }
+  .topbar-right { gap: 10px; }
+}
+/* =========================================
+   5. DATA TABLES
+   ========================================= */
+.table-wrap { border: 1px solid var(--border-color) !important; border-radius: 12px !important; overflow: hidden !important; background: var(--card-bg) !important; }
+.portfolio-table, .project-portfolio-table { width: 100% !important; border-collapse: collapse !important; background: var(--card-bg) !important; }
+.portfolio-table th, .project-portfolio-table th { background: var(--table-header-bg) !important; color: var(--table-header-text) !important; font-weight: 600 !important; font-size: 0.75rem !important; text-transform: uppercase !important; padding: 12px 16px !important; border-bottom: 1px solid var(--border-color) !important; text-align: left; }
+.portfolio-table td, .project-portfolio-table td { padding: 14px 16px !important; border-bottom: 1px solid var(--border-color) !important; color: var(--text-color) !important; font-size: 0.85rem !important; vertical-align: middle !important; background: var(--card-bg) !important; }
+.portfolio-table tbody tr:hover td, .project-portfolio-table tbody tr:hover td { background: var(--table-row-hover) !important; }
+
+/* =========================================
+   6. LOGIN PAGE
    ========================================= */
 .login-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
-.login-card { width: 100%; max-width: 420px; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 20px; box-shadow: 0 15px 35px rgba(0, 45, 115, 0.15), 0 5px 15px rgba(0, 0, 0, 0.05); padding: 3rem 2.5rem; display: flex; flex-direction: column; gap: 1.8rem; animation: fadeIn 0.6s ease-out; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
-.login-header { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; }
-.login-logo { height: 48px !important; object-fit: contain; margin-bottom: 10px !important; }
-.login-header h1 { margin: 0; color: #1a365d; font-size: 1.8rem; font-family: "Noto Serif Thai", serif; font-weight: 800; letter-spacing: -0.5px; }
-.login-header p { margin: 0; color: #64748b; font-size: 0.95rem; font-weight: 500; }
-.login-form { display: flex; flex-direction: column; gap: 1.25rem; }
-.login-card label { font-weight: 700; color: #334155; font-size: 0.85rem; letter-spacing: 0.2px; margin-bottom: 0.4rem; display: block; }
-.login-card input, .modern-select { width: 100%; border: 1.5px solid #cbd5e1; background: rgba(255, 255, 255, 0.9); border-radius: 10px; padding: 0.8rem 1rem; font-size: 0.95rem; color: #1e293b; transition: all 0.2s ease; }
-.login-card input:focus, .modern-select:focus { outline: none; border-color: #2b6cb0; background: #ffffff; box-shadow: 0 0 0 4px rgba(43, 108, 176, 0.1); }
-.btn-login-submit { background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%); color: white; border: none; padding: 0.9rem; border-radius: 10px; font-size: 1rem; font-weight: 700; cursor: pointer; width: 100%; transition: all 0.3s ease; margin-top: 0.8rem; box-shadow: 0 6px 15px rgba(30, 58, 138, 0.25); }
-.btn-login-submit:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(30, 58, 138, 0.35); background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); }
-.auth-error { color: #b91c1c; font-size: 0.85rem; font-weight: 600; background: #fef2f2; border: 1px solid #fecaca; padding: 0.75rem; border-radius: 8px; text-align: center; }
-.login-footer { text-align: center; margin-top: 0.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(0, 0, 0, 0.08); }
-.login-footer .btn-link { background: none; border: none; color: #2b6cb0; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: all 0.2s ease; padding: 5px 10px; border-radius: 6px; }
-.login-footer .btn-link:hover { color: #1e3a8a; background: rgba(43, 108, 176, 0.05); }
-.password-input-wrapper { position: relative; display: flex; align-items: center; }
-.password-input-wrapper input { padding-right: 2.5rem; }
-.password-toggle-btn { position: absolute; right: 0.5rem; background: transparent; border: none; color: #64748b; cursor: pointer; padding: 0.2rem; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: color 0.2s, background 0.2s; }
-.password-toggle-btn:hover { color: #0072bb; background: rgba(0, 114, 187, 0.1); }
+.login-card { width: 100%; max-width: 440px; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.8); border-radius: 24px; box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.15); padding: 40px 32px; display: flex; flex-direction: column; gap: 24px; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+[data-theme='dark'] .login-card { background: rgba(30, 41, 59, 0.95); border-color: rgba(255, 255, 255, 0.1); }
+.login-header { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.login-logo { height: 50px !important; object-fit: contain; margin-bottom: 8px !important; }
+.login-title { margin: 0; color: var(--text-color); font-size: 1.8rem; font-weight: 800; letter-spacing: -0.5px; }
+.login-desc { margin: 0; color: var(--text-muted); font-size: 0.95rem; }
+.login-form .form-group { margin-bottom: 16px; display: flex; flex-direction: column; gap: 6px; }
+.login-form label { font-size: 0.85rem; font-weight: 700; color: var(--text-color); margin: 0; }
+.login-form input, .login-form select { width: 100%; border-radius: 12px !important; border: 1.5px solid var(--border-color) !important; padding: 12px 16px !important; background: var(--input-bg) !important; color: var(--text-color) !important; font-size: 0.95rem !important; transition: all 0.2s !important; }
+.login-form input:focus, .login-form select:focus { border-color: var(--blue) !important; box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.15) !important; }
+.password-input-wrapper { position: relative; width: 100%; display: flex; align-items: center; }
+.password-input-wrapper input { padding-right: 48px !important; }
+.password-toggle-btn { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: transparent !important; border: none !important; color: var(--text-muted); cursor: pointer; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50% !important; transition: 0.2s; outline: none; padding: 0 !important; box-shadow: none !important; }
+.password-toggle-btn:hover { color: var(--blue); background: rgba(2, 132, 199, 0.1) !important; }
+.btn-login-submit { background: linear-gradient(135deg, var(--blue), var(--blue-dark)) !important; color: white !important; width: 100% !important; padding: 14px !important; margin-top: 10px !important; border-radius: 12px !important; font-size: 1rem !important; font-weight: 700 !important; border: none !important; cursor: pointer !important; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3) !important; transition: transform 0.2s, box-shadow 0.2s !important; }
+.btn-login-submit:hover:not(:disabled) { transform: translateY(-2px) !important; box-shadow: 0 6px 16px rgba(2, 132, 199, 0.4) !important; }
+.login-footer { text-align: center; margin-top: 8px; }
+.login-footer .btn-link { background: transparent !important; border: none !important; color: var(--blue) !important; font-weight: 700; font-size: 0.9rem; cursor: pointer; padding: 8px 16px; border-radius: 8px; transition: all 0.2s; box-shadow: none !important; display: inline-block; }
+.login-footer .btn-link:hover { background: rgba(2, 132, 199, 0.08) !important; text-decoration: none; }
+.auth-error { color: #ef4444; font-size: 0.85rem; font-weight: 600; background: #fef2f2; border: 1px solid #fca5a5; padding: 12px; border-radius: 8px; text-align: center; }
 
 /* =========================================
-   2. TOPBAR & SIDEBAR NAVIGATION (Minimalist 🚀)
+   7. BADGES & NOTIFICATIONS
    ========================================= */
-.topbar {
-  display: flex !important;
-  flex-direction: row !important;
-  justify-content: space-between !important;
-  align-items: center !important;
-  padding: 0 32px;
-  height: 75px;
-  width: 100%;
-  background-color: #ffffff;
-  border-bottom: 1px solid #e2e8f0;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-  flex-wrap: nowrap !important;
+.status-badge { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; text-transform: capitalize; border: 1px solid transparent; }
+.status-badge.active { background: #dcfce7 !important; color: #166534 !important; border-color: #bbf7d0 !important; }
+.status-badge.go-live { background: #dbeafe !important; color: #1e40af !important; border-color: #bfdbfe !important; }
+.status-badge.hold { background: #fef3c7 !important; color: #92400e !important; border-color: #fde68a !important; }
+.status-badge.initiate { background: #f3f4f6 !important; color: #475569 !important; border-color: #e2e8f0 !important; }
+
+.notif-badge { position: absolute; top: -4px; right: -4px; background: #ef4444; color: white; font-size: 0.65rem; font-weight: 800; height: 18px; min-width: 18px; border-radius: 10px; display: flex; align-items: center; justify-content: center; border: 2px solid var(--card-bg); padding: 0 4px; }
+
+.toast-notification { 
+  position: fixed; bottom: 24px; right: -320px; background: var(--card-bg); color: var(--text-color); 
+  padding: 16px 20px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); 
+  font-weight: 600; font-size: 0.9rem; z-index: 9999; transition: right 0.4s cubic-bezier(0.16,1,0.3,1); 
+  display: flex; align-items: center; gap: 12px; border: 1px solid var(--border-color); 
 }
+.toast-notification.show { right: 24px; }
+.toast-notification.success { background: #f0fdf4; border-color: #bbf7d0; color: #15803d; }
+.toast-notification.error { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
+.toast-notification.info { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
 
-/* --- ฝั่งซ้าย (Logos) --- */
-.topbar-left {
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  flex: 0 0 auto;
-  height: 100%;
-}
-
-.brand-container { display: flex; align-items: center; gap: 16px; }
-.hospital-logo { height: 38px; object-fit: contain; }
-.vertical-divider { width: 2px; height: 32px; background-color: #e2e8f0; border-radius: 2px; }
-.system-identity { display: flex; align-items: center; gap: 12px; }
-.greenline-logo { height: 26px; object-fit: contain; }
-
-.system-text { display: flex; flex-direction: column; justify-content: center; }
-.system-name { font-weight: 800; font-size: 1.1rem; color: #0f2b4b; line-height: 1.2; margin: 0; white-space: nowrap; }
-.location-tag { font-size: 0.7rem; color: #64748b; font-weight: 600; letter-spacing: 0.5px; line-height: 1; text-transform: uppercase; white-space: nowrap; }
-
-/* --- 🚀 ปุ่มแฮมเบอร์เกอร์ (แสดงทุกหน้าจอ) --- */
-.hamburger-btn {
-  display: block !important;
-  position: relative;
-  z-index: 1001; /* ให้อยู่เหนือ Sidebar */
-  background: none;
-  border: none;
-  font-size: 2rem; /* ขยายปุ่มให้กดง่าย */
-  color: #1a365d;
-  cursor: pointer;
-  padding: 0 10px;
-  transition: transform 0.2s ease;
-}
-.hamburger-btn:hover { transform: scale(1.1); }
-
-/* --- 🚀 Sidebar Drawer (กล่องเมนูที่เลื่อนออกมา) --- */
-.topbar-sidebar {
-  position: fixed !important;
-  top: 0;
-  right: 0;
-  width: 320px; /* ขยายกว้างขึ้นให้ดูโปร */
-  height: 100vh;
-  background: rgba(255, 255, 255, 0.98);
-  backdrop-filter: blur(15px);
-  -webkit-backdrop-filter: blur(15px);
-  flex-direction: column !important;
-  padding: 90px 28px 32px; /* ดันลงมาหลบปุ่มปิด */
-  box-shadow: -15px 0 35px rgba(0, 0, 0, 0.08);
-  transform: translateX(100%);
-  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  visibility: hidden;
-  z-index: 1000;
-  display: flex;
-  align-items: stretch;
-}
-
-.topbar-sidebar.open {
-  visibility: visible;
-  transform: translateX(0);
-}
-
-/* 1. โปรไฟล์ (บนสุด) */
-.sidebar-profile {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding-bottom: 24px;
-  margin-bottom: 24px;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.user-avatar {
-  width: 50px;
-  height: 50px;
-  background: linear-gradient(135deg, #0072bb, #002d73);
-  color: white;
-  border-radius: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 1.4rem;
-  box-shadow: 0 4px 12px rgba(0, 114, 187, 0.25);
-  flex-shrink: 0;
-}
-
-.user-details { display: flex; flex-direction: column; justify-content: center; overflow: hidden; }
-.user-details .username { font-weight: 700; color: #1e293b; font-size: 1.05rem; margin: 0; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
-.user-details .user-role { font-size: 0.75rem; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
-
-/* 2. เมนู (ตรงกลาง) */
-.sidebar-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  width: 100%;
-}
-
-.sidebar-nav .nav-item {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  padding: 16px 20px;
-  color: #475569;
-  font-weight: 600;
-  font-size: 1.05rem;
-  text-decoration: none;
-  border-radius: 12px;
-  transition: all 0.2s ease;
-}
-
-.sidebar-nav .nav-item:hover { color: #0072bb; background: rgba(0, 114, 187, 0.05); transform: translateX(5px); }
-.sidebar-nav .nav-item.active { color: #0072bb; background: rgba(0, 114, 187, 0.08); font-weight: 700; }
-
-/* 3. ปุ่ม Logout (ล่างสุด) */
-.topbar-sidebar .logout-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  background: #fff5f5;
-  color: #ef4444;
-  border: 1px solid #fecaca;
-  padding: 16px;
-  border-radius: 12px;
-  font-weight: 700;
-  font-size: 1.05rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  margin-top: auto; /* 🚀 ดันปุ่มนี้ลงไปติดขอบจอด้านล่างสุดเสมอ */
-  width: 100%;
-}
-
-.topbar-sidebar .logout-btn:hover { background: #ef4444; color: white; border-color: #ef4444; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.2); }
-
-/* Responsive ซ่อนข้อความแบรนด์ในจอเล็กมาก */
-@media screen and (max-width: 768px) {
-  .system-text { display: none !important; }
-  .topbar { padding: 0 16px; }
-  .topbar-sidebar { width: 85%; max-width: 320px; } /* ไม่ให้เมนูกินเต็มจอ 100% ในมือถือ */
-}
+/* Dark mode adjustments for Toasts */
+[data-theme='dark'] .toast-notification.success { background: rgba(21, 128, 61, 0.15); border-color: rgba(34, 197, 94, 0.3); color: #4ade80; }
+[data-theme='dark'] .toast-notification.error { background: rgba(185, 28, 28, 0.15); border-color: rgba(239, 68, 68, 0.3); color: #f87171; }
+[data-theme='dark'] .toast-notification.info { background: rgba(29, 78, 216, 0.15); border-color: rgba(59, 130, 246, 0.3); color: #60a5fa; }
 
 /* =========================================
-   3. APP CONTENT (โค้ดตารางและฟอร์มเดิมของคุณ 100%)
+   8. PRINT MEDIA
    ========================================= */
-.app-container { display: flex; flex-direction: column; min-height: 100vh; }
-.btn { border: none; border-radius: 10px; padding: 0.7rem 1.5rem; font-weight: 700; cursor: pointer; transition: 0.2s; }
-.btn-primary { background: linear-gradient(135deg, var(--blue), var(--blue-dark)); color: #fff; width: 100%; }
-.btn-secondary { background: #f1f5f9; color: #475569; }
-
-.pdf-preview-modal, .pdf-preview-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.3); z-index: 9999; display: flex; align-items: center; justify-content: center; }
-.pdf-preview-content, .pdf-preview-card { background: #fff; border-radius: 12px; box-shadow: 0 2px 16px rgba(0,0,0,0.18); padding: 0; width: 900px; height: 90vh; max-width: 98vw; max-height: 98vh; display: flex; flex-direction: column; overflow: hidden; }
-.pdf-preview-toolbar, .pdf-preview-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 24px 8px 24px; border-bottom: 1px solid #eee; background: #fff; }
-.pdf-preview-iframe { flex: 1; width: 100%; height: 100%; border: none; background: #f8f8f8; display: block; margin: 0 auto; aspect-ratio: 1/1.414; box-shadow: 0 0 0 1px #eee; overflow: auto; }
-.pdf-preview-title { font-weight: 700; color: #20344f; }
-.pdf-preview-actions { display: flex; gap: 0.6rem; }
-.pdf-preview-body { flex: 1; overflow: auto; background: #f2f5f9; }
-.pdf-preview-empty { height: 100%; display: flex; align-items: center; justify-content: center; color: #516178; font-weight: 600; }
-.pdf-preview-frame { width: min(100%, 980px); height: 100%; border: none; display: block; margin: 0 auto; background: #fff; }
-.page-heading {margin: 0 0 1.2rem 0; color: #102a48; font-size: 1.8rem; font-weight: 700; font-family: "Noto Serif Thai", serif; text-align: center !important; width: 100%; display: block !important; }
-.page-rule { display: none; }
-.manager-panel { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; padding: 0.75rem 0.9rem; border: 1px solid #d9e0ec; border-radius: 4px; background: rgba(255, 255, 255, 0.6); }
-.manager-status { font-weight: 700; font-size: 0.82rem; color: #4f6177; }
-.manager-form { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
-.manager-form input { min-width: 140px; height: 2rem; }
-.request-card { width: min(680px, 100%); margin: 0 auto; }
-.request-form { display: grid; gap: 0.85rem; }
-label { display: grid; gap: 0.35rem; color: #586a80; font-size: 0.8rem; font-weight: 700; }
-input, select, textarea { width: 100%; border: 1px solid rgba(182, 201, 222, 0.9); border-radius: 8px; background: var(--surface-2); color: #34445a; font: inherit; padding: 0.55rem 0.65rem; transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease; }
-input::placeholder, textarea::placeholder { color: #8b9bb0; }
-input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: var(--ring); background: #fff; }
-.react-datepicker-wrapper, .react-datepicker__input-container { width: 100%; }
-.date-input { width: 100%; }
-textarea { min-height: 70px; resize: vertical; }
-.priority-row { display: flex; gap: 0.65rem; flex-wrap: wrap; }
-.priority-chip { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.72rem; font-weight: 700; color: #7d8a9b; }
-.priority-chip input { width: auto; }
-.form-actions { display: flex; justify-content: center; gap: 0.7rem; padding-top: 0.15rem; }
-button { border: none; border-radius: 10px; padding: 0.55rem 1.85rem; background: linear-gradient(135deg, var(--blue), var(--blue-dark)); color: #fff; font: inherit; font-size: 0.82rem; font-weight: 700; cursor: pointer; box-shadow: 0 6px 14px rgba(0, 45, 115, 0.18); transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease; }
-button:hover, button:focus-visible { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(0, 45, 115, 0.22); }
-.secondary-button { background: #eef2f7; color: #526175; box-shadow: none; }
-.secondary-button:hover, .secondary-button:focus-visible { background: #cfd7e2; }
-.toolbar { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.8rem; margin-bottom: 0.85rem; }
-.toolbar select, .toolbar input { height: 2rem; }
-.search-box { position: relative; }
-.search-box input { padding-right: 2rem; }
-.search-icon { position: absolute; right: 0.6rem; top: 50%; transform: translateY(-50%); color: #9aa6b5; }
-
-.table-wrap { overflow-x: auto; border-radius: 12px; }
-.portfolio-table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #d9e0ec; border-radius: 12px; overflow: hidden; }
-.portfolio-table th, .portfolio-table td { padding: 0.52rem 0.72rem; border-bottom: 1px solid #e4e9f1; font-size: 0.8rem; color: #526175; text-align: left; }
-.portfolio-table td { vertical-align: top; }
-.portfolio-table th { background: linear-gradient(180deg, #f7f9fc, #eef3f9); color: #516175; }
-.portfolio-table tbody tr:hover td { background: #f3f7ff; }
-.project-portfolio-table th { background: var(--blue); color: #fff; font-weight: 800; border-bottom: 2px solid var(--blue-dark); text-transform: uppercase; letter-spacing: 0.03em; }
-.project-portfolio-table th:nth-child(even) { background: #0062a3; }
-.project-portfolio-table td { background: #fff; }
-.project-portfolio-table tbody tr:nth-child(even) td { background: #e3efff; }
-.project-portfolio-table td { border-right: 1px solid #d6e4f7; }
-.project-portfolio-table td:last-child, .project-portfolio-table th:last-child { border-right: none; }
-.project-id { font-weight: 800; color: var(--blue-dark); }
-.project-name { min-width: 220px; }
-.project-description { min-width: 380px; line-height: 1.25rem; }
-.status-pill { display: inline-flex; align-items: center; justify-content: center; min-width: 80px; padding: 0.25rem 0.6rem; border-radius: 999px; font-weight: 800; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; border: 1px solid transparent; }
-.status-active { color: #fff; background: linear-gradient(135deg, #1f7a4f, #24b170); border-color: #1a6f46; }
-.status-hold { color: #2b2b2b; background: linear-gradient(135deg, #f2e1a9, #f5c86a); border-color: #d8b156; }
-.status-initiate { color: #fff; background: linear-gradient(135deg, #ff6a00, #ff3b3b); border-color: #d93434; }
-.status-go { color: #fff; background: linear-gradient(135deg, #1c3eff, #00a6ff); border-color: #1640c7; }
-.phase-pill { display: inline-flex; align-items: center; padding: 0.25rem 0.55rem; border-radius: 6px; font-weight: 700; font-size: 0.72rem; border: 1px solid #e7d2c0; background: #fff4ea; color: #7a4b2b; white-space: nowrap; }
-.phase-go { background: #e8f2ff; border-color: #9bb9ff; color: #1c3eff; }
-.phase-uat { background: #fff3e1; border-color: #f0c27a; color: #a15a00; }
-.phase-register { background: #f2ffe9; border-color: #9ed18a; color: #2d6b2f; }
-.phase-dev { background: #ffe9ef; border-color: #e2a2b4; color: #8b2b40; }
-.phase-prep { background: #f6efff; border-color: #bba3ff; color: #4f2fa6; }
-.status { display: inline-flex; align-items: center; justify-content: center; min-width: 72px; padding: 0.28rem 0.55rem; border-radius: 6px; color: #fff; font-size: 0.7rem; font-weight: 700; }
-.status-yellow { background: var(--yellow); color: #5e4a00; }
-.status-green { background: var(--green); }
-.status-red { background: var(--red); }
-.plain { border-radius: 4px; }
-.progress-bar { display: inline-block; width: 100%; max-width: 115px; height: 9px; background: #e4e9f1; border-radius: 999px; overflow: hidden; }
-.progress-bar span { display: block; height: 100%; background: #53b652; }
-.manager-update { display: flex; gap: 0.4rem; align-items: center; }
-.update-button { padding: 0.35rem 0.8rem; font-size: 0.75rem; }
-.status-select { width: 100%; min-width: 110px; height: 2rem; background: #f6f8fb; border: 1px solid #d9e1ee; border-radius: 2px; color: #516178; font-size: 0.78rem; }
-.status-select:disabled { opacity: 0.8; cursor: not-allowed; }
-.table-note { margin: 0.75rem 0 0; font-size: 0.75rem; color: #7a8a9e; }
-.portfolio-section { margin-bottom: 1.2rem; }
-.portfolio-section-title { display: none; }
-.application-portfolio-table th, .application-portfolio-table td { white-space: nowrap; font-size: 0.72rem; }
-.application-portfolio-table .group-row th { text-align: center; font-size: 0.72rem; font-weight: 700; color: #fff; background: var(--blue); border-bottom: 2px solid var(--blue-dark); text-transform: uppercase; letter-spacing: 0.03em; }
-.application-portfolio-table .group-row th:nth-child(even) { background: #0062a3; }
-.application-portfolio-table thead tr:nth-child(2) th { background: #f5f7fb; color: #647489; font-weight: 700; }
-.application-portfolio-table tbody tr:nth-child(even) td { background: #e3efff; }
-.application-portfolio-table tbody tr:hover td { background: #dbe9ff; }
-.application-portfolio-table .checkbox-cell { text-align: center; }
-.application-portfolio-table .checkbox-cell input { width: auto; margin: 0; }
-.pdpa-table th:nth-child(3), .pdpa-table th:nth-child(4), .pdpa-table th:nth-child(5) { min-width: 220px; }
-.pdpa-checklist { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.35rem 0.75rem; }
-.pdpa-checklist-item { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; color: #526175; font-weight: 600; margin: 0; }
-.pdpa-checklist-item input { width: auto; margin: 0; }
-.app-grid { display: grid; grid-template-columns: repeat(5, minmax(220px, 1fr)); gap: 0.65rem; }
-.app-tile p { margin: 0.3rem 0 0; padding: 0 0.75rem; font-size: 0.73rem; color: #586b7f; }
-.app-tile p:last-child { padding-bottom: 0.75rem; }
-
-.form-header { background: #fff; padding: 1.2rem; margin-bottom: 1rem; border: 1px solid var(--line); border-radius: 4px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08); width: min(980px, 100%); margin-left: auto; margin-right: auto; display: grid; gap: 0.8rem; }
 .print-hidden { display: block; }
-.print-only { display: none; font-size: 0.8rem; color: var(--text); }
-.print-only-grid { display: none; }
-.print-only-row { display: none; }
-.cost-continued { text-align: left; font-weight: 700; padding: 0.35rem 0.5rem; }
-.print-header { display: none; }
-.print-page-block { display: grid; gap: 0.8rem; }
-.print-logo { height: 22px; width: auto; }
-.print-header-text { display: grid; gap: 0.1rem; }
-.print-title { font-size: 0.85rem; font-weight: 700; color: #000; }
-.print-subtitle { font-size: 0.7rem; color: #333; }
-.form-header h1 { margin: 0 0 1rem 0; font-size: 1.4rem; font-weight: 700; color: var(--text); }
-.form-status { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
-.status-field { display: grid; grid-template-columns: 120px 1fr; gap: 0.5rem; align-items: center; }
-.status-field label { font-weight: 700; color: var(--text); margin: 0; grid-template-columns: 1fr; }
-.status-field input { margin: 0; }
-/* =========================================
-   4. FORM SECTIONS & CARDS (กรอบสวยเนียนเท่ากันทุกอัน 🚀)
-   ========================================= */
-.form-section { 
-  background: rgba(255, 255, 255, 0.98); 
-  padding: 24px; 
-  /* 🚀 เพิ่มเส้นขอบสีเทาฟ้าให้ชัดเจน เท่ากันทุกฟอร์ม */
-  border: 1px solid #cbd5e1; 
-  border-radius: 16px; 
-  box-shadow: 0 8px 20px rgba(15, 43, 75, 0.08); 
-  width: min(980px, 100%); 
-  margin-left: auto; 
-  margin-right: auto; 
-  /* 🚀 บังคับตัดมุมที่ล้นออก เพื่อให้หัวข้อฟอร์มโค้งมนตามกรอบ */
-  overflow: hidden; 
-}
-
-/* ระยะห่างระหว่างกล่องฟอร์ม */
-.form-section + .form-section { 
-  margin-top: 24px; 
-}
-
-/* ลบเส้นคั่นประหลาดๆ ของเก่าทิ้งไปเลย */
-.form-section + .form-section::before { 
-  display: none; 
-}
-
-.section-title { 
-  background: linear-gradient(135deg, var(--blue), var(--blue-dark)); 
-  color: #fff; 
-  padding: 14px 24px; 
-  /* 🚀 ใช้เทคนิค Margin ติดลบ ดันหัวข้อให้ชิดขอบบน/ซ้าย/ขวา พอดีเป๊ะ */
-  margin: -24px -24px 24px -24px; 
-  font-weight: 700; 
-  font-size: 1.05rem; 
-  letter-spacing: 0.5px; 
-  text-transform: uppercase; 
-  border-bottom: 3px solid #002d73; /* เพิ่มมิติให้ขอบล่างของหัวข้อ */
-}
-.form-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; margin-bottom: 1rem; }
-.form-row.print-only-grid { display: none !important; }
-.form-row.details-row { grid-template-columns: repeat(5, 1fr); }
-.form-group { display: grid; gap: 0.4rem; }
-.form-group.full-width { grid-column: 1 / -1; }
-.form-group label { font-weight: 700; font-size: 0.8rem; color: var(--text); margin: 0; display: block; }
-.form-section .form-row { padding-bottom: 1.2rem; border-bottom: 1px solid #b2bfd3; }
-.form-section .form-row.no-divider { border-bottom: none; padding-bottom: 0.3rem; }
-.form-section .form-row:last-child { border-bottom: none; padding-bottom: 0; }
-.note-label { font-size: 0.7rem; font-weight: 400; color: var(--muted); }
-.form-group input[disabled], .form-group select[disabled] { background: #f5f7fb; color: var(--muted); cursor: not-allowed; }
-textarea { resize: vertical; font-family: Arial, sans-serif; }
-.button-row { display: flex; gap: 0.8rem; justify-content: flex-start; grid-template-columns: auto auto auto; }
-.page-request .button-row { justify-content: center; }
-.btn { padding: 0.6rem 1.5rem; border: none; border-radius: 10px; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease; }
-.btn-primary {background: linear-gradient(135deg, var(--blue), var(--blue-dark));color: #fff;padding: 0.6rem 1.5rem; border: none;border-radius: 10px;font-size: 0.8rem;font-weight: 700;cursor: pointer;box-shadow: 0 8px 16px rgba(0, 45, 115, 0.2);transition: transform 0.15s ease, box-shadow 0.2s ease;width: auto;}
-.btn-primary:hover, .btn-primary:focus-visible {transform: translateY(-1px);box-shadow: 0 12px 22px rgba(0, 45, 115, 0.24);}
-.btn-secondary { background: #eef2f7; color: #425268; border: 1px solid rgba(182, 201, 222, 0.8); }
-.btn-secondary:hover, .btn-secondary:focus-visible { transform: translateY(-1px); background: #e2e9f2; }
-.btn-tertiary { background: #f6f7fb; color: #425268; border: 1px solid rgba(190, 202, 220, 0.8); }
-.btn-tertiary:hover, .btn-tertiary:focus-visible { transform: translateY(-1px); background: #eceff6; }
-.checkbox-group, .radio-group { display: flex; flex-direction: column; gap: 0.5rem; }
-.checkbox-item, .radio-item { display: flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; color: var(--text); font-weight: 400; cursor: pointer; margin: 0; }
-.checkbox-item input, .radio-item input { width: auto; margin: 0; cursor: pointer; accent-color: var(--blue); }
-.field-note { margin: 0.5rem 0 0; padding: 0.4rem; background: #f5f7fb; border-left: 3px solid var(--blue); font-size: 0.75rem; color: var(--muted); }
-.cost-table-wrapper { overflow-x: auto; border: 1px solid var(--line); border-radius: 3px; }
-.cost-table { width: 100%; border-collapse: collapse; background: #fff; font-size: 0.8rem; table-layout: fixed; }
-.cost-table th { background: #f5f7fb; padding: 0.6rem; border: 1px solid var(--line); font-weight: 700; color: var(--text); text-align: center; }
-.cost-table td { padding: 0.4rem; border: 1px solid var(--line); vertical-align: middle; }
-.cost-table input { width: 100%; padding: 0.4rem; border: 1px solid #ddd; border-radius: 2px; font-size: 0.75rem; }
-.cost-table td:first-child { text-align: center; font-weight: 600; width: 35px; }
-.cost-table th:nth-child(1), .cost-table td:nth-child(1) { width: 6%; }
-.cost-table th:nth-child(2), .cost-table td:nth-child(2) { width: 38%; }
-.cost-table th:nth-child(3), .cost-table td:nth-child(3) { width: 16%; }
-.cost-table th:nth-child(4), .cost-table td:nth-child(4) { width: 14%; }
-.cost-table th:nth-child(5), .cost-table td:nth-child(5) { width: 26%; }
-.approval-row { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid var(--line); }
-.signature-box { width: 100%; height: 80px; border: 1px solid var(--text); background: #fafbfc; margin: 0.8rem 0; }
-.signature-date { font-size: 0.8rem; color: var(--text); font-weight: 600; }
-.approval-grid { display: grid; grid-template-columns: repeat(5, minmax(170px, 1fr)); gap: 0.6rem; margin-top: 1rem; width: 100%; }
-.approval-card { border: 1px solid #111; background: #fff; font-size: 0.75rem; text-align: center; min-width: 0; }
-.approval-title { background: #b9b9b9; color: #111; font-weight: 700; padding: 0.2rem 0; border-bottom: 1px solid #111; }
-.approval-sign { height: 90px; border-bottom: 1px solid #111; }
-.approval-name, .approval-date { padding: 0.2rem 0; border-bottom: 1px solid #111; }
-.approval-date { text-align: left; padding-left: 0.5rem; }
-.approval-role { font-weight: 700; padding: 0.35rem 0.2rem; font-size: 0.72rem; }
-.approval-grid-right .approval-card { grid-column: auto; width: min(250px, 100%); }
-.approval-grid-right { display: flex; justify-content: flex-end; }
-.gls-approval-grid { display: grid; grid-template-columns: repeat(2, minmax(220px, 250px)); gap: 1.2rem; margin-top: 1.4rem; justify-content: end; justify-items: end; }
-.gls-approval-grid .approval-card { width: 100%; max-width: 250px; }
-
-.page-project .content-card,
-.page-app .content-card,
-.page-project .page-heading,
-.page-app .page-heading,
-.page-request .page-heading {
-  width: min(980px, 100%) !important;
-  margin-left: auto !important;
-  margin-right: auto !important;
-}
-
-.page-project .table-wrap,
-.page-app .table-wrap {
-  width: 100%;
-  overflow-x: auto;
-}
-
-/* =========================================
-   MEDIA QUERIES
-   ========================================= */
-@media (max-width: 1200px) { .form-row { grid-template-columns: repeat(3, 1fr); } .form-row.details-row { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 900px) { .toolbar, .app-grid { grid-template-columns: 1fr 1fr; } .manager-update { flex-direction: column; align-items: stretch; } .request-card { width: 100%; } }
-@media (max-width: 768px) { .form-row, .form-row.details-row { grid-template-columns: 1fr 1fr; } .form-status { grid-template-columns: 1fr; gap: 1rem; } .approval-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .approval-grid-right .approval-card { grid-column: auto; } .approval-row { grid-template-columns: 1fr; gap: 1.5rem; } .gls-approval-grid { grid-template-columns: 1fr; } }
-@media (max-width: 640px) { .toolbar, .app-grid { grid-template-columns: 1fr; } .page-wrap { width: min(100%, calc(100% - 1rem)); } }
-@media (max-width: 540px) { .form-row, .form-row.details-row { grid-template-columns: 1fr; } .approval-grid { grid-template-columns: 1fr; } .button-row { flex-direction: column; } .btn { width: 100%; } .cost-table { font-size: 0.7rem; } .cost-table th, .cost-table td { padding: 0.3rem; } .cost-table input { font-size: 0.7rem; padding: 0.3rem; } }
-
+.print-only, .print-only-grid, .print-only-row { display: none; }
 @media print {
-  .page-heading { display: none !important; }
-  @page { size: A4; margin: 5mm; }
-  body { background: #fff !important; }
-  .topbar, .button-row, .print-hidden, .form-header { display: none !important; }
-  .print-header { display: grid !important; grid-template-columns: auto 1fr; align-items: center; gap: 0.6rem; margin-bottom: 0.35rem; border: none; padding: 0; background: transparent; }
-  .app-main { background: none !important; }
-  .app-main::before { display: none !important; }
-  .print-area { width: 100% !important; margin: 0 !important; }
-  .print-hide-input { display: none !important; }
+  .print-hidden, .topbar { display: none !important; }
   .print-only { display: block !important; }
-  .print-only-grid, .form-row.print-only-grid { display: grid !important; }
-  .print-only-row { display: table-row !important; }
-  textarea { resize: none !important; overflow: visible !important; }
-  textarea::-webkit-resizer { display: none !important; }
-  textarea::-webkit-scrollbar, .print-area *::-webkit-scrollbar { display: none !important; }
-  .form-section, .form-row, .form-group, .print-page-block { overflow: visible !important; }
-  .requester-section { zoom: 0.82; }
-  .gls-section { zoom: 0.68; }
-  .requester-section .section-title, .gls-section .section-title { margin-right: 0 !important; }
-  .requester-section, .gls-section, .print-page-block { break-inside: avoid; page-break-inside: avoid; }
-  .requester-section { break-after: page; page-break-after: always; }
-  .gls-section { break-before: page; page-break-before: always; }
-  .approval-grid, .gls-approval-grid, .print-keep { break-inside: avoid; page-break-inside: avoid; }
-  .form-section { box-shadow: none !important; border: none !important; padding: 0.3rem 0 !important; width: 100% !important; }
-  .section-title { margin: 0 0 0.35rem 0 !important; padding: 0.22rem 0.45rem !important; font-size: 0.7rem !important; }
-  .form-row { gap: 0.4rem !important; margin-bottom: 0.25rem !important; }
-  .form-section .form-row { border-bottom: none !important; padding-bottom: 0.18rem !important; }
-  .form-group { display: flex !important; align-items: flex-start !important; gap: 0.35rem !important; }
-  .form-group label { width: 200px !important; min-width: 200px !important; margin: 0 !important; text-align: left !important; }
-  .form-group > input, .form-group > select, .form-group > textarea, .form-group > .date-input, .form-group > .react-datepicker-wrapper, .form-group > .print-only, .form-group > .checkbox-group, .form-group > .radio-group, .form-group > .cost-table-wrapper { flex: 1 1 auto !important; min-width: 0 !important; }
-  .form-row.details-row .form-group, .form-row.timeline-row .form-group { display: grid !important; grid-template-columns: max-content minmax(0, 1fr) !important; align-items: center !important; column-gap: 0.2rem !important; }
-  .form-row.details-row { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
-  .form-row.details-row .form-group label, .form-row.timeline-row .form-group label { grid-column: 1 !important; width: auto !important; min-width: 0 !important; margin: 0 !important; white-space: nowrap !important; }
-  .form-row.details-row .form-group > input, .form-row.timeline-row .form-group > .react-datepicker-wrapper, .form-row.timeline-row .form-group > input { grid-column: 2 !important; display: block !important; width: 100% !important; min-width: 0 !important; margin: 0 !important; }
-  label, .form-group label { font-size: 0.6rem !important; line-height: 1.15 !important; }
-  input, select, textarea, .date-input { font-size: 0.6rem !important; padding: 0.18rem 0.24rem !important; line-height: 1.15 !important; border: none !important; background: transparent !important; box-shadow: none !important; }
-  .cost-table input { border: none !important; background: transparent !important; }
-  .cost-table-wrapper { overflow: visible !important; }
-  .cost-table { page-break-inside: auto; }
-  .cost-table thead { display: table-header-group; }
-  .cost-table tbody { display: table-row-group; }
-  .cost-table tr { page-break-inside: avoid; }
-  .cost-table th:last-child, .cost-table td:last-child { display: none !important; }
-  textarea { min-height: 28px !important; }
-  .approval-grid { grid-template-columns: repeat(5, minmax(110px, 1fr)) !important; gap: 0.25rem !important; margin-top: 0.4rem !important; }
-  .approval-sign { height: 44px !important; }
-  .approval-title { padding: 0.12rem 0 !important; font-size: 0.62rem !important; }
-  .approval-name, .approval-date { padding: 0.12rem 0 !important; font-size: 0.6rem !important; }
-  .approval-role { padding: 0.2rem 0.1rem !important; font-size: 0.6rem !important; line-height: 1.1 !important; }
-  .form-section + .form-section { margin-top: 0.8rem; }
-  .print-break-before { break-before: page; page-break-before: always; }
-  .gls-approval-grid { gap: 0.6rem !important; margin-top: 0.6rem !important; }
-}
-/* =========================================
-   แก้ไขกรอบซ้อนทับด้านใน (Fix Fieldset Border)
-   ========================================= */
-fieldset {
-  border: none !important; /* สั่งลบกรอบที่เบราว์เซอร์แถมมาให้ทิ้งไปเลย */
-  padding: 0 !important;
-  margin: 0 !important;
-  min-width: 0;
-}
-
-/* ถ้าสมมติว่ากรอบนั้นไม่ได้ใช้ fieldset แต่เป็นคลาสที่มีขอบ ให้ล้างขอบเขตด้านในทิ้งด้วย */
-.form-section > div {
-  border: none !important;
-}
-/* =========================================
-   5. SETTINGS MODAL & THEMES (ส่วนที่เพิ่มใหม่)
-   ========================================= */
-
-/* 🌙 Dark Mode Override */
-[data-theme='dark'] {
-  --page-bg: #0f172a;
-  --surface: #1e293b;
-  --surface-2: #334155;
-  --line: #475569;
-  --text: #f8fafc;
-  --muted: #94a3b8;
-  --blue: #38bdf8;
-  --blue-dark: #0284c7;
-  color-scheme: dark;
-}
-
-/* 🏥 Hospital Mode Override */
-[data-theme='hospital'] {
-  --page-bg: #f0fdf4;
-  --surface: #ffffff;
-  --surface-2: #f0fdf4;
-  --line: #bbf7d0;
-  --text: #064e3b;
-  --blue: #059669;
-}
-
-/* ทำให้การ์ดต่างๆ เปลี่ยนสีตาม Theme อย่างนุ่มนวล */
-.form-section, .form-header, .topbar, .topbar-sidebar {
-  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
-}
-
-/* 🚀 SETTINGS MODAL STYLES */
-.settings-overlay {
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
-  display: flex; align-items: center; justify-content: center;
-  z-index: 2000; opacity: 0; visibility: hidden; transition: 0.3s;
-}
-.settings-overlay.active { opacity: 1; visibility: visible; }
-
-.settings-card {
-  background: var(--surface); width: 90%; max-width: 480px;
-  border-radius: 24px; padding: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.3);
-  transform: translateY(30px); transition: 0.3s;
-}
-.settings-overlay.active .settings-card { transform: translateY(0); }
-
-.settings-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
-.settings-header h2 { margin: 0; font-size: 1.2rem; color: var(--blue); font-weight: 700; }
-.close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--muted); }
-
-.section-label { display: block; font-size: 0.8rem; font-weight: 800; color: var(--muted); text-transform: uppercase; margin-bottom: 12px; }
-.setting-section { margin-bottom: 25px; }
-
-.profile-preview { display: flex; align-items: center; gap: 15px; padding: 15px; background: var(--surface-2); border-radius: 15px; border: 1px solid var(--line); }
-.avatar-large { width: 60px; height: 60px; background: linear-gradient(135deg, var(--blue), var(--blue-dark)); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 700; }
-.p-username { margin: 0; font-weight: 700; font-size: 1.1rem; color: var(--text); }
-.p-role { margin: 0; font-size: 0.85rem; color: var(--blue); font-weight: 600; }
-
-.theme-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-.theme-option { padding: 12px; border: 2px solid var(--line); background: var(--surface-2); border-radius: 12px; cursor: pointer; font-weight: 700; color: var(--text); transition: 0.2s; }
-.theme-option:hover { border-color: var(--blue); }
-.theme-option.active { border-color: var(--blue); color: var(--blue); background: var(--surface); box-shadow: 0 0 0 2px rgba(0, 114, 187, 0.1); }
-
-.toggle-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: var(--surface-2); border-radius: 12px; color: var(--text); font-weight: 600; font-size: 0.9rem; border: 1px solid var(--line); margin-bottom: 8px; }
-
-.btn-logout-alt { width: 100%; padding: 14px; border: none; background: #ef4444; color: white; border-radius: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; }
-.btn-logout-alt:hover { background: #dc2626; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2); }
-/* =========================================
-   แก้ไขจุดบกพร่องของโหมด DARK & THEMES
-   ========================================= */
-
-/* บังคับให้ Input, Select, Textarea ทุกตัวเปลี่ยนสีตาม Theme */
-[data-theme='dark'] input,
-[data-theme='dark'] select,
-[data-theme='dark'] textarea,
-[data-theme='dark'] .modern-select,
-[data-theme='dark'] .status-select {
-  background-color: var(--surface-2);
-  color: var(--text);
-  border-color: var(--line);
-}
-
-[data-theme='dark'] input:focus,
-[data-theme='dark'] select:focus,
-[data-theme='dark'] textarea:focus {
-  background-color: var(--surface);
-  border-color: var(--blue);
-  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2); /* สีฟ้าอ่อนสำหรับ Dark Mode */
-}
-
-/* แก้ไขสีตารางใน Dark Mode */
-[data-theme='dark'] .cost-table, 
-[data-theme='dark'] .portfolio-table,
-[data-theme='dark'] .project-portfolio-table {
-  background-color: var(--surface);
-  border-color: var(--line);
-}
-
-[data-theme='dark'] .cost-table th, 
-[data-theme='dark'] .portfolio-table th {
-  background-color: var(--surface-2);
-  color: var(--text);
-  border-color: var(--line);
-}
-
-[data-theme='dark'] .cost-table td, 
-[data-theme='dark'] .portfolio-table td {
-  background-color: var(--surface);
-  border-color: var(--line);
-  color: var(--text);
-}
-
-/* เปลี่ยนสีตัวหนังสือต่างๆ ที่อาจจะมองไม่เห็นใน Dark Mode */
-[data-theme='dark'] label,
-[data-theme='dark'] .note-label,
-[data-theme='dark'] .checkbox-item,
-[data-theme='dark'] .radio-item {
-  color: var(--text);
+  .form-section { box-shadow: none !important; border: none !important; padding: 0 !important; margin: 0 0 24px 0 !important; }
+  .print-header { display: flex !important; align-items: center; gap: 16px; margin-bottom: 24px; }
+  .print-logo { height: 38px !important; width: auto !important; max-width: 250px !important; object-fit: contain !important; }
+  .approval-card { border: 1px solid #000; }
+  .approval-title, .approval-sign, .approval-name, .approval-date { border-bottom: 1px solid #000; }
 }
 
 /* =========================================
-   UI ของ Settings Modal ที่เพิ่มใหม่
+   9. DARK MODE FIXES & OTHERS
    ========================================= */
-.edit-profile-form { display: flex; flex-direction: column; width: 100%; }
-.edit-input { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); color: var(--text); font-size: 0.9rem; margin-bottom: 5px; }
-.btn-text { background: none; border: none; color: var(--blue); font-weight: 700; cursor: pointer; padding: 0; font-size: 0.85rem; }
-.btn-text:hover { text-decoration: underline; }
-.btn-small-primary { background: var(--blue); color: white; border: none; padding: 5px 10px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; flex: 1; }
-.btn-small-secondary { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); padding: 5px 10px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; flex: 1; }
-.change-password-box { background: var(--surface-2); padding: 15px; border-radius: 12px; border: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
-/* =========================================
-   ปรับแต่ง Scrollbar แบบมินิมอล (ใช้กับทุกหน้าและทุกกล่องในเว็บ)
-   ========================================= */
-
-/* ใช้ * เพื่อให้มีผลกับทุกๆ ส่วนที่มีการเลื่อน (Scroll) */
-*::-webkit-scrollbar {
-  width: 8px;  /* ความกว้างสำหรับแถบเลื่อนแนวตั้ง */
-  height: 8px; /* ความสูงสำหรับแถบเลื่อนแนวนอน (เช่น ตาราง) */
-}
-
-/* พื้นหลังของแถบเลื่อน (Track) */
-*::-webkit-scrollbar-track {
-  background: transparent; /* ให้พื้นหลังโปร่งใส */
-}
-
-/* ตัวจับเลื่อน (Thumb) */
-*::-webkit-scrollbar-thumb {
-  background: rgba(100, 116, 139, 0.25); /* สีเทาโปร่งใส */
-  border-radius: 10px; /* ขอบโค้งมน */
-}
-
-/* เวลาเอาเมาส์ไปชี้ที่แถบเลื่อน (Hover) ให้สีเข้มขึ้นนิดนึง */
-*::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.6); 
-}
-/* =========================================
-   ระบบการแจ้งเตือน (Notifications & Toast)
-   ========================================= */
-
-/* 1. Toast Notification (ป๊อปอัปมุมขวาล่าง) */
-.toast-notification {
-  position: fixed;
-  bottom: 30px;
-  right: -300px; /* ซ่อนไว้ก่อน */
-  background: var(--surface);
-  color: var(--text);
-  padding: 14px 24px;
-  border-radius: 12px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-  font-weight: 700;
-  font-size: 0.95rem;
-  z-index: 9999;
-  transition: right 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  border-left: 5px solid var(--blue);
-}
-
-.toast-notification.show {
-  right: 30px; /* สไลด์เข้ามา */
-}
-
-/* สีของ Toast ตามประเภท */
-.toast-notification.success { border-left-color: #10b981; }
-.toast-notification.error { border-left-color: #ef4444; }
-.toast-notification.warning { border-left-color: #f59e0b; }
-.toast-notification.info { border-left-color: #3b82f6; }
-
-
-/* 2. Notification Bell (ปุ่มกระดิ่ง) */
-.notif-wrapper {
-  position: relative;
-}
-
-.notif-btn {
-  background: none;
-  border: none;
-  color: #1a365d;
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-  position: relative;
-}
-
-.notif-btn:hover {
-  background: rgba(0, 114, 187, 0.1);
-}
-
-[data-theme='dark'] .notif-btn { color: var(--text); }
-
-.notif-badge {
-  position: absolute;
-  top: 2px;
-  right: 4px;
-  background: #ef4444;
-  color: white;
-  font-size: 0.65rem;
-  font-weight: 800;
-  height: 16px;
-  min-width: 16px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid var(--surface);
-  padding: 0 4px;
-}
-
-
-/* 3. Notification Dropdown (กล่องข้อความแจ้งเตือน) */
-.notif-dropdown {
-  position: absolute;
-  top: 120%;
-  right: 0;
-  width: 350px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
-  z-index: 1005;
-  overflow: hidden;
-  animation: slideDown 0.2s ease-out;
-}
-
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.notif-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--line);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: var(--surface-2);
-}
-
-.notif-header h4 {
-  margin: 0;
-  font-size: 1rem;
-  color: var(--text);
-  font-weight: 800;
-}
-
-.mark-read-btn {
-  background: none;
-  border: none;
-  color: var(--blue);
-  font-size: 0.75rem;
-  font-weight: 700;
-  cursor: pointer;
-  padding: 0;
-}
-.mark-read-btn:hover { text-decoration: underline; }
-
-.notif-body {
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.notif-empty {
-  padding: 40px 20px;
-  text-align: center;
-  color: var(--muted);
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.notif-item {
-  display: flex;
-  gap: 15px;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--line);
-  cursor: pointer;
-  transition: background 0.2s;
-  position: relative;
-}
-.notif-item:hover { background: var(--surface-2); }
-.notif-item.unread { background: rgba(0, 114, 187, 0.03); }
-
-.notif-icon-bg {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  color: white;
-  flex-shrink: 0;
-}
-.notif-icon-bg.success { background: #10b981; }
-.notif-icon-bg.info { background: #3b82f6; font-family: serif; font-style: italic; }
-.notif-icon-bg.warning { background: #f59e0b; }
-
-.notif-content { flex: 1; }
-.notif-title { font-weight: 700; font-size: 0.9rem; color: var(--text); margin-bottom: 4px; }
-.notif-text { font-size: 0.8rem; color: var(--muted); line-height: 1.4; margin-bottom: 6px; }
-.notif-time { font-size: 0.7rem; color: #94a3b8; font-weight: 600; }
-
-.notif-dot {
-  width: 8px;
-  height: 8px;
-  background: var(--blue);
-  border-radius: 50%;
-  position: absolute;
-  top: 20px;
-  right: 20px;
-}
-
-/* รองรับจอมือถือ */
-@media screen and (max-width: 480px) {
-  .notif-dropdown {
-    width: 300px;
-    right: -40px; /* ปรับให้ไม่ตกขอบจอ */
-  }
-}
-/* --- 🚀 DARK MODE FIXES (บังคับสี Input & Text) --- */
-[data-theme='dark'] input, 
-[data-theme='dark'] select, 
-[data-theme='dark'] textarea {
-  background-color: #1e293b !important;
-  color: #f8fafc !important;
-  border-color: #475569 !important;
-}
-
-[data-theme='dark'] .form-section, 
-[data-theme='dark'] .topbar, 
-[data-theme='dark'] .topbar-sidebar {
-  background-color: #0f172a !important;
-  color: #f8fafc !important;
-  border-color: #334155 !important;
-}
-
+fieldset { border: none !important; padding: 0 !important; margin: 0 !important; min-width: 0; }
+[data-theme='dark'] input, [data-theme='dark'] select, [data-theme='dark'] textarea { background-color: #1e293b !important; color: #f8fafc !important; border-color: #475569 !important; }
+[data-theme='dark'] .form-section, [data-theme='dark'] .topbar, [data-theme='dark'] .topbar-sidebar { background-color: #0f172a !important; color: #f8fafc !important; border-color: #334155 !important; }
 [data-theme='dark'] .nav-item { color: #94a3b8; }
 [data-theme='dark'] .nav-item.active { background: #38bdf8; color: #000; }
 
-/* --- 🚀 SIDEBAR NOTIFICATION STYLES --- */
-.sidebar-notif-section {
-  margin: 10px 0 20px 0;
-  border-radius: 12px;
-  overflow: hidden;
-  background: var(--surface-2);
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+@keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* =========================================
+   10. CRITICAL BUG FIXES (ADDED)
+   ========================================= */
+/* แก้ไข Modal ทับกันและ Animation Stacking Context */
+.page-wrap { animation: none !important; transform: none !important; }
+.swal2-container { z-index: 999999 !important; }
+
+/* แก้ไขโลโก้แตกทะลุจอในหน้า Request Form */
+.app-main img { max-width: 100% !important; height: auto !important; }
+.form-section img, .content-card img:not(.hospital-logo):not(.greenline-logo) { max-width: 300px !important; max-height: 80px !important; object-fit: contain !important; margin-bottom: 16px; }
+
+/* แก้ไขปุ่มบันทึกใน Modal ลอยทับเนื้อหา */
+.pdf-preview-card, .modal { display: flex !important; flex-direction: column !important; max-height: 90vh !important; overflow: hidden !important; }
+.pdf-preview-card > div:first-child, .modal-header, .app-modal-header { flex-shrink: 0 !important; }
+.pdf-preview-card > div:nth-child(2), .modal-body { overflow-y: auto !important; }
+.pdf-preview-card > div:last-child, .modal-footer, .app-modal-footer { flex-shrink: 0 !important; background: var(--card-bg) !important; position: relative !important; z-index: 10 !important; }
+
+/* Application Portfolio modal: keep the tabs compact and prevent them from stretching */
+.pdf-preview-card > .app-modal-tabs { flex: 0 0 auto !important; overflow: visible !important; }
+.pdf-preview-card > .app-modal-body { flex: 1 1 auto !important; overflow-y: auto !important; }
+
+/* แก้ไข Sidebar พังเมื่อไม่มีชื่อ User (Fallback Layout) */
+.user-details { flex: 1 !important; }
+.user-details .username { min-height: 22px !important; width: 100% !important; }
+/* =========================================
+   11. RESPONSIVE SIDEBAR (Mini Icon Drawer)
+   ========================================= */
+.sidebar-overlay {
+  position: fixed; inset: 0; background: rgba(15,23,42,0.4); backdrop-filter: blur(2px); z-index: 1000;
 }
 
-.notif-toggle-btn {
+/* 🚀 สไตล์สำหรับเมนูไอคอน (ปุ่มสี่เหลี่ยมขอบมน) */
+.topbar-sidebar {
+  align-items: center !important;
+  padding: 24px 10px !important;
+}
+.sidebar-nav {
+  align-items: center;
   width: 100%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 20px;
-  background: none;
-  border: none;
-  color: var(--text);
-  font-weight: 700;
-  cursor: pointer;
-  font-family: inherit;
 }
-
-.notif-badge-inline {
-  background: #ef4444;
-  color: white;
-  font-size: 0.7rem;
-  padding: 2px 8px;
-  border-radius: 10px;
-}
-
-.sidebar-notif-list {
-  max-height: 200px;
-  overflow-y: auto;
-  border-top: 1px solid var(--line);
-}
-
-.sidebar-notif-item {
-  display: flex;
-  gap: 12px;
-  padding: 12px 20px;
-  border-bottom: 1px solid var(--line);
-  font-size: 0.85rem;
-  align-items: center;
-}
-
-.sidebar-notif-item.unread { background: rgba(0, 114, 187, 0.05); }
-
-.notif-dot-small {
-  width: 6px; height: 6px;
-  background: var(--blue);
-  border-radius: 50%;
-}
-
-.notif-title-small { font-weight: 700; color: var(--text); }
-.notif-text-small { color: var(--muted); font-size: 0.75rem; }
-
-/* ปรับ Scrollbar ให้มินิมอลตามที่ต้องการ */
-*::-webkit-scrollbar { width: 6px; height: 6px; }
-*::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.2); border-radius: 10px; }
-*::-webkit-scrollbar-thumb:hover { background: rgba(100, 116, 139, 0.5); }
-/* =========================================
-   🚀 ACTION BUTTONS (BELL & SETTINGS)
-   ========================================= */
-
-/* ดีไซน์ปุ่มกลมแบบใหม่ ไม่บี้แบน ไม่ทับกากบาท */
-.action-icon-btn {
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
-  color: #475569;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+.nav-item {
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  flex-shrink: 0; /* ป้องกันการบี้แบนเป็นวงรี */
-  padding: 0;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+  width: 48px;
+  height: 48px;
+  padding: 0 !important;
+  color: var(--text-muted) !important;
+  border-radius: 14px !important;
+  margin-bottom: 12px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.action-icon-btn:hover {
-  background: #f8fafc;
-  color: var(--blue);
-  border-color: var(--blue);
+/* เอฟเฟกต์เวลา Hover หรือคลิกค้าง (Active) */
+.nav-item:hover, .nav-item.active {
+  background: var(--blue) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3) !important;
   transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(0, 114, 187, 0.1);
 }
 
-/* รองรับ Dark Mode */
-[data-theme='dark'] .action-icon-btn {
-  background: var(--surface-2);
-  border-color: var(--line);
-  color: var(--text);
-}
-[data-theme='dark'] .action-icon-btn:hover {
-  color: var(--blue);
-  border-color: var(--blue);
-}
-
-/* 2. ป้ายตัวเลขแจ้งเตือนสีแดง (Badge) */
-.notif-badge {
-  position: absolute;
-  top: -4px;
-  right: -4px;
-  background: #ef4444;
-  color: white;
-  font-size: 0.65rem;
-  font-weight: 800;
-  height: 18px;
-  min-width: 18px;
-  border-radius: 10px;
+/* ปุ่ม Logout ย่อเหลือแค่ไอคอน */
+.logout-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid var(--surface);
-  padding: 0 4px;
+  width: 48px !important;
+  height: 48px !important;
+  padding: 0 !important;
+  margin: auto auto 0 auto !important;
+  border-radius: 14px !important;
+  background: #fff5f5 !important;
+  color: #ef4444 !important;
+  border: 1px solid #fecaca !important;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.logout-btn:hover {
+  background: #ef4444 !important;
+  color: #fff !important;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3) !important;
+  transform: translateY(-2px);
 }
 
-/* 3. กล่อง Popup ลอยตัว (ทิ้งตัวลงมาจากใต้ปุ่มกระดิ่ง) */
-.notif-popup-dropdown {
-  position: absolute;
-  top: 50px;       /* ลอยอยู่ใต้ปุ่มพอดี */
-  right: -10px;    /* จัดให้อยู่ใต้ปุ่มกระดิ่ง แอบเหลื่อมนิดๆ ให้สวย */
-  width: 320px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
-  z-index: 1020;
-  overflow: hidden;
-  animation: slideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+/* 💻 สำหรับหน้าจอคอมพิวเตอร์ (ย่อขนาด Sidebar ลง) */
+@media (min-width: 1025px) {
+  .hamburger-btn, .sidebar-overlay { display: none !important; }
+  .topbar-sidebar {
+    transform: translateX(0) !important;
+    left: 0 !important;
+    right: auto !important;
+    top: 64px !important;
+    height: calc(100vh - 64px) !important;
+    width: 80px !important; /* 🚀 ลดความกว้างเหลือแค่ 80px */
+    box-shadow: 1px 0 0 var(--border-color) !important;
+  }
+  .app-main {
+    margin-left: 80px !important; /* 🚀 ขยับเนื้อหาให้ชิดซ้ายขึ้น */
+    width: calc(100% - 80px) !important;
+    max-width: none !important; 
+  }
+  .topbar { z-index: 1002 !important; }
 }
 
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+/* 📱 สำหรับหน้าจอมือถือและแท็บเล็ต */
+@media (max-width: 1024px) {
+  .topbar-sidebar {
+    right: 0 !important;
+    left: auto !important;
+    width: 80px !important; /* บังคับให้เป็นแท็บเล็กๆ เหมือนกัน */
+  }
+  .app-main {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
 }
-
-.notif-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--line);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: var(--surface-2);
-}
-
-.notif-header h4 { margin: 0; font-size: 0.95rem; color: var(--text); font-weight: 800; }
-
-.mark-read-btn {
-  background: none; border: none; color: var(--blue);
-  font-size: 0.75rem; font-weight: 700; cursor: pointer; padding: 0;
-}
-.mark-read-btn:hover { text-decoration: underline; }
-
-/* 4. รายการที่อยู่ใน Popup */
-.sidebar-notif-list {
-  max-height: 350px;
-  overflow-y: auto;
-}
-
-.sidebar-notif-item {
-  display: flex; gap: 12px; padding: 16px 20px;
-  border-bottom: 1px solid var(--line);
-  align-items: flex-start;
-  transition: background 0.2s;
-}
-
-.sidebar-notif-item:hover { background: var(--surface-2); }
-.sidebar-notif-item.unread { background: rgba(0, 114, 187, 0.04); }
-
-.notif-dot-small {
-  width: 8px; height: 8px; flex-shrink: 0;
-  background: var(--blue); border-radius: 50%;
-  margin-top: 6px;
-}
-
-.notif-title-small { font-weight: 700; color: var(--text); font-size: 0.9rem; margin-bottom: 4px;}
-.notif-text-small { color: var(--muted); font-size: 0.8rem; line-height: 1.4; }
-
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.notif-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--line);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: var(--surface-2);
-}
-
-.notif-header h4 { margin: 0; font-size: 0.95rem; color: var(--text); font-weight: 800; }
-
-.mark-read-btn {
-  background: none; border: none; color: var(--blue);
-  font-size: 0.75rem; font-weight: 700; cursor: pointer; padding: 0;
-}
-.mark-read-btn:hover { text-decoration: underline; }
-
-/* 4. รายการที่อยู่ใน Popup */
-.sidebar-notif-list {
-  max-height: 350px;
-  overflow-y: auto;
-}
-
-.sidebar-notif-item {
-  display: flex; gap: 12px; padding: 16px 20px;
-  border-bottom: 1px solid var(--line);
-  align-items: flex-start;
-  transition: background 0.2s;
-}
-
-.sidebar-notif-item:hover { background: var(--surface-2); }
-.sidebar-notif-item.unread { background: rgba(0, 114, 187, 0.04); }
-
-.notif-dot-small {
-  width: 8px; height: 8px; flex-shrink: 0;
-  background: var(--blue); border-radius: 50%;
-  margin-top: 6px;
-}
-
-.notif-title-small { font-weight: 700; color: var(--text); font-size: 0.9rem; margin-bottom: 4px;}
-.notif-text-small { color: var(--muted); font-size: 0.8rem; line-height: 1.4; }
 /* =========================================
-   🌙 THEME & DARK MODE VARIABLES
+   12. TABLE ACTION ICON BUTTONS (UX/UI)
    ========================================= */
-:root, [data-theme="light"], [data-theme="hospital"] {
-  --bg-color: #f4f7f6;
-  --card-bg: #ffffff;
-  --border-color: #e2e8f0;
-  --text-color: #334155;
-  --text-muted: #64748b;
-  --blue: #0072bb;
-  --blue-dark: #0f2b4b;
-  --table-bg: #ffffff;
-  --table-header-bg: #f8fafc;
-  --table-header-text: #0f2b4b;
-  --table-row-hover: #f1f5f9;
-  --input-bg: #ffffff;
-  --modal-overlay: rgba(0, 0, 0, 0.5);
+.table-action-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  border: 1px solid transparent;
 }
 
-[data-theme="dark"] {
-  --bg-color: #0f172a;
-  --card-bg: #1e293b;
-  --border-color: #334155;
-  --text-color: #f8fafc;
-  --text-muted: #94a3b8;
-  --blue: #3b82f6;
-  --blue-dark: #60a5fa;
-  --table-bg: #1e293b;
-  --table-header-bg: #0f172a;
-  --table-header-text: #f8fafc;
-  --table-row-hover: #334155;
-  --input-bg: #0f172a;
-  --modal-overlay: rgba(15, 23, 42, 0.8);
+/* ปุ่มอัปเดต (สีฟ้า-เทา) */
+.table-action-btn.edit {
+  background: var(--bg-color);
+  border-color: var(--border-color);
+  color: var(--blue);
+}
+.table-action-btn.edit:hover {
+  background: var(--blue);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(2, 132, 199, 0.2);
 }
 
-/* บังคับใช้สีตาม Theme ในจุดที่กลืนไปกับพื้นหลัง */
-body, .app-main { background-color: transparent; color: var(--text-color); }
-h1, h2, h3, h4, p, span, div, label, strong { color: inherit; } 
-
-.content-card, .settings-card, .notif-popup-dropdown, .pdf-preview-card, .topbar { 
-  background-color: var(--card-bg) !important; 
-  border-color: var(--border-color) !important; 
+/* ปุ่มตรวจสอบ/ดูรายละเอียด (สีฟ้าเข้ม) */
+.table-action-btn.view {
+  background: linear-gradient(135deg, var(--blue), var(--blue-dark));
+  color: #fff;
+}
+.table-action-btn.view:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(2, 132, 199, 0.3);
 }
 
-/* แก้ปุ่ม ☰ ให้มีสีสว่างในโหมดมืด */
-.hamburger-btn, .action-icon-btn, .system-name, .page-heading { color: var(--text-color) !important; }
-
-/* แก้ตาราง */
-.portfolio-table { background-color: var(--card-bg); }
-.portfolio-table th { background-color: var(--table-header-bg) !important; color: var(--table-header-text) !important; border-bottom: 2px solid var(--border-color); }
-.portfolio-table td { background-color: var(--card-bg) !important; color: var(--text-color) !important; border-bottom: 1px solid var(--border-color) !important; }
-.portfolio-table tbody tr:hover td { background-color: var(--table-row-hover) !important; }
-
-/* แก้ Input */
-input, select, textarea, .date-input { 
-  background-color: var(--input-bg) !important; 
-  color: var(--text-color) !important; 
-  border: 1px solid var(--border-color) !important; 
+/* ปุ่มลบ (สีแดง) */
+.table-action-btn.delete {
+  background: #fff5f5;
+  border-color: #fecaca;
+  color: #ef4444;
 }
-/* บังคับแค่หัวตาราง Portfolio (ไม่ยุ่งกับตารางค่าใช้จ่าย) */
-.portfolio-table th {
-  background-color: var(--blue-dark) !important;
-  color: #ffffff !important;
-  border-bottom: 2px solid rgba(255, 255, 255, 0.2) !important;
-}/* =========================================
-   🚀 บังคับหัวตารางทุกหน้าให้เป็นสีเข้ม และ "ล้างการไล่สี (Gradient) เดิมทิ้ง"
+.table-action-btn.delete:hover {
+  background: #ef4444;
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2);
+}
+/* =========================================
+   🚀 แก้ไข UX/UI ของ Modal Tabs (หน้า Projects / Apps)
    ========================================= */
-.portfolio-table th,
-.project-portfolio-table th {
-  /* ต้องใช้คำว่า background เฉยๆ (ห้ามมี -color) เพื่อบังคับลบ Gradient สีขาวทิ้ง */
-  background: #0f2b4b !important; 
-  color: #ffffff !important;
-  border-bottom: 2px solid rgba(255, 255, 255, 0.1) !important;
+.modal-tabs-container {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  border-bottom: 2px solid var(--border-color); /* เส้นขอบฐานที่ชัดเจน */
+  margin-bottom: 20px;
+  gap: 8px; /* ระยะห่างระหว่าง Tab */
+  padding: 0 8px; /* ไม่ให้ชิดขอบจอเกินไป */
 }
 
-/* ปรับให้สีน้ำเงินสว่างขึ้นนิดนึงในโหมดมืด จะได้เข้ากับ Theme */
-[data-theme="dark"] {
-  --blue-dark: #1e3a8a;
+/* ซ่อน Scrollbar ของ Tab เวลามีหลายอัน */
+.modal-tabs-container::-webkit-scrollbar {
+  display: none; 
+}
+
+.modal-tab-btn {
+  padding: 12px 20px;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent; /* ซ่อนเส้นใต้ไว้ก่อน */
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.modal-tab-btn:hover {
+  color: var(--text-color);
+  background: var(--bg-color);
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+}
+
+/* 🌟 รูปแบบของ Tab ที่ถูกเลือก (Active) */
+.modal-tab-btn.active {
+  color: var(--blue); /* สีข้อความ */
+  border-bottom: 3px solid var(--blue); /* เส้นใต้สีฟ้าที่สวยงาม */
+  background: transparent;
+}
+
+/* =========================================
+   13. PROJECT MODAL POLISH
+   ========================================= */
+.project-modal-card {
+  border-radius: 20px !important;
+  overflow: hidden !important;
+}
+
+.project-modal-header {
+  box-shadow: inset 0 -1px 0 rgba(255,255,255,0.12);
+}
+
+.project-modal-tabs {
+  min-height: 48px;
+}
+
+.project-modal-tabs button {
+  position: relative;
+  margin-bottom: -1px;
+}
+
+.project-modal-tabs button:hover {
+  color: var(--blue) !important;
+}
+
+.project-modal-body {
+  scrollbar-gutter: stable;
+}
+
+.project-modal-footer {
+  box-shadow: 0 -1px 0 rgba(0,0,0,0.04);
 }

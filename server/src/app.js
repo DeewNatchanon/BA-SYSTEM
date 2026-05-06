@@ -26,8 +26,8 @@ app.use(
     credentials: false
   }));
 
-app.use(express.json({ limit: '1mb' }));
-// 🚀 2. เปิดทางให้อนุญาตอ่านไฟล์ในโฟลเดอร์ uploads ได้
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // ให้ระบบรู้ว่าถ้านำหน้าด้วย /api ให้ไปเรียกใช้ projectRoutes
@@ -46,15 +46,12 @@ app.use(
     legacyHeaders: false
   })
 );
-app.use('/api/projects', projectRoutes);
 app.use('/api/users', userRoutes); 
 app.use('/api/auth', authRoutes);
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
 app.use('/api/forms', formRoutes);
 
 app.use(notFound);
