@@ -108,7 +108,6 @@ function ApplicationPortfolio({ currentUser }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState({ status: "All", category: "All" });
   
-  // 🌟 จุดที่แก้ไข 1: เปลี่ยนค่า Default การจัดเรียงเป็นเวลาอัปเดตล่าสุด
   const [sortBy, setSortBy] = useState("updated_at");
   const [sortOrder, setSortOrder] = useState("desc");
   const [showFilters, setShowFilters] = useState(false);
@@ -159,7 +158,11 @@ function ApplicationPortfolio({ currentUser }) {
             return {
               ...item,
               form_data: parsedForm,
+              // 🌟 โหลดโครงสร้างข้อมูลทั้งหมดมารอไว้
+              app_info: parsedForm.app_info || {},
               tech: parsedForm.tech || {},
+              interface: parsedForm.interface || {},
+              security_cia: parsedForm.security_cia || {},
               compliance: parsedForm.compliance || { pdpa: {}, ropa: {} },
               support: parsedForm.support || {},
               manager:
@@ -249,9 +252,11 @@ function ApplicationPortfolio({ currentUser }) {
   const handleStartEdit = () => {
     setEditFormData({
       ...selectedApp,
+      app_info: selectedApp.app_info || {},
       tech: selectedApp.tech || {},
       support: selectedApp.support || {},
       interface: selectedApp.interface || {},
+      security_cia: selectedApp.security_cia || {},
       compliance: {
         pdpa: selectedApp.compliance?.pdpa || {},
         ropa: selectedApp.compliance?.ropa || {},
@@ -304,12 +309,16 @@ function ApplicationPortfolio({ currentUser }) {
           const sessionRaw = localStorage.getItem("ba-system.auth-session");
           const token = sessionRaw ? JSON.parse(sessionRaw).token : null;
           if (!token) throw new Error("No token found");
+          
           const finalDataToSave = {
             ...editFormData,
-            updated_at: new Date().toISOString(), // 🌟 จุดที่แก้ไข 2: บังคับอัปเดตเวลาเพื่อให้เด้งขึ้นบนสุด
+            updated_at: new Date().toISOString(),
             form_data: {
               ...editFormData.form_data,
+              app_info: editFormData.app_info, // บันทึกข้อมูลส่วนเพิ่ม
               tech: editFormData.tech,
+              interface: editFormData.interface, // บันทึก Interface
+              security_cia: editFormData.security_cia, // บันทึก CIA
               compliance: editFormData.compliance,
               support: editFormData.support,
               users: editFormData.users,
@@ -369,7 +378,6 @@ function ApplicationPortfolio({ currentUser }) {
     }
   };
 
-  // 🚀 ย้ายฟังก์ชัน applySort เข้ามาในนี้ เพื่อแก้ Warning ESLint 🚀
   const displayedApps = useMemo(() => {
     let filtered = filterRows(allData, {
       searchQuery: searchTerm,
@@ -389,7 +397,6 @@ function ApplicationPortfolio({ currentUser }) {
     const applySort = (data) => {
       if (!sortBy) return data;
       return [...data].sort((a, b) => {
-        // 🌟 จุดที่แก้ไข 3: เพิ่มเงื่อนไขการเรียงลำดับด้วยเวลา (updated_at)
         if (sortBy === 'updated_at') {
           const aValDate = new Date(a.updated_at || a.created_at || 0).getTime();
           const bValDate = new Date(b.updated_at || b.created_at || 0).getTime();
@@ -416,7 +423,7 @@ function ApplicationPortfolio({ currentUser }) {
     };
 
     return applySort(filtered);
-  }, [allData, searchTerm, filters, sortBy, sortOrder]); // ⚠️ ลบการเรียกตัวแปรนอก scope ทำให้ Warning หายเกลี้ยง!
+  }, [allData, searchTerm, filters, sortBy, sortOrder]); 
 
   const hasActiveFilter = filters.status !== 'All' || filters.category !== 'All';
 
@@ -475,7 +482,6 @@ function ApplicationPortfolio({ currentUser }) {
         </h1>
       </div>
       
-      {/* Minimal Top-Right Toolbar (Search + Filters Popover) */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '16px', position: 'relative', zIndex: 20 }}>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           
@@ -1059,205 +1065,149 @@ function ApplicationPortfolio({ currentUser }) {
                         </div>
                       )}
                     </div>
-                    <div
-                      style={{
-                        background: "var(--card-bg)",
-                        padding: "20px",
-                        borderRadius: "12px",
-                        border: "1px solid var(--border-color)",
-                        boxShadow: "0 4px 6px rgba(0,0,0,0.02)",
-                      }}
-                    >
-                      <div
-                        style={{
-                          color: "var(--text-muted)",
-                          fontSize: "0.85rem",
-                          fontWeight: 600,
-                          marginBottom: "8px",
-                        }}
-                      >
-                        ผู้จัดการระบบ (Manager)
-                      </div>
+
+                    {/* 🌟 ฟิลด์ใหม่เพิ่มเติมจาก Excel 🌟 */}
+                    <div style={{ background: "var(--card-bg)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border-color)" }}>
+                      <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "8px" }}>ชื่อย่อระบบ (Abbreviation)</div>
+                      {isEditing ? (
+                        <input type="text" value={editFormData.app_info?.abbreviation || ""} onChange={(e) => handleNestedChange("app_info", "abbreviation", e.target.value)} style={{ width: "100%", padding: "12px", borderRadius: "8px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }} />
+                      ) : ( <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.app_info?.abbreviation || "-"}</div> )}
+                    </div>
+
+                    <div style={{ background: "var(--card-bg)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border-color)" }}>
+                      <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "8px" }}>โมดูลของระบบ (Module)</div>
+                      {isEditing ? (
+                        <input type="text" value={editFormData.app_info?.module || ""} onChange={(e) => handleNestedChange("app_info", "module", e.target.value)} style={{ width: "100%", padding: "12px", borderRadius: "8px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }} />
+                      ) : ( <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.app_info?.module || "-"}</div> )}
+                    </div>
+
+                    <div style={{ background: "var(--card-bg)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border-color)" }}>
+                      <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "8px" }}>ผู้จัดการระบบ (Manager)</div>
                       {isEditing ? (
                         <input
                           type="text"
                           value={editFormData.manager || ""}
-                          onChange={(e) =>
-                            setEditFormData({
-                              ...editFormData,
-                              manager: e.target.value,
-                            })
-                          }
-                          style={{
-                            width: "100%",
-                            padding: "12px",
-                            borderRadius: "8px",
-                            background: "var(--input-bg)",
-                            border: "1px solid var(--border-color)",
-                            color: "var(--text-color)",
-                          }}
+                          onChange={(e) => setEditFormData({ ...editFormData, manager: e.target.value }) }
+                          style={{ width: "100%", padding: "12px", borderRadius: "8px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }}
                         />
                       ) : (
-                        <div
-                          style={{
-                            color: "var(--text-color)",
-                            fontWeight: 600,
-                          }}
-                        >
-                          {selectedApp.manager || "-"}
-                        </div>
+                        <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.manager || "-"}</div>
                       )}
                     </div>
-                    <div
-                      style={{
-                        background: "var(--card-bg)",
-                        padding: "20px",
-                        borderRadius: "12px",
-                        border: "1px solid var(--border-color)",
-                        boxShadow: "0 4px 6px rgba(0,0,0,0.02)",
-                      }}
-                    >
-                      <div
-                        style={{
-                          color: "var(--text-muted)",
-                          fontSize: "0.85rem",
-                          fontWeight: 600,
-                          marginBottom: "8px",
-                        }}
-                      >
-                        หน่วยงานเจ้าของ (Owner)
-                      </div>
+
+                    <div style={{ background: "var(--card-bg)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border-color)" }}>
+                      <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "8px" }}>หน่วยงานเจ้าของ (Owner)</div>
                       {isEditing ? (
                         <input
                           type="text"
                           value={editFormData.owner || ""}
-                          onChange={(e) =>
-                            setEditFormData({
-                              ...editFormData,
-                              owner: e.target.value,
-                            })
-                          }
-                          style={{
-                            width: "100%",
-                            padding: "12px",
-                            borderRadius: "8px",
-                            background: "var(--input-bg)",
-                            border: "1px solid var(--border-color)",
-                            color: "var(--text-color)",
-                          }}
+                          onChange={(e) => setEditFormData({ ...editFormData, owner: e.target.value }) }
+                          style={{ width: "100%", padding: "12px", borderRadius: "8px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }}
                         />
                       ) : (
-                        <div
-                          style={{
-                            color: "var(--text-color)",
-                            fontWeight: 600,
-                          }}
-                        >
-                          {selectedApp.owner || "-"}
+                        <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.owner || "-"}</div>
+                      )}
+                    </div>
+
+                    <div style={{ background: "var(--card-bg)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border-color)" }}>
+                      <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "8px" }}>ระดับองค์กร (Enterprise)</div>
+                      {isEditing ? (
+                        <input type="text" value={editFormData.app_info?.enterprise || ""} onChange={(e) => handleNestedChange("app_info", "enterprise", e.target.value)} placeholder="e.g. Business Management" style={{ width: "100%", padding: "12px", borderRadius: "8px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }} />
+                      ) : ( <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.app_info?.enterprise || "-"}</div> )}
+                    </div>
+
+                    <div style={{ background: "var(--card-bg)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border-color)" }}>
+                      <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "8px" }}>หมวดหมู่ระบบ (Catalog)</div>
+                      {isEditing ? (
+                        <input type="text" value={editFormData.app_info?.catalog || ""} onChange={(e) => handleNestedChange("app_info", "catalog", e.target.value)} placeholder="e.g. Support Application" style={{ width: "100%", padding: "12px", borderRadius: "8px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }} />
+                      ) : ( <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.app_info?.catalog || "-"}</div> )}
+                    </div>
+
+                    <div style={{ background: "var(--card-bg)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border-color)" }}>
+                      <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "8px" }}>ประเภทการพัฒนา (Type)</div>
+                      {isEditing ? (
+                        <select value={editFormData.app_info?.type || ""} onChange={(e) => handleNestedChange("app_info", "type", e.target.value)} style={{ width: "100%", padding: "12px", borderRadius: "8px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }}>
+                          <option value="">เลือกประเภท</option>
+                          <option value="Inhouse">Inhouse</option>
+                          <option value="Package">Package</option>
+                        </select>
+                      ) : ( <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.app_info?.type || "-"}</div> )}
+                    </div>
+
+                    <div style={{ background: "var(--card-bg)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border-color)" }}>
+                      <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "8px" }}>เวลาใช้งาน (Usage Hour)</div>
+                      {isEditing ? (
+                        <input type="text" value={editFormData.app_info?.usageHour || ""} onChange={(e) => handleNestedChange("app_info", "usageHour", e.target.value)} placeholder="e.g. 24*7 หรือ 8*5" style={{ width: "100%", padding: "12px", borderRadius: "8px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }} />
+                      ) : ( <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.app_info?.usageHour || "-"}</div> )}
+                    </div>
+
+                    <div style={{ background: "var(--card-bg)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border-color)", display: "flex", alignItems: "center", gap: "15px" }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "4px" }}>ผลกระทบธุรกิจเมื่อระบบล่ม (Impact)</div>
+                      </div>
+                      {isEditing ? (
+                         <label style={{ display: "flex", alignItems: "center", cursor: "pointer" }}>
+                           <input type="checkbox" checked={editFormData.app_info?.impactBusiness === "Yes"} onChange={(e) => handleNestedChange("app_info", "impactBusiness", e.target.checked ? "Yes" : "No")} style={{ width: "20px", height: "20px", accentColor: "#ef4444" }} />
+                           <span style={{ marginLeft: "8px", color: editFormData.app_info?.impactBusiness === "Yes" ? "#ef4444" : "var(--text-muted)", fontWeight: "bold" }}>
+                             {editFormData.app_info?.impactBusiness === "Yes" ? "Yes (กระทบ)" : "No"}
+                           </span>
+                         </label>
+                      ) : (
+                        <div style={{ color: selectedApp.app_info?.impactBusiness === "Yes" ? "#ef4444" : "var(--text-muted)", fontWeight: "bold" }}>
+                          {selectedApp.app_info?.impactBusiness || "No"}
                         </div>
                       )}
                     </div>
-                    <div
-                      style={{
-                        background: "var(--card-bg)",
-                        padding: "20px",
-                        borderRadius: "12px",
-                        border: "1px solid var(--border-color)",
-                        boxShadow: "0 4px 6px rgba(0,0,0,0.02)",
-                      }}
-                    >
-                      <div
-                        style={{
-                          color: "var(--text-muted)",
-                          fontSize: "0.85rem",
-                          fontWeight: 600,
-                          marginBottom: "8px",
-                        }}
-                      >
-                        จำนวนผู้ใช้ (No. of Users)
+
+                    <div style={{ background: "var(--card-bg)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border-color)", display: "flex", alignItems: "center", gap: "15px" }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "4px" }}>มี Source Code ไหม? (Source Code Availability)</div>
                       </div>
+                      {isEditing ? (
+                         <label style={{ display: "flex", alignItems: "center", cursor: "pointer" }}>
+                           <input type="checkbox" checked={editFormData.app_info?.hasSourceCode === "Yes"} onChange={(e) => handleNestedChange("app_info", "hasSourceCode", e.target.checked ? "Yes" : "No")} style={{ width: "20px", height: "20px", accentColor: "#10b981" }} />
+                           <span style={{ marginLeft: "8px", color: editFormData.app_info?.hasSourceCode === "Yes" ? "#10b981" : "var(--text-muted)", fontWeight: "bold" }}>
+                             {editFormData.app_info?.hasSourceCode === "Yes" ? "Yes (มี)" : "No"}
+                           </span>
+                         </label>
+                      ) : (
+                        <div style={{ color: selectedApp.app_info?.hasSourceCode === "Yes" ? "#10b981" : "var(--text-muted)", fontWeight: "bold" }}>
+                          {selectedApp.app_info?.hasSourceCode || "No"}
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ background: "var(--card-bg)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border-color)" }}>
+                      <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "8px" }}>จำนวนผู้ใช้ (No. of Users)</div>
                       {isEditing ? (
                         <input
                           type="text"
                           value={editFormData.users || ""}
-                          onChange={(e) =>
-                            setEditFormData({
-                              ...editFormData,
-                              users: e.target.value,
-                            })
-                          }
-                          style={{
-                            width: "100%",
-                            padding: "12px",
-                            borderRadius: "8px",
-                            background: "var(--input-bg)",
-                            border: "1px solid var(--border-color)",
-                            color: "var(--text-color)",
-                          }}
+                          onChange={(e) => setEditFormData({ ...editFormData, users: e.target.value }) }
+                          style={{ width: "100%", padding: "12px", borderRadius: "8px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }}
                         />
                       ) : (
-                        <div
-                          style={{
-                            color: "var(--text-color)",
-                            fontWeight: 600,
-                          }}
-                        >
-                          {selectedApp.users || "-"}
-                        </div>
+                        <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.users || "-"}</div>
                       )}
                     </div>
-                    <div
-                      style={{
-                        background: "var(--card-bg)",
-                        padding: "20px",
-                        borderRadius: "12px",
-                        border: "1px solid var(--border-color)",
-                        boxShadow: "0 4px 6px rgba(0,0,0,0.02)",
-                      }}
-                    >
-                      <div
-                        style={{
-                          color: "var(--text-muted)",
-                          fontSize: "0.85rem",
-                          fontWeight: 600,
-                          marginBottom: "8px",
-                        }}
-                      >
-                        สถานะ (Status)
-                      </div>
+
+                    <div style={{ background: "var(--card-bg)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border-color)" }}>
+                      <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "8px" }}>สถานะ (Status)</div>
                       {isEditing ? (
                         <select
                           value={editFormData.status || "Active"}
-                          onChange={(e) =>
-                            setEditFormData({
-                              ...editFormData,
-                              status: e.target.value,
-                            })
-                          }
-                          style={{
-                            width: "100%",
-                            padding: "12px",
-                            borderRadius: "8px",
-                            background: "var(--input-bg)",
-                            border: "1px solid var(--border-color)",
-                            color: "var(--text-color)",
-                          }}
+                          onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value }) }
+                          style={{ width: "100%", padding: "12px", borderRadius: "8px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }}
                         >
                           <option value="Active">Active</option>
                           <option value="Hold">Hold</option>
                           <option value="Inactive">Inactive</option>
                         </select>
                       ) : (
-                        <div
-                          style={{
-                            color: "var(--text-color)",
-                            fontWeight: 600,
-                          }}
-                        >
-                          {selectedApp.status || "Active"}
-                        </div>
+                        <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.status || "Active"}</div>
                       )}
                     </div>
+
                   </div>
                 </div>
               )}
@@ -1271,7 +1221,7 @@ function ApplicationPortfolio({ currentUser }) {
                 >
                   <h4
                     style={{
-                      margin: "0 0 16px 0",
+                      margin: "0",
                       fontSize: "1.1rem",
                       color: "var(--text-color)",
                       display: "flex",
@@ -1295,7 +1245,7 @@ function ApplicationPortfolio({ currentUser }) {
                     >
                       2
                     </span>
-                    โครงสร้างเทคโนโลยี (Server & Tech Stack)
+                    โครงสร้างเทคโนโลยีและ Server (Tech & Infra Stack)
                   </h4>
                   <div
                     style={{
@@ -1304,203 +1254,116 @@ function ApplicationPortfolio({ currentUser }) {
                       gap: "20px",
                     }}
                   >
-                    <div
-                      style={{
-                        background: "var(--card-bg)",
-                        padding: "20px",
-                        borderRadius: "12px",
-                        border: "1px solid var(--border-color)",
-                        boxShadow: "0 4px 6px rgba(0,0,0,0.02)",
-                      }}
-                    >
-                      <div
-                        style={{
-                          color: "var(--text-muted)",
-                          fontSize: "0.85rem",
-                          fontWeight: 600,
-                          marginBottom: "8px",
-                        }}
-                      >
-                        Programming Language
-                      </div>
+                    <div style={{ background: "var(--card-bg)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border-color)" }}>
+                      <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "8px" }}>Programming Language</div>
                       {isEditing ? (
-                        <input
-                          type="text"
-                          value={editFormData.tech?.language || ""}
-                          onChange={(e) =>
-                            handleNestedChange(
-                              "tech",
-                              "language",
-                              e.target.value,
-                            )
-                          }
-                          style={{
-                            width: "100%",
-                            padding: "12px",
-                            borderRadius: "8px",
-                            background: "var(--input-bg)",
-                            border: "1px solid var(--border-color)",
-                            color: "var(--text-color)",
-                          }}
-                        />
-                      ) : (
-                        <div
-                          style={{
-                            color: "var(--text-color)",
-                            fontWeight: 600,
-                          }}
-                        >
-                          {selectedApp.tech?.language || "-"}
-                        </div>
-                      )}
+                        <input type="text" value={editFormData.tech?.language || ""} onChange={(e) => handleNestedChange("tech", "language", e.target.value)} style={{ width: "100%", padding: "12px", borderRadius: "8px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }} />
+                      ) : ( <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.tech?.language || "-"}</div> )}
                     </div>
-                    <div
-                      style={{
-                        background: "var(--card-bg)",
-                        padding: "20px",
-                        borderRadius: "12px",
-                        border: "1px solid var(--border-color)",
-                        boxShadow: "0 4px 6px rgba(0,0,0,0.02)",
-                      }}
-                    >
-                      <div
-                        style={{
-                          color: "var(--text-muted)",
-                          fontSize: "0.85rem",
-                          fontWeight: 600,
-                          marginBottom: "8px",
-                        }}
-                      >
-                        Platform
-                      </div>
+                    
+                    <div style={{ background: "var(--card-bg)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border-color)" }}>
+                      <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "8px" }}>Tools (เครื่องมือพัฒนา)</div>
                       {isEditing ? (
-                        <input
-                          type="text"
-                          value={editFormData.tech?.platform || ""}
-                          onChange={(e) =>
-                            handleNestedChange(
-                              "tech",
-                              "platform",
-                              e.target.value,
-                            )
-                          }
-                          style={{
-                            width: "100%",
-                            padding: "12px",
-                            borderRadius: "8px",
-                            background: "var(--input-bg)",
-                            border: "1px solid var(--border-color)",
-                            color: "var(--text-color)",
-                          }}
-                        />
-                      ) : (
-                        <div
-                          style={{
-                            color: "var(--text-color)",
-                            fontWeight: 600,
-                          }}
-                        >
-                          {selectedApp.tech?.platform || "Web Base"}
-                        </div>
-                      )}
+                        <input type="text" value={editFormData.tech?.tools || ""} onChange={(e) => handleNestedChange("tech", "tools", e.target.value)} placeholder="e.g. Visual Studio 2010" style={{ width: "100%", padding: "12px", borderRadius: "8px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }} />
+                      ) : ( <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.tech?.tools || "-"}</div> )}
                     </div>
-                    <div
-                      style={{
-                        background: "var(--card-bg)",
-                        padding: "20px",
-                        borderRadius: "12px",
-                        border: "1px solid var(--border-color)",
-                        boxShadow: "0 4px 6px rgba(0,0,0,0.02)",
-                      }}
-                    >
-                      <div
-                        style={{
-                          color: "var(--text-muted)",
-                          fontSize: "0.85rem",
-                          fontWeight: 600,
-                          marginBottom: "8px",
-                        }}
-                      >
-                        Database Server IP
-                      </div>
+
+                    <div style={{ background: "var(--card-bg)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border-color)" }}>
+                      <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "8px" }}>Platform</div>
                       {isEditing ? (
-                        <input
-                          type="text"
-                          value={editFormData.tech?.server || ""}
-                          onChange={(e) =>
-                            handleNestedChange("tech", "server", e.target.value)
-                          }
-                          style={{
-                            width: "100%",
-                            padding: "12px",
-                            borderRadius: "8px",
-                            background: "var(--input-bg)",
-                            border: "1px solid var(--border-color)",
-                            color: "var(--text-color)",
-                          }}
-                        />
-                      ) : (
-                        <div
-                          style={{
-                            color: "var(--text-color)",
-                            fontWeight: 600,
-                          }}
-                        >
-                          {selectedApp.tech?.server || "-"}
-                        </div>
-                      )}
+                        <input type="text" value={editFormData.tech?.platform || ""} onChange={(e) => handleNestedChange("tech", "platform", e.target.value)} style={{ width: "100%", padding: "12px", borderRadius: "8px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }} />
+                      ) : ( <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.tech?.platform || "Web Base"}</div> )}
                     </div>
-                    <div
-                      style={{
-                        background: "var(--card-bg)",
-                        padding: "20px",
-                        borderRadius: "12px",
-                        border: "1px solid var(--border-color)",
-                        boxShadow: "0 4px 6px rgba(0,0,0,0.02)",
-                      }}
-                    >
-                      <div
-                        style={{
-                          color: "var(--text-muted)",
-                          fontSize: "0.85rem",
-                          fontWeight: 600,
-                          marginBottom: "8px",
-                        }}
-                      >
-                        Web Server IP
-                      </div>
+
+                    <div style={{ background: "var(--card-bg)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border-color)" }}>
+                      <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "8px" }}>Type of Backup Required</div>
                       {isEditing ? (
-                        <input
-                          type="text"
-                          value={editFormData.tech?.webServer || ""}
-                          onChange={(e) =>
-                            handleNestedChange(
-                              "tech",
-                              "webServer",
-                              e.target.value,
-                            )
-                          }
-                          style={{
-                            width: "100%",
-                            padding: "12px",
-                            borderRadius: "8px",
-                            background: "var(--input-bg)",
-                            border: "1px solid var(--border-color)",
-                            color: "var(--text-color)",
-                          }}
-                        />
-                      ) : (
-                        <div
-                          style={{
-                            color: "var(--text-color)",
-                            fontWeight: 600,
-                          }}
-                        >
-                          {selectedApp.tech?.webServer || "-"}
-                        </div>
-                      )}
+                        <input type="text" value={editFormData.tech?.backupType || ""} onChange={(e) => handleNestedChange("tech", "backupType", e.target.value)} placeholder="e.g. Full backup_Monthly" style={{ width: "100%", padding: "12px", borderRadius: "8px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }} />
+                      ) : ( <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.tech?.backupType || "-"}</div> )}
                     </div>
+
+                    {/* Server Info Group */}
+                    <div style={{ gridColumn: "1 / -1", background: "rgba(139, 92, 246, 0.05)", padding: "20px", borderRadius: "12px", border: "1px solid rgba(139, 92, 246, 0.2)", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+                       <h5 style={{ gridColumn: "1 / -1", margin: "0 0 10px 0", color: "#8b5cf6" }}>🖥️ ข้อมูล Server</h5>
+                       
+                       <div>
+                         <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "8px" }}>Web Server (IP & Name)</div>
+                         {isEditing ? (
+                           <div style={{ display: "flex", gap: "10px" }}>
+                             <input type="text" placeholder="IP" value={editFormData.tech?.webServerIp || ""} onChange={(e) => handleNestedChange("tech", "webServerIp", e.target.value)} style={{ width: "50%", padding: "10px", borderRadius: "8px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }} />
+                             <input type="text" placeholder="Name" value={editFormData.tech?.webServerName || ""} onChange={(e) => handleNestedChange("tech", "webServerName", e.target.value)} style={{ width: "50%", padding: "10px", borderRadius: "8px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }} />
+                           </div>
+                         ) : ( <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.tech?.webServerIp || "-"} / {selectedApp.tech?.webServerName || "-"}</div> )}
+                       </div>
+
+                       <div>
+                         <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "8px" }}>App Server (IP & Name)</div>
+                         {isEditing ? (
+                           <div style={{ display: "flex", gap: "10px" }}>
+                             <input type="text" placeholder="IP" value={editFormData.tech?.appServerIp || ""} onChange={(e) => handleNestedChange("tech", "appServerIp", e.target.value)} style={{ width: "50%", padding: "10px", borderRadius: "8px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }} />
+                             <input type="text" placeholder="Name" value={editFormData.tech?.appServerName || ""} onChange={(e) => handleNestedChange("tech", "appServerName", e.target.value)} style={{ width: "50%", padding: "10px", borderRadius: "8px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }} />
+                           </div>
+                         ) : ( <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.tech?.appServerIp || "-"} / {selectedApp.tech?.appServerName || "-"}</div> )}
+                       </div>
+
+                       <div>
+                         <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "8px" }}>Database Server (IP & Name)</div>
+                         {isEditing ? (
+                           <div style={{ display: "flex", gap: "10px" }}>
+                             <input type="text" placeholder="IP" value={editFormData.tech?.dbServerIp || ""} onChange={(e) => handleNestedChange("tech", "dbServerIp", e.target.value)} style={{ width: "50%", padding: "10px", borderRadius: "8px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }} />
+                             <input type="text" placeholder="Name" value={editFormData.tech?.dbServerName || ""} onChange={(e) => handleNestedChange("tech", "dbServerName", e.target.value)} style={{ width: "50%", padding: "10px", borderRadius: "8px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }} />
+                           </div>
+                         ) : ( <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.tech?.dbServerIp || "-"} / {selectedApp.tech?.dbServerName || "-"}</div> )}
+                       </div>
+
+                       <div>
+                         <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "8px" }}>HIS Server (Connection)</div>
+                         {isEditing ? (
+                           <input type="text" value={editFormData.tech?.hisServer || ""} onChange={(e) => handleNestedChange("tech", "hisServer", e.target.value)} style={{ width: "100%", padding: "10px", borderRadius: "8px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }} />
+                         ) : ( <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.tech?.hisServer || "-"}</div> )}
+                       </div>
+                    </div>
+
                   </div>
+
+                  <h4 style={{ margin: "10px 0 0 0", fontSize: "1.1rem", color: "var(--text-color)", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span style={{ background: "#8b5cf6", color: "#fff", width: "28px", height: "28px", borderRadius: "8px", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "0.9rem", fontWeight: "bold" }}>
+                      3
+                    </span>
+                    การเชื่อมต่อข้อมูล (Application Interface)
+                  </h4>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+                     <div style={{ background: "var(--card-bg)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border-color)" }}>
+                        <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "8px" }}>Interface Inbound Data</div>
+                        {isEditing ? (
+                          <input type="text" value={editFormData.interface?.inbound || ""} onChange={(e) => handleNestedChange("interface", "inbound", e.target.value)} placeholder="e.g. HIS Data" style={{ width: "100%", padding: "12px", borderRadius: "8px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }} />
+                        ) : ( <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.interface?.inbound || "-"}</div> )}
+                     </div>
+                     <div style={{ background: "var(--card-bg)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border-color)" }}>
+                        <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "8px" }}>Interface Outbound Data</div>
+                        {isEditing ? (
+                          <input type="text" value={editFormData.interface?.outbound || ""} onChange={(e) => handleNestedChange("interface", "outbound", e.target.value)} placeholder="e.g. No" style={{ width: "100%", padding: "12px", borderRadius: "8px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }} />
+                        ) : ( <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.interface?.outbound || "-"}</div> )}
+                     </div>
+                     <div style={{ background: "var(--card-bg)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border-color)" }}>
+                        <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "8px" }}>Processing System</div>
+                        {isEditing ? (
+                           <select value={editFormData.interface?.processing || ""} onChange={(e) => handleNestedChange("interface", "processing", e.target.value)} style={{ width: "100%", padding: "12px", borderRadius: "8px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }}>
+                             <option value="">เลือกประเภท</option>
+                             <option value="Online">Online</option>
+                             <option value="Batch">Batch</option>
+                             <option value="Batch&Online">Batch & Online</option>
+                           </select>
+                        ) : ( <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.interface?.processing || "-"}</div> )}
+                     </div>
+                     <div style={{ background: "var(--card-bg)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border-color)" }}>
+                        <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "8px" }}>Public Interface</div>
+                        {isEditing ? (
+                          <input type="text" value={editFormData.interface?.public || ""} onChange={(e) => handleNestedChange("interface", "public", e.target.value)} style={{ width: "100%", padding: "12px", borderRadius: "8px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }} />
+                        ) : ( <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.interface?.public || "-"}</div> )}
+                     </div>
+                  </div>
+
                 </div>
               )}
               {activeTab === "support" && (
@@ -1535,111 +1398,45 @@ function ApplicationPortfolio({ currentUser }) {
                         fontWeight: "bold",
                       }}
                     >
-                      3
+                      4
                     </span>
-                    ระดับการสนับสนุนและสัญญา (Support & Contract)
+                    ระดับการสนับสนุนและสัญญา (Support & Contact)
                   </h4>
                   <div style={{ display: "grid", gap: "20px" }}>
-                    <div
-                      style={{
-                        background: "var(--card-bg)",
-                        padding: "20px",
-                        borderRadius: "12px",
-                        border: "1px solid var(--border-color)",
-                        boxShadow: "0 4px 6px rgba(0,0,0,0.02)",
-                      }}
-                    >
-                      <div
-                        style={{
-                          color: "var(--blue)",
-                          fontSize: "0.85rem",
-                          fontWeight: 700,
-                          marginBottom: "8px",
-                        }}
-                      >
-                        Tier 2 (L2 Support) / Site IT
-                      </div>
+                    
+                    {/* 🌟 เพิ่ม L1 Support 🌟 */}
+                    <div style={{ background: "var(--card-bg)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border-color)", boxShadow: "0 4px 6px rgba(0,0,0,0.02)" }}>
+                      <div style={{ color: "var(--blue)", fontSize: "0.85rem", fontWeight: 700, marginBottom: "8px" }}>Tier 1 (L1 Support) / Helpdesk</div>
+                      {isEditing ? (
+                        <input type="text" value={editFormData.support?.l1Contact || ""} onChange={(e) => handleNestedChange("support", "l1Contact", e.target.value)} placeholder="e.g. Centralized IT Helpdesk: 02-xxx-xxxx" style={{ width: "100%", padding: "12px", borderRadius: "8px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }} />
+                      ) : ( <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.support?.l1Contact || "Centralized IT Helpdesk"}</div> )}
+                    </div>
+
+                    <div style={{ background: "var(--card-bg)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border-color)", boxShadow: "0 4px 6px rgba(0,0,0,0.02)" }}>
+                      <div style={{ color: "var(--blue)", fontSize: "0.85rem", fontWeight: 700, marginBottom: "8px" }}>Tier 2 (L2 Support) / Site IT</div>
                       {isEditing ? (
                         <input
                           type="text"
                           value={editFormData.support?.l2Contact || ""}
-                          onChange={(e) =>
-                            handleNestedChange(
-                              "support",
-                              "l2Contact",
-                              e.target.value,
-                            )
-                          }
-                          style={{
-                            width: "100%",
-                            padding: "12px",
-                            borderRadius: "8px",
-                            background: "var(--input-bg)",
-                            border: "1px solid var(--border-color)",
-                            color: "var(--text-color)",
-                          }}
+                          onChange={(e) => handleNestedChange("support", "l2Contact", e.target.value) }
+                          style={{ width: "100%", padding: "12px", borderRadius: "8px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }}
                         />
                       ) : (
-                        <div
-                          style={{
-                            color: "var(--text-color)",
-                            fontWeight: 600,
-                          }}
-                        >
-                          {selectedApp.support?.l2Contact ||
-                            "BPK IT Support on site"}
-                        </div>
+                        <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.support?.l2Contact || "BPK IT Support on site"}</div>
                       )}
                     </div>
-                    <div
-                      style={{
-                        background: "var(--card-bg)",
-                        padding: "20px",
-                        borderRadius: "12px",
-                        border: "1px solid var(--border-color)",
-                        boxShadow: "0 4px 6px rgba(0,0,0,0.02)",
-                      }}
-                    >
-                      <div
-                        style={{
-                          color: "var(--blue)",
-                          fontSize: "0.85rem",
-                          fontWeight: 700,
-                          marginBottom: "8px",
-                        }}
-                      >
-                        Tier 3 (L3 Support) / App Owner
-                      </div>
+
+                    <div style={{ background: "var(--card-bg)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border-color)", boxShadow: "0 4px 6px rgba(0,0,0,0.02)" }}>
+                      <div style={{ color: "var(--blue)", fontSize: "0.85rem", fontWeight: 700, marginBottom: "8px" }}>Tier 3 (L3 Support) / App Owner</div>
                       {isEditing ? (
                         <input
                           type="text"
                           value={editFormData.support?.l3Contact || ""}
-                          onChange={(e) =>
-                            handleNestedChange(
-                              "support",
-                              "l3Contact",
-                              e.target.value,
-                            )
-                          }
-                          style={{
-                            width: "100%",
-                            padding: "12px",
-                            borderRadius: "8px",
-                            background: "var(--input-bg)",
-                            border: "1px solid var(--border-color)",
-                            color: "var(--text-color)",
-                          }}
+                          onChange={(e) => handleNestedChange("support", "l3Contact", e.target.value) }
+                          style={{ width: "100%", padding: "12px", borderRadius: "8px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }}
                         />
                       ) : (
-                        <div
-                          style={{
-                            color: "var(--text-color)",
-                            fontWeight: 600,
-                          }}
-                        >
-                          {selectedApp.support?.l3Contact ||
-                            "GLS-G6-Developer-Group"}
-                        </div>
+                        <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.support?.l3Contact || "GLS-G6-Developer-Group"}</div>
                       )}
                     </div>
                   </div>
@@ -1653,10 +1450,68 @@ function ApplicationPortfolio({ currentUser }) {
                     gap: "24px",
                   }}
                 >
+                  
+                  {/* 🌟 เพิ่มส่วน CIA Triad ก่อนขึ้น PDPA 🌟 */}
+                  <div>
+                    <h4 style={{ margin: "0 0 16px 0", fontSize: "1.1rem", color: "var(--text-color)", display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span style={{ background: "#ef4444", color: "#fff", width: "28px", height: "28px", borderRadius: "8px", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "0.9rem", fontWeight: "bold" }}>
+                        5
+                      </span>
+                      Security & User Access (CIA Triad)
+                    </h4>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "15px" }}>
+                      
+                      <div style={{ background: "var(--card-bg)", padding: "15px", borderRadius: "10px", border: "1px solid var(--border-color)" }}>
+                         <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "8px" }}>Contract Type</div>
+                         {isEditing ? (
+                           <input type="text" value={editFormData.security_cia?.contractType || ""} onChange={(e) => handleNestedChange("security_cia", "contractType", e.target.value)} placeholder="e.g. Obligation" style={{ width: "100%", padding: "10px", borderRadius: "6px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }} />
+                         ) : ( <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.security_cia?.contractType || "-"}</div> )}
+                      </div>
+
+                      <div style={{ background: "var(--card-bg)", padding: "15px", borderRadius: "10px", border: "1px solid var(--border-color)" }}>
+                         <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "8px" }}>Confidentiality (ความลับ)</div>
+                         {isEditing ? (
+                           <select value={editFormData.security_cia?.confidentiality || ""} onChange={(e) => handleNestedChange("security_cia", "confidentiality", e.target.value)} style={{ width: "100%", padding: "10px", borderRadius: "6px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }}>
+                             <option value="">เลือกระดับ</option>
+                             <option value="Internal Use">Internal Use</option>
+                             <option value="Confidential">Confidential</option>
+                             <option value="Public">Public</option>
+                             <option value="Classify">Classify</option>
+                           </select>
+                         ) : ( <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.security_cia?.confidentiality || "-"}</div> )}
+                      </div>
+
+                      <div style={{ background: "var(--card-bg)", padding: "15px", borderRadius: "10px", border: "1px solid var(--border-color)" }}>
+                         <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "8px" }}>Integrity (ความถูกต้อง)</div>
+                         {isEditing ? (
+                           <select value={editFormData.security_cia?.integrity || ""} onChange={(e) => handleNestedChange("security_cia", "integrity", e.target.value)} style={{ width: "100%", padding: "10px", borderRadius: "6px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }}>
+                             <option value="">เลือกระดับ</option>
+                             <option value="High">High</option>
+                             <option value="Medium">Medium</option>
+                             <option value="Low">Low</option>
+                           </select>
+                         ) : ( <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.security_cia?.integrity || "-"}</div> )}
+                      </div>
+
+                      <div style={{ background: "var(--card-bg)", padding: "15px", borderRadius: "10px", border: "1px solid var(--border-color)" }}>
+                         <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "8px" }}>Availability (ความพร้อมใช้)</div>
+                         {isEditing ? (
+                           <select value={editFormData.security_cia?.availability || ""} onChange={(e) => handleNestedChange("security_cia", "availability", e.target.value)} style={{ width: "100%", padding: "10px", borderRadius: "6px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }}>
+                             <option value="">เลือกระดับ</option>
+                             <option value="High">High</option>
+                             <option value="Medium">Medium</option>
+                             <option value="Low">Low</option>
+                           </select>
+                         ) : ( <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.security_cia?.availability || "-"}</div> )}
+                      </div>
+
+                    </div>
+                  </div>
+
                   <div>
                     <h4
                       style={{
-                        margin: "0 0 16px 0",
+                        margin: "10px 0 16px 0",
                         fontSize: "1.1rem",
                         color: "var(--text-color)",
                         display: "flex",
@@ -1678,9 +1533,9 @@ function ApplicationPortfolio({ currentUser }) {
                           fontWeight: "bold",
                         }}
                       >
-                        4
+                        6
                       </span>
-                      PDPA: ข้อมูลส่วนบุคคลที่ระบบจัดเก็บ
+                      PDPA / Critical Info: ข้อมูลส่วนบุคคลที่ระบบจัดเก็บ
                     </h4>
                     <div
                       style={{
@@ -1772,7 +1627,7 @@ function ApplicationPortfolio({ currentUser }) {
                           fontWeight: "bold",
                         }}
                       >
-                        5
+                        7
                       </span>
                       ROPA: บันทึกกิจกรรมการประมวลผลข้อมูล
                     </h4>
@@ -1913,7 +1768,7 @@ function ApplicationPortfolio({ currentUser }) {
                         fontWeight: "bold",
                       }}
                     >
-                      6
+                      8
                     </span>
                     ประวัติและการเปลี่ยนแปลง (History)
                   </h4>
