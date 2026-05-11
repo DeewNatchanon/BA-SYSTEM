@@ -61,6 +61,7 @@ router.get("/projects/pending", async (req, res) => {
   try {
     const query = `SELECT p.id, p.name, p.site, p.category, p.description, p.created_at, p.status, p.form_data, p.document_path, u.username AS requester_name FROM projects p LEFT JOIN users u ON p.requester_id = u.id WHERE p.status = 'Pending Approval' OR p.form_data::text LIKE '%"isPendingApproval":true%' OR p.form_data::text LIKE '%"isPendingApproval": true%' ORDER BY p.created_at DESC;`;
     const result = await pool.query(query);
+    console.log("Pending projects fetched:", result.rows);
     res.status(200).json({ success: true, data: result.rows });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });

@@ -78,6 +78,23 @@ const HistoryIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
 );
 
+// 🚀 SVG Icons ชุดจัดเรียงระดับมืออาชีพ
+const SortUpIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 19V5M5 12l7-7 7 7"/>
+  </svg>
+);
+const SortDownIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 5v14M19 12l-7 7-7-7"/>
+  </svg>
+);
+const SortDefaultIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M7 15l5 5 5-5M7 9l5-5 5 5"/>
+  </svg>
+);
+
 function ApplicationPortfolio({ currentUser }) {
   const [allData, setAllData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -90,8 +107,10 @@ function ApplicationPortfolio({ currentUser }) {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState({ status: "All", category: "All" });
-  const [sortBy, setSortBy] = useState("name");
-  const [sortOrder, setSortOrder] = useState("asc");
+  
+  // 🌟 จุดที่แก้ไข 1: เปลี่ยนค่า Default การจัดเรียงเป็นเวลาอัปเดตล่าสุด
+  const [sortBy, setSortBy] = useState("updated_at");
+  const [sortOrder, setSortOrder] = useState("desc");
   const [showFilters, setShowFilters] = useState(false);
 
   const isManager = currentUser?.role === "manager";
@@ -287,6 +306,7 @@ function ApplicationPortfolio({ currentUser }) {
           if (!token) throw new Error("No token found");
           const finalDataToSave = {
             ...editFormData,
+            updated_at: new Date().toISOString(), // 🌟 จุดที่แก้ไข 2: บังคับอัปเดตเวลาเพื่อให้เด้งขึ้นบนสุด
             form_data: {
               ...editFormData.form_data,
               tech: editFormData.tech,
@@ -340,23 +360,16 @@ function ApplicationPortfolio({ currentUser }) {
     return statuses.sort((a,b) => a.localeCompare(b, 'th'));
   }, [allData]);
 
-  const sortData = (data) => {
-    if (!sortBy) return data;
-    return [...data].sort((a, b) => {
-      let aVal = a[sortBy] || '';
-      let bVal = b[sortBy] || '';
-      if (sortBy === 'name') {
-        aVal = a.name || '';
-        bVal = b.name || '';
-      }
-      if (typeof aVal === 'string' && typeof bVal === 'string') {
-        const cmp = aVal.localeCompare(bVal, ['th', 'en']);
-        return sortOrder === 'asc' ? cmp : -cmp;
-      }
-      return sortOrder === 'asc' ? (aVal > bVal ? 1 : -1) : (aVal > bVal ? -1 : 1);
-    });
+  const handleSort = (columnKey) => {
+    if (sortBy === columnKey) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(columnKey);
+      setSortOrder('asc');
+    }
   };
 
+  // 🚀 ย้ายฟังก์ชัน applySort เข้ามาในนี้ เพื่อแก้ Warning ESLint 🚀
   const displayedApps = useMemo(() => {
     let filtered = filterRows(allData, {
       searchQuery: searchTerm,
@@ -372,10 +385,67 @@ function ApplicationPortfolio({ currentUser }) {
         "site",
       ],
     });
-    return sortData(filtered);
-  }, [allData, searchTerm, filters, sortBy, sortOrder]);
+
+    const applySort = (data) => {
+      if (!sortBy) return data;
+      return [...data].sort((a, b) => {
+        // 🌟 จุดที่แก้ไข 3: เพิ่มเงื่อนไขการเรียงลำดับด้วยเวลา (updated_at)
+        if (sortBy === 'updated_at') {
+          const aValDate = new Date(a.updated_at || a.created_at || 0).getTime();
+          const bValDate = new Date(b.updated_at || b.created_at || 0).getTime();
+          return sortOrder === 'asc' ? aValDate - bValDate : bValDate - aValDate;
+        }
+
+        let aVal = a[sortBy] || '';
+        let bVal = b[sortBy] || '';
+        if (sortBy === 'name') {
+          aVal = a.name || '';
+          bVal = b.name || '';
+        }
+        if (sortBy === 'id') {
+          aVal = getAppIdDisplay(a) || '';
+          bVal = getAppIdDisplay(b) || '';
+        }
+        
+        if (typeof aVal === 'string' && typeof bVal === 'string') {
+          const cmp = aVal.localeCompare(bVal, ['th', 'en']);
+          return sortOrder === 'asc' ? cmp : -cmp;
+        }
+        return sortOrder === 'asc' ? (aVal > bVal ? 1 : -1) : (aVal > bVal ? -1 : 1);
+      });
+    };
+
+    return applySort(filtered);
+  }, [allData, searchTerm, filters, sortBy, sortOrder]); // ⚠️ ลบการเรียกตัวแปรนอก scope ทำให้ Warning หายเกลี้ยง!
 
   const hasActiveFilter = filters.status !== 'All' || filters.category !== 'All';
+
+  const SortableHeader = ({ label, columnKey, align = 'left' }) => {
+    const isActive = sortBy === columnKey;
+    return (
+      <th 
+        onClick={() => handleSort(columnKey)}
+        style={{ 
+          padding: '20px 24px', borderBottom: '2px solid var(--border-color)', 
+          color: isActive ? 'var(--blue)' : 'var(--text-muted)', 
+          fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', 
+          textAlign: align, background: isActive ? 'rgba(2, 132, 199, 0.05)' : 'transparent', 
+          cursor: 'pointer', userSelect: 'none', transition: 'all 0.2s ease'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: align === 'center' ? 'center' : 'flex-start', gap: '6px' }}>
+          {label}
+          <span style={{ 
+            display: 'flex', alignItems: 'center', 
+            color: isActive ? 'var(--blue)' : '#cbd5e1', 
+            opacity: isActive ? 1 : 0.6, transition: 'all 0.2s ease' 
+          }}>
+            {isActive ? (sortOrder === 'asc' ? <SortUpIcon /> : <SortDownIcon />) : <SortDefaultIcon />}
+          </span>
+        </div>
+      </th>
+    );
+  };
 
   if (isLoading)
     return (
@@ -451,21 +521,6 @@ function ApplicationPortfolio({ currentUser }) {
                   <span onClick={()=>{setFilters({ status: "All", category: "All" });}} style={{ fontSize: '0.75rem', color: '#ef4444', cursor: 'pointer', fontWeight: 700, background: '#fef2f2', padding: '4px 8px', borderRadius: '6px' }}>ล้างทั้งหมด</span>
                 )}
              </div>
-             
-             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-               <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>จัดเรียงข้อมูล (Sort)</label>
-               <div style={{ display: 'flex', gap: '8px' }}>
-                 <select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{ flex: 1, padding:'8px 12px', borderRadius:'8px', border:'1px solid var(--border-color)', fontSize:'0.85rem', background: 'var(--input-bg)', color: 'var(--text-color)', margin: 0, outline: 'none', boxShadow: 'none' }}>
-                   <option value="name">ชื่อ (Name)</option>
-                   <option value="id">รหัส (ID)</option>
-                   <option value="status">สถานะ (Status)</option>
-                   <option value="category">ประเภท (Category)</option>
-                 </select>
-                 <button onClick={()=>setSortOrder(sortOrder==='asc'?'desc':'asc')} style={{ padding:'8px', borderRadius:'8px', border:'1px solid var(--border-color)', background:'var(--input-bg)', cursor:'pointer', width: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'none', color: 'var(--text-color)' }}>
-                   {sortOrder==='asc'?'⬆️':'⬇️'}
-                 </button>
-               </div>
-             </div>
 
              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>สถานะ (Status)</label>
@@ -490,18 +545,10 @@ function ApplicationPortfolio({ currentUser }) {
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
-              <th style={{ padding: '20px 24px', borderBottom: '2px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', textAlign: 'left', background: 'transparent' }}>
-                รหัสระบบ (App ID)
-              </th>
-              <th style={{ padding: '20px 24px', borderBottom: '2px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', textAlign: 'left', background: 'transparent' }}>
-                ชื่อระบบ / ไซต์ (Name / Site)
-              </th>
-              <th style={{ padding: '20px 24px', borderBottom: '2px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', textAlign: 'left', background: 'transparent' }}>
-                ประเภท (Category)
-              </th>
-              <th style={{ padding: '20px 24px', borderBottom: '2px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', textAlign: 'left', background: 'transparent' }}>
-                สถานะ (Status)
-              </th>
+              <SortableHeader label="รหัสระบบ (App ID)" columnKey="id" />
+              <SortableHeader label="ชื่อระบบ / ไซต์ (Name / Site)" columnKey="name" />
+              <SortableHeader label="ประเภท (Category)" columnKey="category" />
+              <SortableHeader label="สถานะ (Status)" columnKey="status" />
               <th style={{ padding: '20px 24px', borderBottom: '2px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', textAlign: 'left', background: 'transparent' }}>
                 เทคโนโลยี (Tech Summary)
               </th>
@@ -833,8 +880,8 @@ function ApplicationPortfolio({ currentUser }) {
                 display: "flex",
                 gap: "12px",
                 overflowX: "auto",
-                overflowY: "hidden", /* 🚀 ซ่อน Scrollbar แนวตั้งที่โผล่มาเกิน 🚀 */
-                scrollbarWidth: "none", /* 🚀 ซ่อน Scrollbar แนวนอนใน Firefox 🚀 */
+                overflowY: "hidden",
+                scrollbarWidth: "none",
                 alignItems: "flex-end",
                 background: "var(--card-bg)",
               }}

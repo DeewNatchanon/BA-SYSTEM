@@ -151,8 +151,17 @@ function RequestForm({ currentUser }) {
     });
   };
 
-  const toIsoDate = (date) => (date ? date.toISOString().split("T")[0] : "");
+  // แก้ไขไม่ให้วันที่ถอยหลัง 1 วันตอนแปลงเป็น String
+  const toIsoDate = (date) => {
+    if (!date) return "";
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  
   const toDate = (value) => (value ? new Date(value) : null);
+  
   const showVendorFields =
     formData.resources.includes("GLS จ้าง Vendor") ||
     formData.resources.includes("โรงพยาบาลจ้าง Vendor");

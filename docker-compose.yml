@@ -1,0 +1,43 @@
+services:
+  db:
+    image: postgres:15-alpine     # ใช้ Image ของ PostgreSQL (เวอร์ชัน 15)
+    container_name: my-postgres-db
+    restart: always               # สั่งให้รันใหม่เสมอถ้ามีปัญหา
+    environment:
+      - POSTGRES_USER=BA_System
+      - POSTGRES_PASSWORD=BaSystem1234
+      - POSTGRES_DB=BASYSTEM_DB
+    ports:
+      - "5433:5432"               # แมปพอร์ตให้เราใช้ DBeaver/pgAdmin ในเครื่องตัวเองเข้าไปดูข้อมูลได้
+    volumes:
+      - pgdata:/var/lib/postgresql/data  # 🌟 สำคัญมาก: เก็บข้อมูลจำเอาไว้ไม่ให้หายไปเมื่อปิด Container
+
+  backend:
+    build: ./server
+    container_name: my-express-backend
+    ports:
+      - "4001:4000"
+    env_file:
+      - ./server/.env.docker
+    environment:
+      - PORT=4000
+      # --- ส่งตัวแปรเชื่อมต่อ Database ไปให้ Express ---
+      - DB_HOST=db                # 🌟 ใช้ชื่อ service 'db' แทน localhost
+      - DB_USER=BA_System
+      - DB_PASSWORD=BaSystem1234
+      - DB_NAME=BASYSTEM_DB
+      - DB_PORT=5433
+    depends_on:
+      - db                        # บอกให้ Backend รอเปิดทีหลัง db
+
+  frontend:
+    build: ./client
+    container_name: my-react-frontend
+    ports:
+      - "3001:80"
+    depends_on:
+      - backend
+
+# ประกาศพื้นที่เก็บข้อมูลสำหรับ Database
+volumes:
+  pgdata:

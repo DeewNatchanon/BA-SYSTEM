@@ -4,7 +4,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import { fetchProjects, updateProjectInDb } from "../api/authApi";
 import Swal from "sweetalert2";
 
-// inline filter helper (copied per-page to use real data structures)
+// inline filter helper
 function getNested(obj, path) {
   if (!path) return undefined;
   const parts = String(path).split(".");
@@ -58,7 +58,6 @@ function filterRows(
         if (!rawStr.toLowerCase().includes(vLower)) return false;
       }
     }
-
     return true;
   });
 }
@@ -78,6 +77,51 @@ const EditIcon = () => (
     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
   </svg>
 );
+
+// 🚀 SVG Icons ชุดใหม่ ระดับมืออาชีพ (เรียบหรู ไม่มีอีโมจิ)
+const SortUpIcon = () => (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M12 19V5M5 12l7-7 7 7" />
+  </svg>
+);
+const SortDownIcon = () => (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M12 5v14M19 12l-7 7-7-7" />
+  </svg>
+);
+const SortDefaultIcon = () => (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M7 15l5 5 5-5M7 9l5-5 5 5" />
+  </svg>
+);
+
 const impactTeamsList = [
   "iMed",
   "HMS",
@@ -113,8 +157,10 @@ function ProjectPortfolio({ currentUser }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
   const [filterPhase, setFilterPhase] = useState("All");
-  const [sortBy, setSortBy] = useState("name");
-  const [sortOrder, setSortOrder] = useState("asc");
+
+  // 🚀 State ควบคุมการจัดเรียงตาราง (Sorting)
+  const [sortBy, setSortBy] = useState("updated_at");
+  const [sortOrder, setSortOrder] = useState("desc");
   const [showFilters, setShowFilters] = useState(false);
 
   const [isLoading, setIsLoading] = useState(true);
@@ -220,13 +266,22 @@ function ProjectPortfolio({ currentUser }) {
         existingTracking.actualGoLive ||
         project.form_data?.compliance?.baEndDate ||
         "",
-      appName: existingTracking.appName || project.name || "",
+      appName: existingTracking.appName || project.form_data?.appName || project.name || "",
       appId: existingTracking.appId || project.form_data?.appId || "",
-      deployIn: existingTracking.deployIn || project.site || "",
-      glsOwner: existingTracking.glsOwner || "",
+      deployIn: existingTracking.deployIn || project.form_data?.site || project.site || "",
+      glsOwner: existingTracking.glsOwner || project.form_data?.glsOwner || "",
       glsManager:
         existingTracking.glsManager || project.form_data?.assigned_to || "",
       impactTeams: existingTracking.impactTeams || [],
+      
+      // 🌟 [เพิ่มใหม่] ฟิลด์ที่ดึงมาจากฟอร์มหรือให้เว้นว่างไว้
+      customerGroup: existingTracking.customerGroup || project.form_data?.customerGroup || "",
+      projectType: existingTracking.projectType || project.form_data?.projectType || "",
+      budgetType: existingTracking.budgetType || project.form_data?.budgetType || "",
+      approvedBudget: existingTracking.approvedBudget || project.form_data?.approvedBudget || "",
+      actualCost: existingTracking.actualCost || project.form_data?.actualCost || "",
+      remark: existingTracking.remark || project.form_data?.remark || "",
+
       isPendingApproval: existingTracking.isPendingApproval || false,
       pendingStatus: existingTracking.pendingStatus || null,
       pendingPhase: existingTracking.pendingPhase || null,
@@ -340,14 +395,12 @@ function ProjectPortfolio({ currentUser }) {
         try {
           const sessionRaw = localStorage.getItem("ba-system.auth-session");
           const token = sessionRaw ? JSON.parse(sessionRaw).token : null;
-
           const newStatus = isApprove
             ? editFormData.tracking.pendingStatus
             : selectedProject.status;
           const newPhase = isApprove
             ? editFormData.tracking.pendingPhase
             : selectedProject.phase;
-
           let autoPercent = editFormData.tracking.completionPercent || 0;
           if (isApprove) {
             if (newStatus === "Go-live" || newPhase === "Go-live")
@@ -374,13 +427,14 @@ function ProjectPortfolio({ currentUser }) {
               autoPercent =
                 selectedProject.form_data?.tracking?.completionPercent || 0;
           }
-
           const finalData = {
             ...editFormData,
             status: newStatus,
             phase: newPhase,
             form_data: {
               ...editFormData.form_data,
+              tech: editFormData.tech,
+              compliance: editFormData.compliance,
               tracking: {
                 ...editFormData.tracking,
                 completionPercent: autoPercent,
@@ -388,8 +442,6 @@ function ProjectPortfolio({ currentUser }) {
                 pendingStatus: null,
                 pendingPhase: null,
               },
-              tech: editFormData.tech,
-              compliance: editFormData.compliance,
             },
           };
           const updated = await updateProjectInDb(
@@ -400,6 +452,7 @@ function ProjectPortfolio({ currentUser }) {
           );
           const parsedUpdated = {
             ...updated.data,
+            updated_at: new Date().toISOString(),
             form_data:
               typeof updated.data.form_data === "string"
                 ? JSON.parse(updated.data.form_data)
@@ -430,7 +483,6 @@ function ProjectPortfolio({ currentUser }) {
       selectedProject.status !== editFormData.status ||
       selectedProject.phase !== editFormData.phase;
     let fileToUpload = progressFile;
-
     let payloadStatus = editFormData.status;
     let payloadPhase = editFormData.phase;
     let payloadTracking = { ...editFormData.tracking };
@@ -450,10 +502,8 @@ function ProjectPortfolio({ currentUser }) {
         });
         if (!isConfirmed) return;
         if (uploadedFile) fileToUpload = uploadedFile;
-
         payloadStatus = selectedProject.status;
         payloadPhase = selectedProject.phase;
-
         payloadTracking.isPendingApproval = true;
         payloadTracking.pendingStatus = editFormData.status;
         payloadTracking.pendingPhase = editFormData.phase;
@@ -492,7 +542,6 @@ function ProjectPortfolio({ currentUser }) {
     try {
       const sessionRaw = localStorage.getItem("ba-system.auth-session");
       const token = sessionRaw ? JSON.parse(sessionRaw).token : null;
-
       const finalData = {
         ...editFormData,
         status: payloadStatus,
@@ -504,7 +553,6 @@ function ProjectPortfolio({ currentUser }) {
           compliance: editFormData.compliance,
         },
       };
-
       const updated = await updateProjectInDb(
         editFormData.id,
         finalData,
@@ -513,6 +561,7 @@ function ProjectPortfolio({ currentUser }) {
       );
       const parsedUpdated = {
         ...updated.data,
+        updated_at: new Date().toISOString(),
         form_data:
           typeof updated.data.form_data === "string"
             ? JSON.parse(updated.data.form_data)
@@ -538,7 +587,14 @@ function ProjectPortfolio({ currentUser }) {
   };
 
   const toDate = (s) => (s ? new Date(s) : null);
-  const toIso = (d) => (d ? d.toISOString().split("T")[0] : "");
+  const toIso = (d) => {
+    if (!d) return "";
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
   const formatDateTH = (dateString) =>
     dateString
       ? new Date(dateString).toLocaleDateString("th-TH", {
@@ -560,48 +616,110 @@ function ProjectPortfolio({ currentUser }) {
       selectedProject.phase !== editFormData.phase);
   const isPendingUpdate = editFormData?.tracking?.isPendingApproval;
 
-  const uniqueStatuses = useMemo(() => {
-    const statuses = [...new Set(projects.map(p => p.status).filter(Boolean))];
-    return statuses.sort((a,b) => a.localeCompare(b, 'th'));
-  }, [projects]);
+  const uniqueStatuses = useMemo(
+    () =>
+      [...new Set(projects.map((p) => p.status).filter(Boolean))].sort((a, b) =>
+        a.localeCompare(b, "th"),
+      ),
+    [projects],
+  );
+  const uniquePhases = useMemo(
+    () =>
+      [...new Set(projects.map((p) => p.phase).filter(Boolean))].sort((a, b) =>
+        a.localeCompare(b, "th"),
+      ),
+    [projects],
+  );
 
-  const uniquePhases = useMemo(() => {
-    const phases = [...new Set(projects.map(p => p.phase).filter(Boolean))];
-    return phases.sort((a,b) => a.localeCompare(b, 'th'));
-  }, [projects]);
-
-  const sortData = (data) => {
-    if (!sortBy) return data;
-    return [...data].sort((a, b) => {
-      let aVal = a[sortBy] || '';
-      let bVal = b[sortBy] || '';
-      if (sortBy === 'name') {
-        aVal = a.name || '';
-        bVal = b.name || '';
-      }
-      if (typeof aVal === 'string' && typeof bVal === 'string') {
-        const cmp = aVal.localeCompare(bVal, ['th', 'en']);
-        return sortOrder === 'asc' ? cmp : -cmp;
-      }
-      return sortOrder === 'asc' ? (aVal > bVal ? 1 : -1) : (aVal > bVal ? -1 : 1);
-    });
+  // 🚀 ฟังก์ชันทำงานเมื่อคลิกหัวตาราง
+  const handleSort = (columnKey) => {
+    if (sortBy === columnKey) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(columnKey);
+      setSortOrder("asc");
+    }
   };
 
+  // 🚀 ตรรกะการคัดกรอง และ จัดเรียงข้อมูล (Filter + Sort)
   const displayedProjects = useMemo(() => {
     let filtered = filterRows(projects, {
       searchQuery: searchQuery,
-      filters: { 
-        status: filterStatus !== 'All' ? filterStatus : null, 
-        phase: filterPhase !== 'All' ? filterPhase : null 
+      filters: {
+        status: filterStatus !== "All" ? filterStatus : null,
+        phase: filterPhase !== "All" ? filterPhase : null,
       },
       searchableFields: [
         "id",
+        "form_data.requestId",
         "name",
         "form_data.tracking.glsManager",
         "form_data.assigned_to",
+        "assignee",
       ],
     });
-    return sortData(filtered);
+
+    const applySort = (data) => {
+      if (!sortBy) return data;
+      return [...data].sort((a, b) => {
+        let aVal = "";
+        let bVal = "";
+        switch (sortBy) {
+          case "id":
+            aVal = a.form_data?.requestId || a.id || "";
+            bVal = b.form_data?.requestId || b.id || "";
+            break;
+          case "name":
+            aVal = a.name || "";
+            bVal = b.name || "";
+            break;
+          case "assignee":
+            aVal =
+              a.form_data?.tracking?.glsManager ||
+              a.form_data?.assigned_to ||
+              a.assignee ||
+              "";
+            bVal =
+              b.form_data?.tracking?.glsManager ||
+              b.form_data?.assigned_to ||
+              b.assignee ||
+              "";
+            break;
+          case "status":
+            aVal = a.status || "";
+            bVal = b.status || "";
+            break;
+          case "phase":
+            aVal = a.phase || "";
+            bVal = b.phase || "";
+            break;
+          case "progress":
+            aVal = a.form_data?.tracking?.completionPercent || 0;
+            bVal = b.form_data?.tracking?.completionPercent || 0;
+            return sortOrder === "asc" ? aVal - bVal : bVal - aVal;
+          case "updated_at":
+            // ใช้เวลาอัปเดตล่าสุด หรือถ้าไม่มีให้ใช้เวลาสร้าง
+            aVal = new Date(a.updated_at || a.created_at || 0).getTime();
+            bVal = new Date(b.updated_at || b.created_at || 0).getTime();
+            return sortOrder === "asc" ? aVal - bVal : bVal - aVal;
+          default:
+            break;
+        }
+        if (typeof aVal === "string" && typeof bVal === "string") {
+          const cmp = aVal.localeCompare(bVal, ["th", "en"]);
+          return sortOrder === "asc" ? cmp : -cmp;
+        }
+        return sortOrder === "asc"
+          ? aVal > bVal
+            ? 1
+            : -1
+          : aVal > bVal
+            ? -1
+            : 1;
+      });
+    };
+
+    return applySort(filtered);
   }, [projects, searchQuery, filterStatus, filterPhase, sortBy, sortOrder]);
 
   const stats = {
@@ -615,7 +733,60 @@ function ProjectPortfolio({ currentUser }) {
     ).length,
   };
 
-  const hasActiveFilter = filterStatus !== 'All' || filterPhase !== 'All';
+  const hasActiveFilter = filterStatus !== "All" || filterPhase !== "All";
+
+  // 🚀 คอมโพเนนต์ย่อยสำหรับสร้างหัวตารางให้คลิกได้ พร้อมไอคอน SVG ระดับโปร
+  const SortableHeader = ({ label, columnKey, align = "left" }) => {
+    const isActive = sortBy === columnKey;
+    return (
+      <th
+        onClick={() => handleSort(columnKey)}
+        style={{
+          padding: "16px 14px",
+          borderBottom: "2px solid var(--border-color)",
+          color: isActive ? "var(--blue)" : "var(--text-muted)",
+          fontSize: "0.75rem",
+          fontWeight: 800,
+          textTransform: "uppercase",
+          textAlign: align,
+          background: isActive ? "rgba(2, 132, 199, 0.05)" : "transparent",
+          cursor: "pointer",
+          userSelect: "none",
+          transition: "all 0.2s ease",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: align === "center" ? "center" : "flex-start",
+            gap: "6px",
+          }}
+        >
+          {label}
+          <span
+            style={{
+              display: "flex",
+              alignItems: "center",
+              color: isActive ? "var(--blue)" : "#cbd5e1",
+              opacity: isActive ? 1 : 0.6,
+              transition: "all 0.2s ease",
+            }}
+          >
+            {isActive ? (
+              sortOrder === "asc" ? (
+                <SortUpIcon />
+              ) : (
+                <SortDownIcon />
+              )
+            ) : (
+              <SortDefaultIcon />
+            )}
+          </span>
+        </div>
+      </th>
+    );
+  };
 
   if (isLoading)
     return (
@@ -645,7 +816,6 @@ function ProjectPortfolio({ currentUser }) {
         </h1>
       </div>
 
-      {/* 🚀 Executive Summary Dashboard 🚀 */}
       {(isCEO || isManager) && (
         <div
           style={{
@@ -780,106 +950,328 @@ function ProjectPortfolio({ currentUser }) {
         </div>
       )}
 
-      {/* 🚀 Minimal Top-Right Toolbar (Filters) 🚀 */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '8px', position: 'relative', zIndex: 20 }}>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            {/* Search Input with textIndent */}
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-              <span style={{ position: 'absolute', left: '12px', fontSize: '0.95rem', color: '#94a3b8', zIndex: 2, pointerEvents: 'none' }}>🔍</span>
-              <input 
-                value={searchQuery} 
-                onChange={e=>setSearchQuery(e.target.value)} 
-                placeholder="ค้นหา..." 
-                style={{ 
-                  borderRadius:'20px', 
-                  border:'1px solid var(--border-color)', 
-                  background:'var(--input-bg)', 
-                  color:'var(--text-color)', 
-                  fontSize:'0.85rem', 
-                  width:'130px', 
-                  outline:'none', 
-                  transition:'all 0.3s ease', 
-                  margin: 0,
-                  textIndent: '24px' 
-                }} 
-                onFocus={(e) => { e.target.style.width = '200px'; e.target.style.borderColor = 'var(--blue)'; }} 
-                onBlur={(e) => { e.target.style.width = '130px'; e.target.style.borderColor = 'var(--border-color)'; }} 
-              />
-            </div>
-            
-            {/* Filter Toggle Button */}
-            <button 
-              onClick={() => setShowFilters(!showFilters)} 
-              style={{ padding:'6px 14px', borderRadius:'20px', border: showFilters || hasActiveFilter ? '1px solid var(--blue)' : '1px solid var(--border-color)', background: showFilters || hasActiveFilter ? 'rgba(2, 132, 199, 0.05)' : 'var(--card-bg)', color: showFilters || hasActiveFilter ? 'var(--blue)' : 'var(--text-muted)', fontSize:'0.85rem', fontWeight: 600, cursor:'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s', height: '100%' }}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          alignItems: "center",
+          marginBottom: "8px",
+          position: "relative",
+          zIndex: 20,
+        }}
+      >
+        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          <div
+            style={{
+              position: "relative",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            <span
+              style={{
+                position: "absolute",
+                left: "12px",
+                fontSize: "0.95rem",
+                color: "#94a3b8",
+                zIndex: 2,
+                pointerEvents: "none",
+              }}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
-              Filter
-              {hasActiveFilter && <span style={{ width: '6px', height: '6px', background: '#ef4444', borderRadius: '50%', display: 'inline-block' }}></span>}
-            </button>
+              🔍
+            </span>
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="ค้นหา..."
+              style={{
+                borderRadius: "20px",
+                border: "1px solid var(--border-color)",
+                background: "var(--input-bg)",
+                color: "var(--text-color)",
+                fontSize: "0.85rem",
+                width: "130px",
+                outline: "none",
+                transition: "all 0.3s ease",
+                margin: 0,
+                textIndent: "24px",
+              }}
+              onFocus={(e) => {
+                e.target.style.width = "200px";
+                e.target.style.borderColor = "var(--blue)";
+              }}
+              onBlur={(e) => {
+                e.target.style.width = "130px";
+                e.target.style.borderColor = "var(--border-color)";
+              }}
+            />
           </div>
 
-          {/* Floating Popover Menu */}
-          {showFilters && (
-            <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '8px', background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '16px', width: '260px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column', gap: '12px', zIndex: 100 }}>
-               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '4px' }}>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-color)' }}>ตั้งค่าตัวกรอง</span>
-                  {hasActiveFilter && (
-                    <span onClick={()=>{setFilterStatus('All');setFilterPhase('All');}} style={{ fontSize: '0.75rem', color: '#ef4444', cursor: 'pointer', fontWeight: 600, background: '#fef2f2', padding: '2px 6px', borderRadius: '4px' }}>ล้างทั้งหมด</span>
-                  )}
-               </div>
-               
-               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                 <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>จัดเรียงข้อมูล (Sort)</label>
-                 <div style={{ display: 'flex', gap: '8px' }}>
-                   <select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{ flex: 1, padding:'6px 10px', borderRadius:'6px', border:'1px solid var(--border-color)', fontSize:'0.8rem', background: 'var(--input-bg)', color: 'var(--text-color)', margin: 0, outline: 'none' }}>
-                     <option value="name">ชื่อ (Name)</option>
-                     <option value="id">รหัส (ID)</option>
-                     <option value="status">สถานะ (Status)</option>
-                     <option value="phase">ขั้นตอน (Phase)</option>
-                   </select>
-                   <button onClick={()=>setSortOrder(sortOrder==='asc'?'desc':'asc')} style={{ padding:'6px', borderRadius:'6px', border:'1px solid var(--border-color)', background:'var(--input-bg)', cursor:'pointer', width: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                     {sortOrder==='asc'?'⬆️':'⬇️'}
-                   </button>
-                 </div>
-               </div>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            style={{
+              padding: "6px 14px",
+              borderRadius: "20px",
+              border:
+                showFilters || hasActiveFilter
+                  ? "1px solid var(--blue)"
+                  : "1px solid var(--border-color)",
+              background:
+                showFilters || hasActiveFilter
+                  ? "rgba(2, 132, 199, 0.05)"
+                  : "var(--card-bg)",
+              color:
+                showFilters || hasActiveFilter
+                  ? "var(--blue)"
+                  : "var(--text-muted)",
+              fontSize: "0.85rem",
+              fontWeight: 600,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              transition: "all 0.2s",
+              height: "100%",
+            }}
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+            </svg>
+            Filter
+            {hasActiveFilter && (
+              <span
+                style={{
+                  width: "6px",
+                  height: "6px",
+                  background: "#ef4444",
+                  borderRadius: "50%",
+                  display: "inline-block",
+                }}
+              ></span>
+            )}
+          </button>
+        </div>
 
-               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                 <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>สถานะ (Status)</label>
-                 <select value={filterStatus} onChange={e=>setFilterStatus(e.target.value)} style={{ padding:'6px 10px', borderRadius:'6px', border:'1px solid var(--border-color)', fontSize:'0.8rem', background: 'var(--input-bg)', color: 'var(--text-color)', margin: 0, outline: 'none' }}>
-                   <option value="All">ทั้งหมด</option>
-                   {uniqueStatuses.map(status => <option key={status} value={status}>{status}</option>)}
-                 </select>
-               </div>
-
-               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                 <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>ขั้นตอน (Phase)</label>
-                 <select value={filterPhase} onChange={e=>setFilterPhase(e.target.value)} style={{ padding:'6px 10px', borderRadius:'6px', border:'1px solid var(--border-color)', fontSize:'0.8rem', background: 'var(--input-bg)', color: 'var(--text-color)', margin: 0, outline: 'none' }}>
-                   <option value="All">ทั้งหมด</option>
-                   {uniquePhases.map(phase => <option key={phase} value={phase}>{phase}</option>)}
-                 </select>
-               </div>
+        {showFilters && (
+          <div
+            style={{
+              position: "absolute",
+              top: "100%",
+              right: 0,
+              marginTop: "8px",
+              background: "var(--card-bg)",
+              border: "1px solid var(--border-color)",
+              borderRadius: "12px",
+              padding: "16px",
+              width: "260px",
+              boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "12px",
+              zIndex: 100,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                borderBottom: "1px solid var(--border-color)",
+                paddingBottom: "8px",
+                marginBottom: "4px",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "0.85rem",
+                  fontWeight: 700,
+                  color: "var(--text-color)",
+                }}
+              >
+                ตั้งค่าตัวกรอง
+              </span>
+              {hasActiveFilter && (
+                <span
+                  onClick={() => {
+                    setFilterStatus("All");
+                    setFilterPhase("All");
+                  }}
+                  style={{
+                    fontSize: "0.75rem",
+                    color: "#ef4444",
+                    cursor: "pointer",
+                    fontWeight: 600,
+                    background: "#fef2f2",
+                    padding: "2px 6px",
+                    borderRadius: "4px",
+                  }}
+                >
+                  ล้างทั้งหมด
+                </span>
+              )}
             </div>
-          )}
+
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "4px" }}
+            >
+              <label
+                style={{
+                  fontSize: "0.75rem",
+                  color: "var(--text-muted)",
+                  fontWeight: 600,
+                }}
+              >
+                สถานะ (Status)
+              </label>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                style={{
+                  padding: "6px 10px",
+                  borderRadius: "6px",
+                  border: "1px solid var(--border-color)",
+                  fontSize: "0.8rem",
+                  background: "var(--input-bg)",
+                  color: "var(--text-color)",
+                  margin: 0,
+                  outline: "none",
+                }}
+              >
+                <option value="All">ทั้งหมด</option>
+                {uniqueStatuses.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "4px" }}
+            >
+              <label
+                style={{
+                  fontSize: "0.75rem",
+                  color: "var(--text-muted)",
+                  fontWeight: 600,
+                }}
+              >
+                ขั้นตอน (Phase)
+              </label>
+              <select
+                value={filterPhase}
+                onChange={(e) => setFilterPhase(e.target.value)}
+                style={{
+                  padding: "6px 10px",
+                  borderRadius: "6px",
+                  border: "1px solid var(--border-color)",
+                  fontSize: "0.8rem",
+                  background: "var(--input-bg)",
+                  color: "var(--text-color)",
+                  margin: 0,
+                  outline: "none",
+                }}
+              >
+                <option value="All">ทั้งหมด</option>
+                {uniquePhases.map((phase) => (
+                  <option key={phase} value={phase}>
+                    {phase}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
       </div>
 
-      <div className="table-wrap" style={{ width: '100%', overflowX: 'auto', position: 'relative', zIndex: 1, border: 'none', background: 'var(--card-bg)', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <div
+        className="table-wrap"
+        style={{
+          width: "100%",
+          overflowX: "auto",
+          position: "relative",
+          zIndex: 1,
+          border: "none",
+          background: "var(--card-bg)",
+          borderRadius: "16px",
+          boxShadow: "0 4px 20px rgba(0,0,0,0.04)",
+        }}
+      >
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
+            {/* 🚀 เปลี่ยนส่วนนี้ให้เป็น SortableHeader เพื่อให้คลิกและจัดเรียงได้ 🚀 */}
             <tr>
-              <th style={{ padding: '16px 14px', borderBottom: '2px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', textAlign: 'left', background: 'transparent' }}>รหัสโครงการ (ID)</th>
-              <th style={{ padding: '16px 14px', borderBottom: '2px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', textAlign: 'left', background: 'transparent' }}>ชื่อโครงการ (Project Name)</th>
-              <th style={{ padding: '16px 14px', borderBottom: '2px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', textAlign: 'left', background: 'transparent' }}>ผู้รับผิดชอบ (Assignee)</th>
-              <th style={{ padding: '16px 14px', borderBottom: '2px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', textAlign: 'left', background: 'transparent' }}>สถานะ (Status)</th>
-              <th style={{ padding: '16px 14px', borderBottom: '2px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', textAlign: 'left', background: 'transparent' }}>ขั้นตอน (Phase)</th>
-              <th style={{ padding: '16px 14px', borderBottom: '2px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', textAlign: 'center', background: 'transparent' }}>ความคืบหน้า (%)</th>
-              {!isCEO && <th style={{ padding: '16px 14px', borderBottom: '2px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', textAlign: 'center', background: 'transparent' }}>Action</th>}
+              <SortableHeader label="รหัสโครงการ (ID)" columnKey="id" />
+              <SortableHeader label="ชื่อโครงการ" columnKey="name" />
+              <SortableHeader label="ผู้รับผิดชอบ" columnKey="assignee" />
+              <SortableHeader label="สถานะ (Status)" columnKey="status" />
+              <SortableHeader label="ขั้นตอน (Phase)" columnKey="phase" />
+              <SortableHeader
+                label="ความคืบหน้า (%)"
+                columnKey="progress"
+                align="center"
+              />
+              {!isCEO && (
+                <th
+                  style={{
+                    padding: "16px 14px",
+                    borderBottom: "2px solid var(--border-color)",
+                    color: "var(--text-muted)",
+                    fontSize: "0.75rem",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    textAlign: "center",
+                    background: "transparent",
+                  }}
+                >
+                  Action
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
             {displayedProjects.map((p) => (
-              <tr key={p.id} style={{ borderBottom: '1px solid var(--border-color)', transition: 'background-color 0.2s ease', cursor: 'default' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--table-row-hover)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
-                <td style={{ padding: '16px 14px', fontWeight: 700, background: 'transparent', fontSize: '0.85rem' }}>{p.id}</td>
-                <td style={{ padding: '16px 14px', background: 'transparent', fontSize: '0.85rem' }}>
+              <tr
+                key={p.id}
+                style={{
+                  borderBottom: "1px solid var(--border-color)",
+                  transition: "background-color 0.2s ease",
+                  cursor: "default",
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.backgroundColor =
+                    "var(--table-row-hover)")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.backgroundColor = "transparent")
+                }
+              >
+                <td
+                  style={{
+                    padding: "16px 14px",
+                    fontWeight: 700,
+                    background: "transparent",
+                    fontSize: "0.85rem",
+                  }}
+                >
+                  {p.form_data?.requestId || p.id}
+                </td>
+                <td
+                  style={{
+                    padding: "16px 14px",
+                    background: "transparent",
+                    fontSize: "0.85rem",
+                  }}
+                >
                   <span
                     onClick={() => handleViewProject(p)}
                     style={{
@@ -891,14 +1283,27 @@ function ProjectPortfolio({ currentUser }) {
                     {p.name}
                   </span>
                 </td>
-                <td style={{ padding: '16px 14px', background: 'transparent', fontSize: '0.85rem' }}>
+                <td
+                  style={{
+                    padding: "16px 14px",
+                    background: "transparent",
+                    fontSize: "0.85rem",
+                  }}
+                >
                   <span style={{ color: "#d32f2f", fontWeight: "700" }}>
                     {p.form_data?.tracking?.glsManager ||
                       p.form_data?.assigned_to ||
+                      p.assignee ||
                       "-"}
                   </span>
                 </td>
-                <td style={{ padding: '16px 14px', background: 'transparent', fontSize: '0.85rem' }}>
+                <td
+                  style={{
+                    padding: "16px 14px",
+                    background: "transparent",
+                    fontSize: "0.85rem",
+                  }}
+                >
                   <div
                     style={{
                       display: "flex",
@@ -928,8 +1333,23 @@ function ProjectPortfolio({ currentUser }) {
                     )}
                   </div>
                 </td>
-                <td style={{ padding: '16px 14px', color: "var(--text-muted)", background: 'transparent', fontSize: '0.85rem' }}>{p.phase || "-"}</td>
-                <td style={{ padding: '16px 14px', textAlign: "center", background: 'transparent' }}>
+                <td
+                  style={{
+                    padding: "16px 14px",
+                    color: "var(--text-muted)",
+                    background: "transparent",
+                    fontSize: "0.85rem",
+                  }}
+                >
+                  {p.phase || "-"}
+                </td>
+                <td
+                  style={{
+                    padding: "16px 14px",
+                    textAlign: "center",
+                    background: "transparent",
+                  }}
+                >
                   <div
                     style={{
                       display: "flex",
@@ -976,7 +1396,13 @@ function ProjectPortfolio({ currentUser }) {
                   </div>
                 </td>
                 {!isCEO && (
-                  <td style={{ padding: '16px 14px', textAlign: "center", background: 'transparent' }}>
+                  <td
+                    style={{
+                      padding: "16px 14px",
+                      textAlign: "center",
+                      background: "transparent",
+                    }}
+                  >
                     <div
                       style={{
                         display: "flex",
@@ -1080,7 +1506,8 @@ function ProjectPortfolio({ currentUser }) {
                       background: "rgba(255,255,255,0.14)",
                     }}
                   >
-                    รหัสโครงการ: {selectedProject.id}
+                    รหัสโครงการ:{" "}
+                    {selectedProject.form_data?.requestId || selectedProject.id}
                   </span>
                   <span
                     style={{
@@ -1129,8 +1556,8 @@ function ProjectPortfolio({ currentUser }) {
                 borderBottom: "1px solid var(--border-color)",
                 background: "var(--card-bg)",
                 overflowX: "auto",
-                overflowY: "hidden", 
-                scrollbarWidth: "none", 
+                overflowY: "hidden",
+                scrollbarWidth: "none",
               }}
             >
               {[
@@ -1169,7 +1596,7 @@ function ProjectPortfolio({ currentUser }) {
                 overflowY: "auto",
                 flex: 1,
                 lineHeight: "1.6",
-                background: "var(--bg-color)", 
+                background: "var(--bg-color)",
               }}
             >
               {activeTab === "overview" && (
@@ -1234,12 +1661,13 @@ function ProjectPortfolio({ currentUser }) {
                           fontSize: "0.98rem",
                         }}
                       >
-                        ข้อมูลผู้ร้องขอ
+                        ข้อมูลผู้ร้องขอ (Requester Info)
                       </h4>
                       <p style={{ margin: "0 0 8px 0" }}>
                         <strong>ชื่อผู้ติดต่อ:</strong>{" "}
-                        {selectedProject.requester_name ||
-                          selectedProject.form_data?.requesterName ||
+                        {/* 🌟 จุดที่แก้ไข 1: สลับความสำคัญของชื่อ 🌟 */}
+                        {selectedProject.form_data?.requesterName ||
+                          selectedProject.requester_name ||
                           "-"}
                       </p>
                       <p style={{ margin: 0 }}>
@@ -1274,6 +1702,45 @@ function ProjectPortfolio({ currentUser }) {
                         {selectedProject.form_data?.expectedOutcome || "-"}
                       </p>
                     </div>
+
+                    {/* 🌟 จุดที่แก้ไข 2: เพิ่มการ์ดสำหรับ ประเภท ข้อมูลลูกค้า และงบประมาณ (ในแท็บ Overview) 🌟 */}
+                    <div
+                      style={{
+                        background: "var(--card-bg)",
+                        padding: "16px",
+                        borderRadius: "12px",
+                        border: "1px solid var(--border-color)",
+                        boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
+                        gridColumn: "1 / -1",
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                        gap: "16px"
+                      }}
+                    >
+                      <div>
+                        <h4 style={{ color: "var(--blue)", margin: "0 0 10px 0", fontSize: "0.98rem" }}>
+                          ประเภทและกลุ่มลูกค้า
+                        </h4>
+                        <p style={{ margin: "0 0 8px 0" }}><strong>Customer Group:</strong> {selectedProject.form_data?.tracking?.customerGroup || selectedProject.form_data?.customerGroup || "-"}</p>
+                        <p style={{ margin: 0 }}><strong>Project Type:</strong> {selectedProject.form_data?.tracking?.projectType || selectedProject.form_data?.projectType || "-"}</p>
+                      </div>
+                      <div>
+                        <h4 style={{ color: "#059669", margin: "0 0 10px 0", fontSize: "0.98rem" }}>
+                          ข้อมูลงบประมาณ (Budget)
+                        </h4>
+                        <p style={{ margin: "0 0 8px 0" }}><strong>Budget Type:</strong> {selectedProject.form_data?.tracking?.budgetType || selectedProject.form_data?.budgetType || "-"}</p>
+                        <p style={{ margin: "0 0 8px 0" }}><strong>Approved Budget:</strong> {selectedProject.form_data?.tracking?.approvedBudget || selectedProject.form_data?.approvedBudget ? `${selectedProject.form_data?.tracking?.approvedBudget || selectedProject.form_data?.approvedBudget} บาท` : "-"}</p>
+                        <p style={{ margin: 0 }}><strong>Actual Cost:</strong> {selectedProject.form_data?.tracking?.actualCost || selectedProject.form_data?.actualCost ? `${selectedProject.form_data?.tracking?.actualCost || selectedProject.form_data?.actualCost} บาท` : "-"}</p>
+                      </div>
+                    </div>
+
+                    {/* แสดง Remark ถ้ามีข้อมูล */}
+                    {(selectedProject.form_data?.tracking?.remark || selectedProject.form_data?.remark) && (
+                      <div style={{ gridColumn: "1 / -1", background: "#f8fafc", padding: "12px 16px", borderLeft: "4px solid #94a3b8", borderRadius: "0 8px 8px 0" }}>
+                        <strong>Remark:</strong> {selectedProject.form_data?.tracking?.remark || selectedProject.form_data?.remark}
+                      </div>
+                    )}
+
                   </div>
                 </div>
               )}
@@ -1310,6 +1777,7 @@ function ProjectPortfolio({ currentUser }) {
                     gap: "14px",
                   }}
                 >
+                  {/* 🌟 จุดที่แก้ไข 3: เพิ่มข้อมูล Deploy In และ App Name ในแท็บ System 🌟 */}
                   <div
                     style={{
                       background: "var(--card-bg)",
@@ -1329,12 +1797,20 @@ function ProjectPortfolio({ currentUser }) {
                       ข้อมูลระบบ
                     </h4>
                     <p style={{ margin: "0 0 8px 0" }}>
-                      <strong>App ID:</strong>{" "}
-                      {selectedProject.form_data?.tracking?.appId || "-"}
+                      <strong>Application Name:</strong>{" "}
+                      {selectedProject.form_data?.tracking?.appName || selectedProject.form_data?.appName || "-"}
+                    </p>
+                    <p style={{ margin: "0 0 8px 0" }}>
+                      <strong>Application ID:</strong>{" "}
+                      {selectedProject.form_data?.tracking?.appId || selectedProject.form_data?.appId || "-"}
+                    </p>
+                    <p style={{ margin: "0 0 8px 0" }}>
+                      <strong>Deploy In (Site):</strong>{" "}
+                      {selectedProject.form_data?.tracking?.deployIn || selectedProject.form_data?.site || "-"}
                     </p>
                     <p style={{ margin: 0 }}>
                       <strong>Owner:</strong>{" "}
-                      {selectedProject.form_data?.tracking?.glsOwner || "-"}
+                      {selectedProject.form_data?.tracking?.glsOwner || selectedProject.form_data?.glsOwner || "-"}
                     </p>
                   </div>
                 </div>
@@ -1366,9 +1842,12 @@ function ProjectPortfolio({ currentUser }) {
                       📋 แผนงานอนุมัติ
                     </h4>
                     <p style={{ margin: "0 0 8px 0" }}>
-                      <strong>ผู้รับผิดชอบ:</strong>{" "}
+                      <strong>ผู้รับผิดชอบ (IT Assignee):</strong>{" "}
                       <span style={{ color: "#d32f2f", fontWeight: "bold" }}>
-                        {selectedProject.form_data?.tracking?.glsManager || "-"}
+                        {selectedProject.form_data?.tracking?.glsManager ||
+                          selectedProject.form_data?.assigned_to ||
+                          selectedProject.assignee ||
+                          "-"}
                       </span>
                     </p>
                     <p style={{ margin: 0 }}>
@@ -1517,7 +1996,8 @@ function ProjectPortfolio({ currentUser }) {
                 <span
                   style={{ fontSize: "0.9rem", color: "var(--text-muted)" }}
                 >
-                  {editFormData.id} - {editFormData.name}
+                  {editFormData.form_data?.requestId || editFormData.id} -{" "}
+                  {editFormData.name}
                 </span>
               </div>
               <button
@@ -2030,6 +2510,157 @@ function ProjectPortfolio({ currentUser }) {
                       style={{
                         background: "var(--input-bg)",
                         color: "var(--text-color)",
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 🌟 จุดที่แก้ไข 4: เพิ่ม Section B สำหรับกรอกข้อมูลงบประมาณและรายละเอียด (ในแท็บ Edit) 🌟 */}
+              <div
+                style={{
+                  background: "var(--card-bg)",
+                  border: "1px solid var(--border-color)",
+                  borderRadius: "10px",
+                  padding: "20px",
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
+                }}
+              >
+                <h4
+                  style={{
+                    margin: "0 0 15px 0",
+                    color: "var(--text-color)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                >
+                  <span
+                    style={{
+                      background: "#059669",
+                      color: "#fff",
+                      width: "24px",
+                      height: "24px",
+                      borderRadius: "50%",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "0.9rem",
+                    }}
+                  >
+                    B
+                  </span>
+                  ข้อมูลเพิ่มเติมและงบประมาณ (Details & Budget)
+                </h4>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "15px",
+                  }}
+                >
+                  <div className="form-group">
+                    <label style={{ color: "var(--text-muted)" }}>
+                      กลุ่มลูกค้า (Customer Group)
+                    </label>
+                    <input
+                      value={editFormData.tracking.customerGroup || ""}
+                      onChange={(e) =>
+                        handleTrackingChange("customerGroup", e.target.value)
+                      }
+                      placeholder="เช่น SOG6"
+                      style={{
+                        background: "var(--input-bg)",
+                        color: "var(--text-color)",
+                      }}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label style={{ color: "var(--text-muted)" }}>
+                      ประเภทโปรเจกต์ (Project Type)
+                    </label>
+                    <input
+                      value={editFormData.tracking.projectType || ""}
+                      onChange={(e) =>
+                        handleTrackingChange("projectType", e.target.value)
+                      }
+                      style={{
+                        background: "var(--input-bg)",
+                        color: "var(--text-color)",
+                      }}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label style={{ color: "var(--text-muted)" }}>
+                      ประเภทงบประมาณ (Budget Type)
+                    </label>
+                    <input
+                      value={editFormData.tracking.budgetType || ""}
+                      onChange={(e) =>
+                        handleTrackingChange("budgetType", e.target.value)
+                      }
+                      style={{
+                        background: "var(--input-bg)",
+                        color: "var(--text-color)",
+                      }}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label style={{ color: "var(--text-muted)" }}>
+                      งบประมาณที่อนุมัติ (Approved Budget)
+                    </label>
+                    <input
+                      type="number"
+                      value={editFormData.tracking.approvedBudget || ""}
+                      onChange={(e) =>
+                        handleTrackingChange("approvedBudget", e.target.value)
+                      }
+                      placeholder="ระบุตัวเลข (บาท)"
+                      style={{
+                        background: "var(--input-bg)",
+                        color: "var(--text-color)",
+                      }}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label style={{ color: "var(--text-muted)" }}>
+                      ค่าใช้จ่ายจริง (Actual Cost)
+                    </label>
+                    <input
+                      type="number"
+                      value={editFormData.tracking.actualCost || ""}
+                      onChange={(e) =>
+                        handleTrackingChange("actualCost", e.target.value)
+                      }
+                      placeholder="ระบุตัวเลข (บาท)"
+                      style={{
+                        background: "var(--input-bg)",
+                        color: "var(--text-color)",
+                      }}
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+                    <label style={{ color: "var(--text-muted)" }}>
+                      หมายเหตุ (Remark)
+                    </label>
+                    <textarea
+                      value={editFormData.tracking.remark || ""}
+                      onChange={(e) =>
+                        handleTrackingChange("remark", e.target.value)
+                      }
+                      rows="2"
+                      style={{
+                        background: "var(--input-bg)",
+                        color: "var(--text-color)",
+                        width: "100%",
+                        padding: "10px",
+                        borderRadius: "6px",
+                        border: "1px solid var(--border-color)",
                       }}
                     />
                   </div>

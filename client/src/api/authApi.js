@@ -1,5 +1,8 @@
 const SESSION_KEY = 'ba-system.auth-session';
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:4000';
+const isDockerPort = window.location.port === '3001';
+
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 
+  (isDockerPort ? 'http://10.11.10.103:4001' : 'http://10.11.10.103:4000');
 
 export const loginWithPassword = async (username, password) => {
   const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
@@ -85,11 +88,8 @@ export const submitProjectRequest = async (formDataToSend, token) => {
 export const fetchProjects = async (token) => {
   const response = await fetch(`${API_BASE_URL}/api/projects/all`, {
     method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${token}`
-    }
+    headers: {'Authorization': `Bearer ${token}`}
   });
-  
   if (!response.ok) {
     throw new Error('Failed to fetch projects');
   }
