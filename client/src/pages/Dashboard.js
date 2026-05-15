@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { fetchProjects } from '../api/authApi';
 import { Link } from 'react-router-dom';
+import { usePermissions } from '../hooks/usePermissions'; // 🌟 นำเข้า Hook เช็คสิทธิ์
 
 // --- Icons (Inline SVGs for performance) ---
 const ActivityIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>;
@@ -10,6 +11,9 @@ const FolderIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="n
 const ArrowRightIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>;
 
 function Dashboard({ currentUser }) {
+  // 🌟 เรียกใช้งาน C-R-U-D Hook สำหรับหน้า Dashboard
+  const { canRead } = usePermissions(currentUser, "dashboard");
+
   const [projects, setProjects] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -81,6 +85,16 @@ function Dashboard({ currentUser }) {
     if (percent < 75) return '#f59e0b'; 
     return '#10b981'; 
   };
+
+  // 🌟 บล็อกการเข้าถึงหน้าจอ ถ้าไม่มีสิทธิ์ Read (วางหลัง Hooks ทั้งหมดเพื่อไม่ให้ผิดกฎ React)
+  if (!canRead) {
+    return (
+      <div style={{ padding: "100px 20px", textAlign: "center", color: "#ef4444", minHeight: "80vh" }}>
+        <h2>⛔ Access Denied</h2>
+        <p>คุณไม่มีสิทธิ์ในการเข้าถึงหน้า Dashboard</p>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

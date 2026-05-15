@@ -22,6 +22,9 @@ import {
 import "./index.css";
 import ManagerDashboard from "./pages/ManagerDashboard";
 import Swal from "sweetalert2";
+import RequestChange from "./pages/RequestChange";
+import ProjectWorkspace from './pages/ProjectWorkspace';
+import EditRole from "./pages/EditRole";
 
 /* 🚀 SVG Icons สวยๆ สำหรับเมนู 🚀 */
 const DashIcon = () => (
@@ -52,8 +55,23 @@ const BellIcon = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
 );
 
-const ProtectedManagerRoute = ({ role, children }) => {
-  if (role !== "manager" && role !== "ceo") return <Navigate to="/" replace />;
+// 🌟 สร้างฟังก์ชันเช็คสิทธิ์ (Permissions) ไว้ใช้ทั่ว App แทนการเช็ค Role ชื่อตรงๆ 🌟
+// 🌟 สร้างฟังก์ชันเช็คสิทธิ์ (Permissions) ไว้ใช้ทั่ว App แทนการเช็ค Role ชื่อตรงๆ 🌟
+const checkPerm = (user, moduleName) => {
+  let perms = user?.permissions || {};
+  if (typeof perms === 'string') {
+    try {
+      perms = JSON.parse(perms);
+    } catch (e) {
+      perms = {};
+    }
+  }
+  return perms?.[moduleName]?.includes("read") || false;
+};
+
+// 🌟 ตัวป้องกัน Route โดยเช็คจากสิทธิ์ 🌟
+const ProtectedRoute = ({ isAllowed, children }) => {
+  if (!isAllowed) return <Navigate to="/" replace />;
   return children;
 };
 
@@ -166,7 +184,8 @@ function App() {
       try {
         let newNotifs = [];
         
-        if (currentUser.role === "manager" || currentUser.role === "ceo") {
+        // 🌟 เปลี่ยนมาเช็คสิทธิ์แทนการเช็ค string role 🌟
+        if (checkPerm(currentUser, "manager_dashboard")) {
           const pending = await fetchPendingRequests(session.token);
           if (pending?.length > 0) {
             pending.forEach((req) =>
@@ -175,7 +194,7 @@ function App() {
                 title: "🔔 รอการอนุมัติ",
                 text: `โปรเจกต์ ${req.name} (${req.id}) รอให้คุณตรวจสอบ`,
                 time: formatNotificationTime(req.created_at),
-                rawDate: new Date(req.created_at.endsWith("Z") ? req.created_at : `${req.created_at}Z`), // 🚀 เก็บเวลาจริงไว้เรียง
+                rawDate: new Date(req.created_at.endsWith("Z") ? req.created_at : `${req.created_at}Z`),
                 read: false,
                 linkPath: "/manager-dashboard",
               }),
@@ -188,9 +207,9 @@ function App() {
           allProjects
             .filter((p) => p.updated_at && p.status !== "Pending Approval")
             .forEach((p) => {
+              // 🌟 เปลี่ยนมาเช็คสิทธิ์ 🌟
               if (
-                currentUser.role === "manager" ||
-                currentUser.role === "ceo" ||
+                checkPerm(currentUser, "manager_dashboard") ||
                 p.form_data?.assigned_to === currentUser.username ||
                 p.requester_name === currentUser.username
               ) {
@@ -200,7 +219,7 @@ function App() {
                   title: "📝 มีการอัปเดต",
                   text: `[${p.id}] ความคืบหน้า ${progress}%`,
                   time: formatNotificationTime(p.updated_at),
-                  rawDate: new Date(p.updated_at.endsWith("Z") ? p.updated_at : `${p.updated_at}Z`), // 🚀 เก็บเวลาจริงไว้เรียง
+                  rawDate: new Date(p.updated_at.endsWith("Z") ? p.updated_at : `${p.updated_at}Z`),
                   read: false,
                   linkPath: "/projects",
                 });
@@ -208,10 +227,7 @@ function App() {
             });
         }
 
-        // 🚀 จับการแจ้งเตือนทั้งหมดมาเรียงลำดับเวลา (ใหม่สุดอยู่บนสุด) 🚀
         newNotifs.sort((a, b) => b.rawDate - a.rawDate);
-        
-        // กรองเอาเฉพาะ 15 รายการล่าสุด เพื่อไม่ให้รกจนเกินไป (ไม่บังคับ แต่แนะนำครับ)
         newNotifs = newNotifs.slice(0, 15);
 
         const readIds = JSON.parse(localStorage.getItem(`readNotifs_${currentUser.username}`)) || [];
@@ -286,93 +302,117 @@ function App() {
 
   if (!currentUser)
     return (
-      <main className="login-page" style={backgroundStyle}>
-        <form className="login-card" onSubmit={handleAuthenticate}>
-          <div className="login-header">
+      <main className="login-page" style={{ ...backgroundStyle, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <form 
+          className="login-card" 
+          onSubmit={handleAuthenticate}
+          style={{
+            maxWidth: "320px",
+            width: "100%",
+            padding: "28px 24px",
+            background: "var(--card-bg, #ffffff)",
+            borderRadius: "16px",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
+            margin: "0px"
+          }}
+        >
+         <div className="login-header" style={{ marginBottom: "0px" }}>
             <img
               src={`${process.env.PUBLIC_URL}/LOGO-BPK.png`}
               alt="Logo"
-              className="login-logo"
               style={{
-                height: "56px",
+                height: "36px",
                 objectFit: "contain",
-                margin: "0 auto 12px auto",
+                margin: "0 auto 4px auto",
                 display: "block",
               }}
             />
-            <h1 className="login-title" style={{ textAlign: "center" }}>
+            <h1 style={{ 
+              textAlign: "center", 
+              fontSize: "1.2rem", 
+              margin: "0", 
+              fontWeight: "700", 
+              color: "var(--text-color)",
+              lineHeight: "1" 
+            }}>
               BA System
             </h1>
-            <p
-              className="login-desc"
-              style={{ textAlign: "center", marginBottom: "16px" }}
-            >
-              Sign In (Internal Use Only)
+            <p style={{ 
+              textAlign: "center", 
+              margin: "-2px 0 0 0", 
+              fontSize: "0.7rem", 
+              color: "var(--text-muted)", 
+              opacity: 0.8,
+              lineHeight: "1" 
+            }}>
+              Internal Use Only
             </p>
           </div>
-          <div className="login-form">
-            <div className="form-group">
-              <label>Username</label>
+          <div className="login-form" style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <div>
               <input
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
-                placeholder="Enter username"
+                placeholder="Username"
+                style={{ 
+                  width: "100%", padding: "10px 12px", borderRadius: "8px", 
+                  border: "1px solid var(--border-color)", fontSize: "0.85rem",
+                  background: "var(--bg-color)"
+                }}
               />
             </div>
-            <div className="form-group">
-              <label>Password</label>
-              <div className="password-input-wrapper">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  placeholder="Enter password"
-                />
-                <button
-                  type="button"
-                  className="password-toggle-btn"
-                  onClick={() => setShowPassword(!showPassword)}
-                  tabIndex="-1"
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    {showPassword ? (
-                      <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></>
-                    ) : (
-                      <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></>
-                    )}
-                  </svg>
-                </button>
-              </div>
+            
+            <div style={{ position: "relative" }}>
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                placeholder="Password"
+                style={{ 
+                  width: "100%", padding: "10px 32px 10px 12px", borderRadius: "8px", 
+                  border: "1px solid var(--border-color)", fontSize: "0.85rem",
+                  background: "var(--bg-color)"
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                tabIndex="-1"
+                style={{
+                  position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)",
+                  background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)",
+                  padding: 0, display: "flex", alignItems: "center"
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  {showPassword ? (
+                    <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></>
+                  ) : (
+                    <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></>
+                  )}
+                </svg>
+              </button>
             </div>
-            {authError && <div className="auth-error">{authError}</div>}
+
+            {authError && <div style={{ color: "#ef4444", fontSize: "0.75rem", textAlign: "center", margin: 0 }}>{authError}</div>}
+
             <button
               type="submit"
-              className="btn btn-login-submit"
               disabled={isAuthenticating}
-              style={{ marginTop: "10px" }}
-            >
-              {isAuthenticating ? "⏳ Authenticating..." : "Secure Login"}
-            </button>
-          </div>
-          <div className="login-footer" style={{ marginTop: "20px" }}>
-            <p
-              style={{
-                fontSize: "0.8rem",
-                color: "var(--text-muted)",
-                lineHeight: 1.5,
+              style={{ 
+                width: "100%", padding: "10px", borderRadius: "8px", fontSize: "0.85rem", fontWeight: "600",
+                background: "var(--blue, #0284c7)", color: "#fff", border: "none", cursor: "pointer",
+                marginTop: "4px"
               }}
             >
-              🔒 Unauthorized access is strictly prohibited.
-              <br />
-              Contact IT Support for account registration.
-            </p>
+              {isAuthenticating ? "⏳" : "Login"}
+            </button>
           </div>
         </form>
-        <div
-          className={`toast-notification ${toast.visible ? "show" : ""} ${toast.type}`}
-        >
+        
+        <div className={`toast-notification ${toast.visible ? "show" : ""} ${toast.type}`}>
           {toast.message}
         </div>
       </main>
@@ -625,18 +665,20 @@ function App() {
           style={{ zIndex: 1001 }}
         >
           <nav className="sidebar-nav">
-            <NavLink
-              to="/"
-              className="nav-item"
-              end
-              onClick={() => setIsMobileMenuOpen(false)}
-              title="Dashboard"
-            >
-              <DashIcon />
-            </NavLink>
+            {/* 🌟 1. ดึงสิทธิ์มาเช็คเพื่อซ่อน/แสดงเมนูด้านซ้าย 🌟 */}
+            {checkPerm(currentUser, "dashboard") && (
+              <NavLink
+                to="/"
+                className="nav-item"
+                end
+                onClick={() => setIsMobileMenuOpen(false)}
+                title="Dashboard"
+              >
+                <DashIcon />
+              </NavLink>
+            )}
 
-            {(currentUser?.role === "manager" ||
-              currentUser?.role === "ceo") && (
+            {checkPerm(currentUser, "manager_dashboard") && (
               <NavLink
                 to="/manager-dashboard"
                 className="nav-item"
@@ -647,7 +689,7 @@ function App() {
               </NavLink>
             )}
 
-            {currentUser?.role !== "ceo" && (
+            {checkPerm(currentUser, "request_form") && (
               <NavLink
                 to="/request"
                 className="nav-item"
@@ -658,23 +700,27 @@ function App() {
               </NavLink>
             )}
 
-            <NavLink
-              to="/projects"
-              className="nav-item"
-              onClick={() => setIsMobileMenuOpen(false)}
-              title="Project Portfolio"
-            >
-              <ProjectIcon />
-            </NavLink>
+            {checkPerm(currentUser, "project_portfolio") && (
+              <NavLink
+                to="/projects"
+                className="nav-item"
+                onClick={() => setIsMobileMenuOpen(false)}
+                title="Project Portfolio"
+              >
+                <ProjectIcon />
+              </NavLink>
+            )}
 
-            <NavLink
-              to="/applications"
-              className="nav-item"
-              onClick={() => setIsMobileMenuOpen(false)}
-              title="App Portfolio"
-            >
-              <AppIcon />
-            </NavLink>
+            {checkPerm(currentUser, "app_portfolio") && (
+              <NavLink
+                to="/applications"
+                className="nav-item"
+                onClick={() => setIsMobileMenuOpen(false)}
+                title="App Portfolio"
+              >
+                <AppIcon />
+              </NavLink>
+            )}
           </nav>
 
           <button
@@ -700,27 +746,15 @@ function App() {
 
         <main className="app-main">
           <Routes>
-            <Route path="/" element={<Dashboard currentUser={currentUser} />} />
-            <Route
-              path="/request"
-              element={<RequestForm currentUser={currentUser} />}
-            />
-            <Route
-              path="/projects"
-              element={<ProjectPortfolio currentUser={currentUser} />}
-            />
-            <Route
-              path="/applications"
-              element={<ApplicationPortfolio currentUser={currentUser} />}
-            />
-            <Route
-              path="/manager-dashboard"
-              element={
-                <ProtectedManagerRoute role={currentUser?.role}>
-                  <ManagerDashboard currentUser={currentUser} />
-                </ProtectedManagerRoute>
-              }
-            />
+            {/* 🌟 2. ล็อกหน้าจอ URL ไม่ให้เข้าถึงถ้าไม่มีสิทธิ์ 🌟 */}
+            <Route path="/" element={<ProtectedRoute isAllowed={checkPerm(currentUser, "dashboard")}><Dashboard currentUser={currentUser} /></ProtectedRoute>} />
+            <Route path="/request" element={<ProtectedRoute isAllowed={checkPerm(currentUser, "request_form")}><RequestForm currentUser={currentUser} /></ProtectedRoute>} />
+            <Route path="/project-workspace" element={<ProtectedRoute isAllowed={checkPerm(currentUser, "project_portfolio")}><ProjectWorkspace currentUser={currentUser} /></ProtectedRoute>} />
+            <Route path="/request-change" element={<ProtectedRoute isAllowed={checkPerm(currentUser, "project_portfolio")}><RequestChange currentUser={currentUser} /></ProtectedRoute>} /> 
+            <Route path="/projects" element={<ProtectedRoute isAllowed={checkPerm(currentUser, "project_portfolio")}><ProjectPortfolio currentUser={currentUser} /></ProtectedRoute>} />
+            <Route path="/applications" element={<ProtectedRoute isAllowed={checkPerm(currentUser, "app_portfolio")}><ApplicationPortfolio currentUser={currentUser} /></ProtectedRoute>} />
+            <Route path="/manager-dashboard" element={<ProtectedRoute isAllowed={checkPerm(currentUser, "manager_dashboard")}><ManagerDashboard currentUser={currentUser} /></ProtectedRoute>} />
+            <Route path="/edit-role" element={<ProtectedRoute isAllowed={checkPerm(currentUser, "role_settings")}><EditRole currentUser={currentUser} /></ProtectedRoute>} />
           </Routes>
         </main>
 
@@ -771,6 +805,7 @@ function App() {
                   >
                     Profile · Security · Preferences
                   </div>
+                  
                 </div>
                 <button
                   onClick={closeSettings}
@@ -941,6 +976,39 @@ function App() {
                   </div>
                 </div>
 
+                {/* 🌟 3. ซ่อนเมนูจัดการ Role ถ้ายูสเซอร์คนนั้นไม่มีสิทธิ์ 🌟 */}
+                {checkPerm(currentUser, "role_settings") && (
+                  <div
+                    style={{
+                      background: "var(--card-bg)",
+                      borderRadius: "16px",
+                      padding: "24px",
+                      border: "1px solid var(--border-color)",
+                      boxShadow: "var(--shadow-sm)",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
+                      <span style={{ fontSize: "1.1rem" }}>👥</span>
+                      <span style={{ fontSize: "1rem", fontWeight: 800, color: "var(--text-color)" }}>
+                        Administration
+                      </span>
+                    </div>
+                    
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px", background: "var(--bg-color)", borderRadius: "12px", border: "1px solid var(--border-color)" }}>
+                      <div>
+                        <div style={{ fontWeight: "bold", color: "var(--text-color)", fontSize: "0.95rem" }}>User Role Management</div>
+                        <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "4px" }}>จัดการสิทธิ์การเข้าถึงเมนูต่างๆ ของพนักงานในระบบ</div>
+                      </div>
+                      <NavLink 
+                        to="/edit-role" 
+                        onClick={closeSettings} 
+                        style={{ textDecoration: "none", background: "var(--blue)", color: "#fff", padding: "8px 16px", borderRadius: "8px", fontWeight: "bold", fontSize: "0.85rem", transition: "all 0.2s" }}
+                      >
+                        จัดการ Role
+                      </NavLink>
+                    </div>
+                  </div>
+                )}
                 <div
                   style={{
                     background: "var(--card-bg)",

@@ -2,7 +2,7 @@ const SESSION_KEY = 'ba-system.auth-session';
 const isDockerPort = window.location.port === '3001';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 
-  (isDockerPort ? 'http://10.11.10.103:4001' : 'http://10.11.10.103:4000');
+  (isDockerPort ? 'http://10.11.11.31:4001' : 'http://10.11.11.31:4000');
 
 export const loginWithPassword = async (username, password) => {
   const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
@@ -43,8 +43,8 @@ export const saveAuthSession = (session) => {
     user: {
       id: session.user?.id,
       username: session.user?.username,
-      role: session.user?.role
-      // 🚫 บรรทัดนี้คือหัวใจสำคัญ: เราจงใจไม่ใส่ avatar ลงไป เพื่อไม่ให้เบราว์เซอร์เต็ม!
+      role: session.user?.role,
+      permissions: session.user?.permissions // 🌟 จำสิทธิ์ได้
     }
   };
   
@@ -62,6 +62,43 @@ export const loadAuthSession = () => {
   } catch (error) {
     return null;
   }
+};
+
+export const fetchAllRoles = async (token) => {
+  const response = await fetch(`${API_BASE_URL}/api/auth/roles`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (!response.ok) {
+    throw new Error('ไม่พบเส้นทาง API หรือเซิร์ฟเวอร์มีปัญหา');
+  }
+  return response.json();
+};
+
+export const updateRolePermissions = async (roleId, permissions, token) => {
+  const response = await fetch(`${API_BASE_URL}/api/auth/roles/${roleId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ permissions })
+  });
+  if (!response.ok) throw new Error('ไม่สามารถบันทึกสิทธิ์ได้');
+  return response.json();
+};
+
+// 🌟 ฟังก์ชันที่หายไป กลับมาแล้วครับ! 🌟
+export const createNewRole = async (name, permissions, token) => {
+  const response = await fetch(`${API_BASE_URL}/api/auth/roles`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ name, permissions })
+  });
+  if (!response.ok) throw new Error('ไม่สามารถสร้างบทบาทใหม่ได้');
+  return response.json();
 };
 
 export const clearAuthSession = () => {
@@ -175,7 +212,6 @@ export const changePassword = async (oldPassword, newPassword, token) => {
 };
 
 export const updateUserProfile = async (id, username, avatar, token) => {
-  // 🚀 ใช้ API_BASE_URL แทนที่ของเก่าที่พัง และเปลี่ยนเป็น PATCH 
   const response = await fetch(`${API_BASE_URL}/api/users/${id}`, {
     method: 'PATCH',
     headers: {
@@ -185,5 +221,17 @@ export const updateUserProfile = async (id, username, avatar, token) => {
     body: JSON.stringify({ username, avatar }) 
   });
   if (!response.ok) throw new Error('Failed to update profile');
+  return response.json();
+};
+// 🌐 ฟังก์ชันลบ Role
+export const deleteRole = async (roleId, token) => {
+  const response = await fetch(`${API_BASE_URL}/api/auth/roles/${roleId}`, {
+    method: 'DELETE',
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error || 'ไม่สามารถลบข้อมูลได้');
+  }
   return response.json();
 };

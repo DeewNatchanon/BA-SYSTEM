@@ -29,7 +29,25 @@ const requireRole = (...allowedRoles) => (req, res, next) => {
   return next();
 };
 
+// 🌟 เพิ่ม Middleware ตัวใหม่สำหรับเช็คสิทธิ์ระดับลึก (Permissions)
+const requirePermission = (moduleName, action) => {
+  return (req, res, next) => {
+    // ดึง permissions ออกมาจาก Payload ของ Token
+    const userPermissions = req.auth?.permissions || {};
+
+    // เช็คว่า User มีสิทธิ์ใน module และ action ตามที่กำหนดหรือไม่
+    const hasPermission = userPermissions[moduleName] && userPermissions[moduleName].includes(action);
+
+    if (!hasPermission) {
+      return res.status(403).json({ message: 'คุณไม่มีสิทธิ์ดำเนินการนี้ (Forbidden)' });
+    }
+
+    return next();
+  };
+};
+
 module.exports = {
   requireAuth,
-  requireRole
+  requireRole,
+  requirePermission // 🌟 Export ฟังก์ชันใหม่ไปใช้งาน
 };

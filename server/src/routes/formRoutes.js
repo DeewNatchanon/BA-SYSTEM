@@ -28,7 +28,15 @@ const storage = multer.diskStorage({
 
 const upload = multer({ 
   storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 } // จำกัดขนาดไฟล์สูงสุด 10MB
+  limits: { fileSize: 10 * 1024 * 1024 }, // จำกัดขนาดไฟล์สูงสุด 10MB
+  // 🌟 เพิ่ม fileFilter เพื่อจำกัดประเภทไฟล์ ป้องกันไฟล์ไวรัส
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'application/pdf' || file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('ไม่อนุญาตให้อัปโหลดไฟล์ประเภทนี้! อนุญาตเฉพาะ PDF และรูปภาพเท่านั้น'), false);
+    }
+  }
 });
 
 // ==========================================

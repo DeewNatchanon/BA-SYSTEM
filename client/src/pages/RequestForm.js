@@ -5,14 +5,19 @@ import { pdf } from "@react-pdf/renderer";
 import RequestFormPdf from "../pdf/RequestFormPdf";
 import { submitProjectRequest } from "../api/authApi";
 import Swal from "sweetalert2";
+import { usePermissions } from "../hooks/usePermissions"; 
 
 function RequestForm({ currentUser }) {
+  // 🌟 ดึงสิทธิ์ canCreate มาเพื่อใช้ควบคุมปุ่มต่างๆ
+  const { canCreate } = usePermissions(currentUser, "request_form");
+  
   const createBlankCost = () => ({
     item: "",
     qty: "",
     cost: "",
     paymentDate: "",
   });
+  
   const normalizeProjectCosts = (costs = []) => {
     const normalized = costs.map((cost) => ({
       item: cost.item || "",
@@ -22,6 +27,7 @@ function RequestForm({ currentUser }) {
     }));
     return normalized.length ? normalized : [createBlankCost()];
   };
+  
   const initialFormData = {
     requestId: "",
     requestDate: new Date().toISOString().split("T")[0],
@@ -64,6 +70,7 @@ function RequestForm({ currentUser }) {
     preparedBy: "",
     approvedBy: "",
   };
+  
   const loadInitialData = () => {
     const draft = localStorage.getItem("ba-system.request-draft");
     if (draft) {
@@ -80,6 +87,7 @@ function RequestForm({ currentUser }) {
     }
     return initialFormData;
   };
+  
   const [formData, setFormData] = useState(loadInitialData);
   const [isCombinedModalOpen, setIsCombinedModalOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState("");
@@ -94,20 +102,25 @@ function RequestForm({ currentUser }) {
       node.style.height = `${node.scrollHeight}px`;
     });
   };
+  
   useEffect(() => {
     localStorage.setItem("ba-system.request-draft", JSON.stringify(formData));
   }, [formData]);
+  
   useEffect(() => {
     resizeAllTextareas();
   }, [formData]);
+  
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
+  
   const handleTextareaInput = (e) => {
     e.target.style.height = "auto";
     e.target.style.height = `${e.target.scrollHeight}px`;
   };
+  
   useEffect(() => {
     if (formData.impactNewHISB !== "Yes")
       setFormData((prev) => ({
@@ -117,6 +130,8 @@ function RequestForm({ currentUser }) {
       }));
   }, [formData.impactNewHISB]);
 
+  // 🌟 เอาเงื่อนไข Access Denied ตรงนี้ออก เพื่อให้คนที่มีสิทธิ์แค่ Read (R) สามารถเข้ามาดูฟอร์มได้
+  
   const handleCheckboxChange = (name, option) => {
     setFormData((prev) => {
       const current = prev[name] || [];
@@ -126,6 +141,7 @@ function RequestForm({ currentUser }) {
       return { ...prev, [name]: updated };
     });
   };
+  
   const handleProjectCostChange = (index, field, value) => {
     setFormData((prev) => {
       const updated = [...prev.projectCosts];
@@ -133,12 +149,14 @@ function RequestForm({ currentUser }) {
       return { ...prev, projectCosts: updated };
     });
   };
+  
   const handleAddProjectCost = () => {
     setFormData((prev) => ({
       ...prev,
       projectCosts: [...prev.projectCosts, createBlankCost()],
     }));
   };
+  
   const handleRemoveProjectCost = (index) => {
     setFormData((prev) => {
       const updated = prev.projectCosts.filter(
@@ -151,7 +169,6 @@ function RequestForm({ currentUser }) {
     });
   };
 
-  // แก้ไขไม่ให้วันที่ถอยหลัง 1 วันตอนแปลงเป็น String
   const toIsoDate = (date) => {
     if (!date) return "";
     const year = date.getFullYear();
@@ -186,6 +203,7 @@ function RequestForm({ currentUser }) {
       }
     });
   };
+  
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files.length > 0)
       setSelectedFile(e.target.files[0]);
@@ -241,6 +259,7 @@ function RequestForm({ currentUser }) {
 
   const createPdfBlob = async () =>
     pdf(<RequestFormPdf data={formData} />).toBlob();
+    
   const handleDownloadPreview = () => {
     if (!previewUrl) return;
     const link = document.createElement("a");
@@ -250,8 +269,9 @@ function RequestForm({ currentUser }) {
     link.click();
     link.remove();
   };
+  
   const handleOpenCombinedModal = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setIsPreviewing(true);
     try {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -265,6 +285,7 @@ function RequestForm({ currentUser }) {
       setIsPreviewing(false);
     }
   };
+  
   const handleCloseModal = () => {
     setIsCombinedModalOpen(false);
     setSelectedFile(null);
@@ -1132,7 +1153,7 @@ function RequestForm({ currentUser }) {
               </div>
             </div>
 
-            {/* 🚀 นำปุ่มยัดเข้ามาในกล่องนี้เรียบร้อย ขีดเส้นคั่นบนให้สวยงาม */}
+            {/* 🌟 แสดงปุ่มควบคุมตามสิทธิ์ C */}
             <div
               className="form-row button-row print-hidden"
               style={{
@@ -1153,16 +1174,33 @@ function RequestForm({ currentUser }) {
               >
                 ล้างข้อมูล (Clear)
               </button>
-              <button
-                type="submit"
-                className="btn btn-primary"
-                style={{ padding: "10px 32px" }}
-                disabled={isPreviewing}
-              >
-                {isPreviewing
-                  ? "กำลังประมวลผล..."
-                  : "พรีวิวและแนบเอกสาร (Preview & Submit)"}
-              </button>
+              
+              {/* ถ้ามีสิทธิ์ Create ให้แสดงปุ่ม Preview & Submit ของเดิม */}
+              {canCreate ? (
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ padding: "10px 32px" }}
+                  disabled={isPreviewing}
+                >
+                  {isPreviewing
+                    ? "กำลังประมวลผล..."
+                    : "พรีวิวและแนบเอกสาร (Preview & Submit)"}
+                </button>
+              ) : (
+                /* ถ้าไม่มีสิทธิ์ Create ให้แสดงปุ่ม Preview Only เพื่อดูแบบฟอร์มเฉยๆ */
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={handleOpenCombinedModal}
+                  style={{ padding: "10px 32px" }}
+                  disabled={isPreviewing}
+                >
+                  {isPreviewing
+                    ? "กำลังประมวลผล..."
+                    : "ดูตัวอย่างเอกสาร (Preview Only)"}
+                </button>
+              )}
             </div>
           </fieldset>
         </section>
@@ -1284,68 +1322,73 @@ function RequestForm({ currentUser }) {
                     📥 ดาวน์โหลด / พิมพ์ PDF
                   </button>
                 </div>
-                <div
-                  style={{
-                    background: "var(--surface-2)",
-                    padding: "20px",
-                    borderRadius: "8px",
-                    border: "1px solid var(--border-color)",
-                    flex: 1,
-                  }}
-                >
-                  <h4
-                    style={{ margin: "0 0 10px 0", color: "var(--blue-dark)" }}
-                  >
-                    ขั้นตอนที่ 2: อัปโหลดและส่งเข้าระบบ
-                  </h4>
-                  <p
+                
+                {/* 🌟 ส่วนของการอัปโหลดไฟล์ จะแสดงเฉพาะเมื่อมีสิทธิ์ C เท่านั้น */}
+                {canCreate && (
+                  <div
                     style={{
-                      fontSize: "0.9rem",
-                      color: "var(--muted)",
-                      marginBottom: "15px",
-                    }}
-                  >
-                    เมื่อได้รับการเซ็นอนุมัติเรียบร้อยแล้ว ให้อัปโหลดไฟล์เอกสาร
-                    (PDF หรือรูปภาพ) ที่นี่
-                  </p>
-                  <input
-                    type="file"
-                    accept=".pdf,image/*"
-                    onChange={handleFileChange}
-                    style={{
-                      width: "100%",
-                      padding: "12px",
-                      border: "2px dashed var(--blue)",
+                      background: "var(--surface-2)",
+                      padding: "20px",
                       borderRadius: "8px",
-                      background: "#fff",
-                      cursor: "pointer",
+                      border: "1px solid var(--border-color)",
+                      flex: 1,
                     }}
-                  />
-                  {selectedFile && (
-                    <div
+                  >
+                    <h4
+                      style={{ margin: "0 0 10px 0", color: "var(--blue-dark)" }}
+                    >
+                      ขั้นตอนที่ 2: อัปโหลดและส่งเข้าระบบ
+                    </h4>
+                    <p
                       style={{
-                        marginTop: "15px",
-                        padding: "10px",
-                        background: "#e8f5e9",
-                        borderRadius: "6px",
-                        border: "1px solid #c8e6c9",
+                        fontSize: "0.9rem",
+                        color: "var(--muted)",
+                        marginBottom: "15px",
                       }}
                     >
-                      <p
+                      เมื่อได้รับการเซ็นอนุมัติเรียบร้อยแล้ว ให้อัปโหลดไฟล์เอกสาร
+                      (PDF หรือรูปภาพ) ที่นี่
+                    </p>
+                    <input
+                      type="file"
+                      accept=".pdf,image/*"
+                      onChange={handleFileChange}
+                      style={{
+                        width: "100%",
+                        padding: "12px",
+                        border: "2px dashed var(--blue)",
+                        borderRadius: "8px",
+                        background: "#fff",
+                        cursor: "pointer",
+                      }}
+                    />
+                    {selectedFile && (
+                      <div
                         style={{
-                          color: "#2e7d32",
-                          fontSize: "0.85rem",
-                          fontWeight: 600,
-                          margin: 0,
+                          marginTop: "15px",
+                          padding: "10px",
+                          background: "#e8f5e9",
+                          borderRadius: "6px",
+                          border: "1px solid #c8e6c9",
                         }}
                       >
-                        ✅ เลือกไฟล์แล้ว: {selectedFile.name}
-                      </p>
-                    </div>
-                  )}
-                </div>
+                        <p
+                          style={{
+                            color: "#2e7d32",
+                            fontSize: "0.85rem",
+                            fontWeight: 600,
+                            margin: 0,
+                          }}
+                        >
+                          ✅ เลือกไฟล์แล้ว: {selectedFile.name}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
+            
             <div
               style={{
                 display: "flex",
@@ -1362,18 +1405,22 @@ function RequestForm({ currentUser }) {
                 onClick={handleCloseModal}
                 disabled={isSubmitting}
               >
-                ยกเลิก (Cancel)
+                {canCreate ? "ยกเลิก (Cancel)" : "ปิดหน้าต่าง (Close)"}
               </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={handleFinalSubmit}
-                disabled={isSubmitting || !selectedFile}
-              >
-                {isSubmitting
-                  ? "กำลังส่งข้อมูล..."
-                  : "ยืนยันและบันทึก (Submit)"}
-              </button>
+              
+              {/* 🌟 ปุ่มยืนยันและบันทึกสุดท้าย จะแสดงเฉพาะเมื่อมีสิทธิ์ C เท่านั้น */}
+              {canCreate && (
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleFinalSubmit}
+                  disabled={isSubmitting || !selectedFile}
+                >
+                  {isSubmitting
+                    ? "กำลังส่งข้อมูล..."
+                    : "ยืนยันและบันทึก (Submit)"}
+                </button>
+              )}
             </div>
           </div>
         </div>

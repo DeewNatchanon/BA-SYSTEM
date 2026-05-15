@@ -4,10 +4,13 @@ const pool = require("../config/db");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const { requireAuth, requireRole } = require('../middleware/auth');
+
 const uploadDir = "uploads/approved_docs/";
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
+
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, uploadDir);
@@ -17,7 +20,20 @@ const storage = multer.diskStorage({
     cb(null, uniqueSuffix + path.extname(file.originalname));
   },
 });
-const upload = multer({ storage: storage });
+
+// 🌟 เพิ่ม limits และ fileFilter ป้องกันการอัปโหลดไฟล์อันตราย
+const upload = multer({ 
+  storage: storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // จำกัดขนาดไฟล์สูงสุด 10MB
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'application/pdf' || file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('ไม่อนุญาตให้อัปโหลดไฟล์ประเภทนี้! อนุญาตเฉพาะ PDF และรูปภาพเท่านั้น'), false);
+    }
+  }
+});
+
 router.post(
   "/projects",
   upload.single("approvedDocument"),
@@ -57,6 +73,7 @@ router.post(
     }
   },
 );
+
 router.get("/projects/pending", async (req, res) => {
   try {
     const query = `SELECT p.id, p.name, p.site, p.category, p.description, p.created_at, p.status, p.form_data, p.document_path, u.username AS requester_name FROM projects p LEFT JOIN users u ON p.requester_id = u.id WHERE p.status = 'Pending Approval' OR p.form_data::text LIKE '%"isPendingApproval":true%' OR p.form_data::text LIKE '%"isPendingApproval": true%' ORDER BY p.created_at DESC;`;
@@ -67,6 +84,7 @@ router.get("/projects/pending", async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
+
 router.get("/projects/all", async (req, res) => {
   try {
     const query = `SELECT p.*, u.username AS requester_name FROM projects p LEFT JOIN users u ON p.requester_id = u.id ORDER BY p.created_at DESC;`;
@@ -76,6 +94,7 @@ router.get("/projects/all", async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
+
 router.put("/projects/:id/approve", async (req, res) => {
   const projectId = req.params.id;
   const {
@@ -115,6 +134,7 @@ router.put("/projects/:id/approve", async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
+
 router.put(
   "/projects/update/:id",
   upload.single("progressFile"),

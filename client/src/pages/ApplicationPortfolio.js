@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { fetchProjects, updateProjectInDb } from "../api/authApi";
 import Swal from "sweetalert2";
+import { useNavigate } from "react-router-dom";
+import { usePermissions } from "../hooks/usePermissions"; 
 
 // inline filter helper
 function getNested(obj, path) {
@@ -61,7 +63,7 @@ function filterRows(
   });
 }
 
-// 🚀 ชุดไอคอน SVG แบบมืออาชีพ เรียบหรู
+// ชุดไอคอน SVG แบบมืออาชีพ เรียบหรู
 const GenIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><line x1="3" y1="9" x2="21" y2="9" /><line x1="9" y1="21" x2="9" y2="9" /></svg>
 );
@@ -77,25 +79,16 @@ const SecurityIcon = () => (
 const HistoryIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
 );
-
-// 🚀 SVG Icons ชุดจัดเรียงระดับมืออาชีพ
-const SortUpIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 19V5M5 12l7-7 7 7"/>
-  </svg>
-);
-const SortDownIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 5v14M19 12l-7 7-7-7"/>
-  </svg>
-);
-const SortDefaultIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M7 15l5 5 5-5M7 9l5-5 5 5"/>
-  </svg>
+const AppCardIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>
 );
 
 function ApplicationPortfolio({ currentUser }) {
+  const navigate = useNavigate(); 
+  
+  // 🌟 ดึงสิทธิ์ที่เกี่ยวข้องทั้งหมดมาใช้งาน
+  const { canRead, canCreate, canUpdate, canDelete } = usePermissions(currentUser, "app_portfolio");
+
   const [allData, setAllData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedApp, setSelectedApp] = useState(null);
@@ -108,12 +101,7 @@ function ApplicationPortfolio({ currentUser }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState({ status: "All", category: "All" });
   
-  const [sortBy, setSortBy] = useState("updated_at");
-  const [sortOrder, setSortOrder] = useState("desc");
   const [showFilters, setShowFilters] = useState(false);
-
-  const isManager = currentUser?.role === "manager";
-  const isCEO = currentUser?.role === "ceo";
 
   const fullPdpaItems = [
     { key: "health", label: "ข้อมูลสุขภาพ" },
@@ -148,17 +136,12 @@ function ApplicationPortfolio({ currentUser }) {
           .map((item) => {
             let parsedForm = item.form_data;
             if (typeof parsedForm === "string") {
-              try {
-                parsedForm = JSON.parse(parsedForm);
-              } catch (e) {
-                parsedForm = {};
-              }
+              try { parsedForm = JSON.parse(parsedForm); } catch (e) { parsedForm = {}; }
             }
             parsedForm = parsedForm || {};
             return {
               ...item,
               form_data: parsedForm,
-              // 🌟 โหลดโครงสร้างข้อมูลทั้งหมดมารอไว้
               app_info: parsedForm.app_info || {},
               tech: parsedForm.tech || {},
               interface: parsedForm.interface || {},
@@ -173,31 +156,66 @@ function ApplicationPortfolio({ currentUser }) {
               owner: parsedForm.tracking?.glsOwner || "SOG6",
               users: parsedForm.users || "> 50 Users",
               comments: parsedForm.comments || "",
+              category: parsedForm.app_info?.catalog || item.category || "Support Application",
             };
           });
         setAllData(appsOnly);
       }
     } catch (error) {
       console.error(error);
-      Swal.fire(
-        "ข้อผิดพลาด",
-        "ไม่สามารถโหลดข้อมูล Application Portfolio ได้",
-        "error",
-      );
+      Swal.fire("ข้อผิดพลาด", "ไม่สามารถโหลดข้อมูล Application Portfolio ได้", "error");
     } finally {
       setIsLoading(false);
     }
   };
 
+  // 🌟 ฟังก์ชัน: เปลี่ยนสถานะเป็น "ยกเลิกการใช้งาน (Retire)" (Step 1)
+  const handleRetireApp = async (app) => {
+    const result = await Swal.fire({
+      title: "ยกเลิกการใช้งาน (Retire)?",
+      text: `คุณต้องการยกเลิกการใช้งานแอปพลิเคชัน ${app.name} ใช่หรือไม่?\n(ข้อมูลจะถูกย้ายไปล่างสุดและสามารถลบถาวรได้ในภายหลัง)`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#f59e0b",
+      cancelButtonColor: "#64748b",
+      confirmButtonText: "🛑 ยืนยันการยกเลิก",
+      cancelButtonText: "กลับ"
+    });
+
+    if (result.isConfirmed) {
+      try {
+        const sessionRaw = localStorage.getItem("ba-system.auth-session");
+        const token = sessionRaw ? JSON.parse(sessionRaw).token : null;
+        
+        const updatedData = {
+          ...app,
+          status: "Retired",
+          form_data: {
+            ...app.form_data,
+            status: "Retired"
+          }
+        };
+        
+        await updateProjectInDb(app.id, updatedData, null, token);
+        setAllData(prev => prev.map(p => p.id === app.id ? updatedData : p));
+        
+        Swal.fire("สำเร็จ", "ยกเลิกการใช้งานระบบแล้ว", "success");
+      } catch(err) {
+        Swal.fire("ผิดพลาด", err.message, "error");
+      }
+    }
+  };
+
+  // 🌟 ฟังก์ชัน: ลบถาวร (Step 2)
   const handleDeleteApp = async (id) => {
     const result = await Swal.fire({
-      title: "ยืนยันการลบ?",
-      text: "ข้อมูลแอปพลิเคชันนี้จะถูกลบออกจากระบบและไม่สามารถกู้คืนได้!",
-      icon: "warning",
+      title: "ลบข้อมูลถาวร?",
+      text: "คุณกำลังลบข้อมูลที่ยกเลิกการใช้งานแล้วออกจากฐานข้อมูล\nการกระทำนี้ไม่สามารถกู้คืนได้!",
+      icon: "error",
       showCancelButton: true,
       confirmButtonColor: "#ef4444",
       cancelButtonColor: "#64748b",
-      confirmButtonText: "🗑️ ยืนยันลบ",
+      confirmButtonText: "🗑️ ยืนยันลบถาวร",
       cancelButtonText: "ยกเลิก",
     });
     if (result.isConfirmed) {
@@ -210,7 +228,7 @@ function ApplicationPortfolio({ currentUser }) {
         });
         if (!res.ok) throw new Error("ไม่สามารถลบข้อมูลได้");
         setAllData((prev) => prev.filter((p) => p.id !== id));
-        Swal.fire("ลบสำเร็จ", "ข้อมูลถูกลบออกจากระบบแล้ว", "success");
+        Swal.fire("ลบสำเร็จ", "ข้อมูลถูกลบถาวรออกจากระบบแล้ว", "success");
       } catch (err) {
         Swal.fire("เกิดข้อผิดพลาด", err.message, "error");
       }
@@ -222,6 +240,23 @@ function ApplicationPortfolio({ currentUser }) {
     setActiveTab("general");
     setIsEditing(false);
     setIsViewModalOpen(true);
+  };
+
+  const handleChangeApp = (app) => {
+    Swal.fire({
+      title: "สร้าง Change Request?",
+      text: `คุณต้องการดำเนินการเปลี่ยนแปลงข้อมูลของระบบ ${app.name} ใช่หรือไม่?`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "var(--blue)",
+      cancelButtonColor: "#64748b",
+      confirmButtonText: "ไปที่หน้าฟอร์ม",
+      cancelButtonText: "ยกเลิก",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        navigate("/RequestChange", { state: { originalAppInfo: app } });
+      }
+    });
   };
 
   const handleCloseModal = () => {
@@ -315,37 +350,24 @@ function ApplicationPortfolio({ currentUser }) {
             updated_at: new Date().toISOString(),
             form_data: {
               ...editFormData.form_data,
-              app_info: editFormData.app_info, // บันทึกข้อมูลส่วนเพิ่ม
+              app_info: editFormData.app_info, 
               tech: editFormData.tech,
-              interface: editFormData.interface, // บันทึก Interface
-              security_cia: editFormData.security_cia, // บันทึก CIA
+              interface: editFormData.interface, 
+              security_cia: editFormData.security_cia, 
               compliance: editFormData.compliance,
               support: editFormData.support,
               users: editFormData.users,
               comments: editFormData.comments,
             },
           };
-          await updateProjectInDb(
-            editFormData.id,
-            finalDataToSave,
-            null,
-            token,
-          );
-          setAllData((prev) =>
-            prev.map((item) =>
-              item.id === editFormData.id ? finalDataToSave : item,
-            ),
-          );
+          await updateProjectInDb(editFormData.id, finalDataToSave, null, token);
+          setAllData((prev) => prev.map((item) => item.id === editFormData.id ? finalDataToSave : item));
           setSelectedApp(finalDataToSave);
           setIsEditing(false);
           Swal.fire("สำเร็จ!", "บันทึกข้อมูลการแก้ไขเรียบร้อยแล้ว", "success");
         } catch (error) {
           console.error(error);
-          Swal.fire(
-            "เกิดข้อผิดพลาด",
-            "ไม่สามารถบันทึกข้อมูลได้: " + error.message,
-            "error",
-          );
+          Swal.fire("เกิดข้อผิดพลาด", "ไม่สามารถบันทึกข้อมูลได้: " + error.message, "error");
         } finally {
           setIsSaving(false);
         }
@@ -357,10 +379,16 @@ function ApplicationPortfolio({ currentUser }) {
     return app.form_data?.tracking?.appId || app.form_data?.appId || app.id;
   };
 
+  const getColorFromName = (name) => {
+    const colors = ["#3b82f6", "#f59e0b", "#10b981", "#6366f1", "#ec4899", "#8b5cf6"];
+    if (!name) return colors[0];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    return colors[Math.abs(hash) % colors.length];
+  };
+
   const uniqueCategories = useMemo(
-    () => [
-      ...new Set(allData.map((item) => item.category || "Support Application")),
-    ],
+    () => [...new Set(allData.map((item) => item.category || "Support Application"))],
     [allData],
   );
 
@@ -368,15 +396,6 @@ function ApplicationPortfolio({ currentUser }) {
     const statuses = [...new Set(allData.map(a => a.status).filter(Boolean))];
     return statuses.sort((a,b) => a.localeCompare(b, 'th'));
   }, [allData]);
-
-  const handleSort = (columnKey) => {
-    if (sortBy === columnKey) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortBy(columnKey);
-      setSortOrder('asc');
-    }
-  };
 
   const displayedApps = useMemo(() => {
     let filtered = filterRows(allData, {
@@ -386,413 +405,267 @@ function ApplicationPortfolio({ currentUser }) {
         category: filters.category !== 'All' ? filters.category : null 
       },
       searchableFields: [
-        "id",
-        "name",
-        "form_data.tracking.glsManager",
-        "form_data.assigned_to",
-        "site",
+        "id", 
+        "name", 
+        "form_data.tracking.appId", 
+        "form_data.appId", 
+        "form_data.app_info.abbreviation",
+        "owner",
+        "manager"
       ],
     });
 
-    const applySort = (data) => {
-      if (!sortBy) return data;
-      return [...data].sort((a, b) => {
-        if (sortBy === 'updated_at') {
-          const aValDate = new Date(a.updated_at || a.created_at || 0).getTime();
-          const bValDate = new Date(b.updated_at || b.created_at || 0).getTime();
-          return sortOrder === 'asc' ? aValDate - bValDate : bValDate - aValDate;
-        }
+    // 🌟 บังคับเรียงลำดับตายตัว: ใหม่ล่าสุดอยู่บนสุดเสมอ (แต่ Retired อยู่ล่างสุด)
+    return [...filtered].sort((a, b) => {
+      const aIsRetired = a.status === 'Retired' || a.status === 'Cancelled';
+      const bIsRetired = b.status === 'Retired' || b.status === 'Cancelled';
+      
+      if (aIsRetired && !bIsRetired) return 1;
+      if (!aIsRetired && bIsRetired) return -1;
 
-        let aVal = a[sortBy] || '';
-        let bVal = b[sortBy] || '';
-        if (sortBy === 'name') {
-          aVal = a.name || '';
-          bVal = b.name || '';
-        }
-        if (sortBy === 'id') {
-          aVal = getAppIdDisplay(a) || '';
-          bVal = getAppIdDisplay(b) || '';
-        }
-        
-        if (typeof aVal === 'string' && typeof bVal === 'string') {
-          const cmp = aVal.localeCompare(bVal, ['th', 'en']);
-          return sortOrder === 'asc' ? cmp : -cmp;
-        }
-        return sortOrder === 'asc' ? (aVal > bVal ? 1 : -1) : (aVal > bVal ? -1 : 1);
-      });
-    };
+      const aTime = new Date(a.updated_at || a.created_at || 0).getTime();
+      const bTime = new Date(b.updated_at || b.created_at || 0).getTime();
+      
+      return bTime - aTime; // Descending (มาใหม่/อัปเดตล่าสุดอยู่บน)
+    });
 
-    return applySort(filtered);
-  }, [allData, searchTerm, filters, sortBy, sortOrder]); 
+  }, [allData, searchTerm, filters]); // 🌟 ลบ sortBy, sortOrder ออกจาก dependencies
 
   const hasActiveFilter = filters.status !== 'All' || filters.category !== 'All';
 
-  const SortableHeader = ({ label, columnKey, align = 'left' }) => {
-    const isActive = sortBy === columnKey;
+  if (!canRead) {
     return (
-      <th 
-        onClick={() => handleSort(columnKey)}
-        style={{ 
-          padding: '20px 24px', borderBottom: '2px solid var(--border-color)', 
-          color: isActive ? 'var(--blue)' : 'var(--text-muted)', 
-          fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', 
-          textAlign: align, background: isActive ? 'rgba(2, 132, 199, 0.05)' : 'transparent', 
-          cursor: 'pointer', userSelect: 'none', transition: 'all 0.2s ease'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: align === 'center' ? 'center' : 'flex-start', gap: '6px' }}>
-          {label}
-          <span style={{ 
-            display: 'flex', alignItems: 'center', 
-            color: isActive ? 'var(--blue)' : '#cbd5e1', 
-            opacity: isActive ? 1 : 0.6, transition: 'all 0.2s ease' 
-          }}>
-            {isActive ? (sortOrder === 'asc' ? <SortUpIcon /> : <SortDownIcon />) : <SortDefaultIcon />}
-          </span>
-        </div>
-      </th>
+      <div style={{ padding: "100px 20px", textAlign: "center", color: "#ef4444", minHeight: "80vh", background: "var(--bg-color)" }}>
+        <h2>⛔ Access Denied</h2>
+        <p>คุณไม่มีสิทธิ์ในการเข้าถึงพอร์ตโฟลิโอแอปพลิเคชัน (App Portfolio)</p>
+      </div>
     );
-  };
+  }
 
   if (isLoading)
-    return (
-      <div
-        style={{
-          padding: "40px",
-          textAlign: "center",
-          color: "var(--text-muted)",
-        }}
-      >
-        กำลังดึงข้อมูล Application Portfolio...
-      </div>
-    );
+    return <div style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)" }}>กำลังดึงข้อมูล Application Portfolio...</div>;
 
   return (
-    <div className="page-wrap page-app" style={{ gap: "16px" }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "12px",
-        }}
-      >
-        <h1 className="page-heading" style={{ margin: 0 }}>
+    <div className="page-wrap page-app" style={{ gap: "20px" }}>
+      
+{/* Header & Minimalist Controls */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "16px" }}>
+        <h1 className="page-heading" style={{ margin: 0, fontSize: "1.5rem" }}>
           Application Portfolio
         </h1>
-      </div>
-      
-      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '16px', position: 'relative', zIndex: 20 }}>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-            <span style={{ position: 'absolute', left: '12px', fontSize: '0.95rem', color: '#94a3b8', zIndex: 2, pointerEvents: 'none' }}>🔍</span>
-            <input 
-              value={searchTerm} 
-              onChange={(e) => setSearchTerm(e.target.value)} 
-              placeholder="ค้นหา..." 
-              style={{ 
-                borderRadius:'20px', 
-                border:'1px solid var(--border-color)', 
-                background:'var(--card-bg)', 
-                color:'var(--text-color)', 
-                fontSize:'0.85rem', 
-                width:'130px', 
-                outline:'none', 
-                transition:'all 0.3s ease', 
-                margin: 0,
-                textIndent: '24px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
-              }} 
-              onFocus={(e) => { e.target.style.width = '200px'; e.target.style.borderColor = 'var(--blue)'; e.target.style.background = 'var(--input-bg)'; }} 
-              onBlur={(e) => { e.target.style.width = '130px'; e.target.style.borderColor = 'var(--border-color)'; e.target.style.background = 'var(--card-bg)'; }} 
-            />
+        
+        {/* 🌟 ชุด Search และ Filter ที่จัดระเบียบใหม่ให้เหมือนหน้า Project Portfolio */}
+        <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", position: "relative", zIndex: 20 }}>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            
+            {/* Search Input */}
+            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+              <span style={{ position: "absolute", left: "12px", fontSize: "0.95rem", color: "#94a3b8", zIndex: 2, pointerEvents: "none" }}>🔍</span>
+              <input 
+                value={searchTerm} 
+                onChange={(e) => setSearchTerm(e.target.value)} 
+                placeholder="ค้นหา..." 
+                style={{ borderRadius: "20px", border: "1px solid var(--border-color)", background: "var(--input-bg)", color: "var(--text-color)", fontSize: "0.85rem", width: "130px", outline: "none", transition: "all 0.3s ease", margin: 0, textIndent: "24px", padding: "6px 12px" }} 
+                onFocus={(e) => { e.target.style.width = "200px"; e.target.style.borderColor = "var(--blue)"; }} 
+                onBlur={(e) => { e.target.style.width = "130px"; e.target.style.borderColor = "var(--border-color)"; }} 
+              />
+            </div>
+
+            {/* Filter Button */}
+            <button 
+              onClick={() => setShowFilters(!showFilters)} 
+              style={{ padding: "6px 14px", borderRadius: "20px", border: showFilters || hasActiveFilter ? "1px solid var(--blue)" : "1px solid var(--border-color)", background: showFilters || hasActiveFilter ? "rgba(2, 132, 199, 0.05)" : "var(--card-bg)", color: showFilters || hasActiveFilter ? "var(--blue)" : "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", transition: "all 0.2s" }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+              Filter
+              {hasActiveFilter && <span style={{ width: "6px", height: "6px", background: "#ef4444", borderRadius: "50%", display: "inline-block" }}></span>}
+            </button>
           </div>
-          
-          <button 
-            onClick={() => setShowFilters(!showFilters)} 
-            style={{ padding:'6px 14px', borderRadius:'20px', border: showFilters || hasActiveFilter ? '1px solid var(--blue)' : '1px solid var(--border-color)', background: showFilters || hasActiveFilter ? 'rgba(2, 132, 199, 0.05)' : 'var(--card-bg)', color: showFilters || hasActiveFilter ? 'var(--blue)' : 'var(--text-muted)', fontSize:'0.85rem', fontWeight: 600, cursor:'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s', height: '100%', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
-            Filter
-            {hasActiveFilter && <span style={{ width: '6px', height: '6px', background: '#ef4444', borderRadius: '50%', display: 'inline-block' }}></span>}
-          </button>
-        </div>
 
-        {showFilters && (
-          <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '8px', background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '20px', width: '280px', boxShadow: '0 10px 30px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column', gap: '16px', zIndex: 100 }}>
-             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px', marginBottom: '4px' }}>
-                <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-color)' }}>ตั้งค่าตัวกรอง</span>
-                {hasActiveFilter && (
-                  <span onClick={()=>{setFilters({ status: "All", category: "All" });}} style={{ fontSize: '0.75rem', color: '#ef4444', cursor: 'pointer', fontWeight: 700, background: '#fef2f2', padding: '4px 8px', borderRadius: '6px' }}>ล้างทั้งหมด</span>
+          {/* Filter Dropdown */}
+          {showFilters && (
+            <div style={{ position: "absolute", top: "100%", right: 0, marginTop: "8px", background: "var(--card-bg)", border: "1px solid var(--border-color)", borderRadius: "12px", padding: "16px", width: "260px", boxShadow: "0 10px 25px rgba(0,0,0,0.1)", display: "flex", flexDirection: "column", gap: "12px", zIndex: 100 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border-color)", paddingBottom: "8px", marginBottom: "4px" }}>
+                <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-color)" }}>ตั้งค่าตัวกรอง</span>
+                {hasActiveFilter && ( 
+                  <span onClick={() => setFilters({ status: "All", category: "All" })} style={{ fontSize: "0.75rem", color: "#ef4444", cursor: "pointer", fontWeight: 600, background: "#fef2f2", padding: "2px 6px", borderRadius: "4px" }}>ล้างทั้งหมด</span> 
                 )}
-             </div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <label style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600 }}>สถานะ (Status)</label>
+                <select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })} style={{ padding: "6px 10px", borderRadius: "6px", border: "1px solid var(--border-color)", fontSize: "0.8rem", background: "var(--input-bg)", color: "var(--text-color)", margin: 0, outline: "none" }}>
+                  <option value="All">ทั้งหมด</option>
+                  {uniqueStatuses.map((status) => ( <option key={status} value={status}>{status}</option> ))}
+                </select>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <label style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600 }}>ประเภท (Category)</label>
+                <select value={filters.category} onChange={(e) => setFilters({ ...filters, category: e.target.value })} style={{ padding: "6px 10px", borderRadius: "6px", border: "1px solid var(--border-color)", fontSize: "0.8rem", background: "var(--input-bg)", color: "var(--text-color)", margin: 0, outline: "none" }}>
+                  <option value="All">ทั้งหมด</option>
+                  {uniqueCategories.map((cat) => ( <option key={cat} value={cat}>{cat}</option> ))}
+                </select>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
-             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-               <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>สถานะ (Status)</label>
-               <select value={filters.status} onChange={e=>setFilters({ ...filters, status: e.target.value })} style={{ padding:'8px 12px', borderRadius:'8px', border:'1px solid var(--border-color)', fontSize:'0.85rem', background: 'var(--input-bg)', color: 'var(--text-color)', margin: 0, outline: 'none', boxShadow: 'none' }}>
-                 <option value="All">ทั้งหมด</option>
-                 {uniqueStatuses.map(status => <option key={status} value={status}>{status}</option>)}
-               </select>
-             </div>
+      {/* Grid Layout */}
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', 
+        gap: '20px', 
+        alignItems: 'stretch' 
+      }}>
+        {displayedApps.length > 0 ? (
+          displayedApps.map((app) => {
+            const appColor = getColorFromName(app.name);
+            const isRetired = app.status === "Retired" || app.status === "Cancelled";
+            
+            // 🌟 ตั้งค่าสีป้ายสถานะสำหรับ Retired โดยเฉพาะ
+            const statusColor = isRetired ? "#64748b" : (app.status === "Inactive" || app.status === "Hold" ? "#ef4444" : "#10b981");
 
-             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-               <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>ประเภท (Category)</label>
-               <select value={filters.category} onChange={e=>setFilters({ ...filters, category: e.target.value })} style={{ padding:'8px 12px', borderRadius:'8px', border:'1px solid var(--border-color)', fontSize:'0.85rem', background: 'var(--input-bg)', color: 'var(--text-color)', margin: 0, outline: 'none', boxShadow: 'none' }}>
-                 <option value="All">ทั้งหมด</option>
-                 {uniqueCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-               </select>
-             </div>
+            return (
+              <div 
+                key={app.id} 
+                style={{
+                  background: 'var(--card-bg)',
+                  borderRadius: '16px',
+                  border: '1px solid var(--border-color)',
+                  padding: '24px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '16px',
+                  boxShadow: '0 4px 15px rgba(0,0,0,0.03)',
+                  transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                  cursor: 'default',
+                  position: 'relative',
+                  opacity: isRetired ? 0.65 : 1 // 🌟 ทำการเฟดสีการ์ดที่โดนยกเลิกแล้ว
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-4px)';
+                  e.currentTarget.style.boxShadow = '0 10px 25px rgba(0,0,0,0.08)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.03)';
+                }}
+              >
+                <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                  <div style={{ 
+                    width: '48px', height: '48px', borderRadius: '12px', flexShrink: 0,
+                    background: `${appColor}15`, color: appColor,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}>
+                    <AppCardIcon />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <h3 style={{ margin: '0 0 4px 0', fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-color)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={app.name}>
+                      {app.name}
+                    </h3>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                      ID: <span style={{ color: 'var(--blue)' }}>{getAppIdDisplay(app)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ height: '1px', background: 'var(--border-color)' }} />
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Owner:</span>
+                    <span style={{ fontWeight: 600, color: 'var(--text-color)', textAlign: 'right' }}>{app.owner || "-"}</span>
+                  </div>
+                  
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', alignItems: 'center' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Status:</span>
+                    <span style={{ color: statusColor, fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: statusColor }}></span>
+                      {isRetired ? "Retired (ยกเลิกการใช้งาน)" : (app.status || "Active")}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', alignItems: 'center' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Technology:</span>
+                    <span style={{ 
+                      background: 'var(--bg-color)', border: '1px solid var(--border-color)', 
+                      padding: '2px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-color)' 
+                    }}>
+                      {app.tech?.language || app.tech?.platform || "N/A"}
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px', marginTop: 'auto', paddingTop: '8px', flexWrap: 'wrap' }}>
+                  <button 
+                    onClick={() => handleViewDetails(app)}
+                    style={{ 
+                      flex: 1, padding: '10px', borderRadius: '10px', background: '#10b981', color: '#fff', 
+                      border: 'none', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', transition: 'filter 0.2s', minWidth: '80px'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.filter = 'brightness(1.1)'}
+                    onMouseLeave={(e) => e.currentTarget.style.filter = 'brightness(1)'}
+                  >
+                    View Details
+                  </button>
+                  
+                  {/* 🌟 ปุ่ม Change App แสดงเฉพาะคนที่มีสิทธิ์ Create */}
+                  {canCreate && !isRetired && (
+                    <button 
+                      onClick={() => handleChangeApp(app)}
+                      style={{ 
+                        flex: 1, padding: '10px', borderRadius: '10px', background: 'var(--blue)', color: '#fff', 
+                        border: 'none', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', transition: 'filter 0.2s', minWidth: '80px'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.filter = 'brightness(1.1)'}
+                      onMouseLeave={(e) => e.currentTarget.style.filter = 'brightness(1)'}
+                    >
+                      🔄 Change App
+                    </button>
+                  )}
+
+                  {/* 🌟 ปุ่ม 2 สเตป (Retire ก่อน แล้วจึงลบถาวรได้) ใช้สิทธิ์ Delete */}
+                  {canDelete && !isRetired && (
+                    <button
+                      onClick={() => handleRetireApp(app)}
+                      title="ยกเลิกการใช้งานระบบ"
+                      style={{ 
+                        padding: '10px 14px', borderRadius: '10px', background: '#fffbeb', color: '#d97706', 
+                        border: '1px solid #fde68a', fontSize: '0.9rem', cursor: 'pointer', transition: 'background 0.2s', fontWeight: 'bold' 
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#fef3c7'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = '#fffbeb'}
+                    >
+                      🛑 ยกเลิก
+                    </button>
+                  )}
+
+                  {canDelete && isRetired && (
+                    <button
+                      onClick={() => handleDeleteApp(app.id)}
+                      title="ลบข้อมูลถาวร"
+                      style={{ 
+                        padding: '10px 14px', borderRadius: '10px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', 
+                        border: '1px solid rgba(239, 68, 68, 0.2)', fontSize: '0.9rem', cursor: 'pointer', transition: 'background 0.2s', fontWeight: 'bold' 
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
+                    >
+                      🗑️ ลบถาวร
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <div style={{ gridColumn: '1 / -1', padding: '60px', textAlign: 'center', color: 'var(--text-muted)', background: 'var(--card-bg)', borderRadius: '16px', border: '1px dashed var(--border-color)' }}>
+            ไม่พบข้อมูลแอปพลิเคชันที่ตรงกับเงื่อนไข
           </div>
         )}
       </div>
 
-      <div className="table-wrap" style={{ width: '100%', overflowX: 'auto', position: 'relative', zIndex: 1, border: 'none', background: 'var(--card-bg)', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr>
-              <SortableHeader label="รหัสระบบ (App ID)" columnKey="id" />
-              <SortableHeader label="ชื่อระบบ / ไซต์ (Name / Site)" columnKey="name" />
-              <SortableHeader label="ประเภท (Category)" columnKey="category" />
-              <SortableHeader label="สถานะ (Status)" columnKey="status" />
-              <th style={{ padding: '20px 24px', borderBottom: '2px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', textAlign: 'left', background: 'transparent' }}>
-                เทคโนโลยี (Tech Summary)
-              </th>
-              <th style={{ padding: '20px 24px', borderBottom: '2px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', textAlign: 'center', background: 'transparent' }}>
-                ความปลอดภัย (Security)
-              </th>
-              <th style={{ padding: '20px 24px', borderBottom: '2px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', textAlign: 'center', background: 'transparent' }}>
-                Action
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {displayedApps.length > 0 ? (
-              displayedApps.map((app) => {
-                const hasPdpa =
-                  app.compliance?.pdpa &&
-                  Object.values(app.compliance.pdpa).some(
-                    (val) => val === true,
-                  );
-                const hasRopa =
-                  app.compliance?.ropa &&
-                  Object.values(app.compliance.ropa).some(
-                    (val) => typeof val === "string" && val.trim() !== "",
-                  );
-                const isNewSystem =
-                  app.project_type === "New System" ||
-                  app.project_type === "New";
-                return (
-                  <tr key={app.id} style={{ borderBottom: '1px solid var(--border-color)', transition: 'background-color 0.2s ease', cursor: 'default' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--table-row-hover)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
-                    <td style={{ color: "var(--blue)", fontWeight: 700, padding: '16px 24px', background: 'transparent', fontSize: '0.85rem' }}>
-                      {getAppIdDisplay(app)}
-                    </td>
-                    <td style={{ padding: '16px 24px', background: 'transparent', fontSize: '0.85rem' }}>
-                      <span
-                        onClick={() => handleViewDetails(app)}
-                        style={{
-                          color: "var(--text-color)",
-                          cursor: "pointer",
-                          fontWeight: "700",
-                          transition: "color 0.2s",
-                        }}
-                        onMouseEnter={(e) =>
-                          (e.target.style.color = "var(--blue)")
-                        }
-                        onMouseLeave={(e) =>
-                          (e.target.style.color = "var(--text-color)")
-                        }
-                      >
-                        {app.name}
-                      </span>
-                      <div
-                        style={{
-                          color: "var(--text-muted)",
-                          fontSize: "0.75rem",
-                          marginTop: "4px",
-                          fontWeight: 600,
-                        }}
-                      >
-                        SITE:{" "}
-                        <span style={{ color: "var(--blue)" }}>
-                          {app.site || "-"}
-                        </span>
-                      </div>
-                    </td>
-                    <td style={{ padding: '16px 24px', background: 'transparent', fontSize: '0.85rem' }}>
-                      <div
-                        style={{
-                          color: "var(--text-color)",
-                          fontSize: "0.85rem",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {app.category || "Support Application"}
-                      </div>
-                      <div
-                        style={{
-                          color: "var(--text-muted)",
-                          fontSize: "0.75rem",
-                          marginTop: "4px",
-                        }}
-                      >
-                        {isNewSystem ? "Inhouse (New)" : "Inhouse (Enhance)"}
-                      </div>
-                    </td>
-                    <td style={{ padding: '16px 24px', background: 'transparent' }}>
-                      <span
-                        style={{
-                          padding: "6px 14px",
-                          background: "rgba(16, 185, 129, 0.1)",
-                          color: "#10b981",
-                          border: "1px solid rgba(16, 185, 129, 0.2)",
-                          borderRadius: "20px",
-                          fontSize: "0.75rem",
-                          fontWeight: 700,
-                        }}
-                      >
-                        {app.status || "Active"}
-                      </span>
-                    </td>
-                    <td style={{ padding: '16px 24px', background: 'transparent' }}>
-                      <div
-                        style={{
-                          color: "var(--text-color)",
-                          fontSize: "0.85rem",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {app.tech?.language || "-"}
-                      </div>
-                      <div
-                        style={{
-                          color: "var(--text-muted)",
-                          fontSize: "0.75rem",
-                          marginTop: "4px",
-                        }}
-                      >
-                        {app.tech?.platform || "Web Base"}
-                      </div>
-                    </td>
-                    <td style={{ textAlign: "center", padding: '16px 24px', background: 'transparent' }}>
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: "6px",
-                          justifyContent: "center",
-                          flexWrap: "wrap",
-                        }}
-                      >
-                        {hasPdpa && (
-                          <div
-                            title="มีการจัดเก็บข้อมูล PDPA"
-                            style={{
-                              padding: "4px 10px",
-                              background: "rgba(245, 158, 11, 0.1)",
-                              color: "#f59e0b",
-                              borderRadius: "8px",
-                              fontSize: "0.7rem",
-                              fontWeight: 700,
-                              border: "1px solid rgba(245, 158, 11, 0.2)",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            🔒 PDPA
-                          </div>
-                        )}
-                        {hasRopa && (
-                          <div
-                            title="มีการบันทึก ROPA"
-                            style={{
-                              padding: "4px 10px",
-                              background: "rgba(14, 165, 233, 0.1)",
-                              color: "#0ea5e9",
-                              borderRadius: "8px",
-                              fontSize: "0.7rem",
-                              fontWeight: 700,
-                              border: "1px solid rgba(14, 165, 233, 0.2)",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            🛡️ ROPA
-                          </div>
-                        )}
-                        {!hasPdpa && !hasRopa && (
-                          <span style={{ color: "var(--text-muted)" }}>
-                            -
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td style={{ textAlign: "center", padding: '16px 24px', background: 'transparent' }}>
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: "8px",
-                          justifyContent: "center",
-                          alignItems: "center",
-                        }}
-                      >
-                        <button
-                          onClick={() => handleViewDetails(app)}
-                          className="btn btn-primary"
-                          style={{
-                            padding: "8px 16px",
-                            borderRadius: "10px",
-                            fontSize: "0.8rem",
-                            fontWeight: 600,
-                            boxShadow: "0 2px 4px rgba(14,165,233,0.2)", 
-                            transition: "transform 0.1s"
-                          }}
-                          onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'} 
-                          onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                        >
-                          🔍 View Details
-                        </button>
-                        {isManager && (
-                          <button
-                            onClick={() => handleDeleteApp(app.id)}
-                            title="ลบข้อมูลแอปพลิเคชัน"
-                            style={{
-                              padding: "8px 12px",
-                              borderRadius: "10px",
-                              fontSize: "0.8rem",
-                              background: "rgba(239, 68, 68, 0.1)",
-                              color: "#ef4444",
-                              border: "1px solid rgba(239, 68, 68, 0.2)",
-                              cursor: "pointer",
-                              fontWeight: "bold",
-                              transition: "transform 0.1s"
-                            }}
-                            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'} 
-                            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                          >
-                            🗑️
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td
-                  colSpan="7"
-                  style={{
-                    textAlign: "center",
-                    padding: "60px",
-                    color: "var(--text-muted)",
-                  }}
-                >
-                  ไม่พบข้อมูลแอปพลิเคชันที่ตรงกับเงื่อนไข
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
+      {/* Modal คงเดิม */}
       {isViewModalOpen && selectedApp && (
         <div className="pdf-preview-overlay" style={{ zIndex: 1050 }}>
           <div
@@ -893,36 +766,11 @@ function ApplicationPortfolio({ currentUser }) {
               }}
             >
               {[
-                {
-                  id: "general",
-                  label: "General & Business",
-                  icon: <GenIcon />,
-                  color: "#0072bb",
-                },
-                {
-                  id: "tech",
-                  label: "Tech & Interface",
-                  icon: <TechIcon />,
-                  color: "#8b5cf6",
-                },
-                {
-                  id: "support",
-                  label: "Support & SLA",
-                  icon: <SupportIcon />,
-                  color: "#10b981",
-                },
-                {
-                  id: "security",
-                  label: "Security & PDPA",
-                  icon: <SecurityIcon />,
-                  color: "#ef4444",
-                },
-                {
-                  id: "history",
-                  label: "History",
-                  icon: <HistoryIcon />,
-                  color: "#f59e0b",
-                },
+                { id: "general", label: "General & Business", icon: <GenIcon />, color: "#0072bb" },
+                { id: "tech", label: "Tech & Interface", icon: <TechIcon />, color: "#8b5cf6" },
+                { id: "support", label: "Support & SLA", icon: <SupportIcon />, color: "#10b981" },
+                { id: "security", label: "Security & PDPA", icon: <SecurityIcon />, color: "#ef4444" },
+                { id: "history", label: "History", icon: <HistoryIcon />, color: "#f59e0b" },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -931,8 +779,7 @@ function ApplicationPortfolio({ currentUser }) {
                     padding: "10px 2px",
                     border: "none",
                     background: "transparent",
-                    color:
-                      activeTab === tab.id ? tab.color : "var(--text-muted)",
+                    color: activeTab === tab.id ? tab.color : "var(--text-muted)",
                     fontWeight: activeTab === tab.id ? "700" : "600",
                     fontSize: "0.82rem",
                     cursor: "pointer",
@@ -942,8 +789,7 @@ function ApplicationPortfolio({ currentUser }) {
                     gap: "6px",
                     transition: "all 0.2s ease",
                     position: "relative",
-                    marginBottom:
-                      "-1px"
+                    marginBottom: "-1px"
                   }}
                 >
                   <span style={{ display: "flex", alignItems: "center" }}>
@@ -952,14 +798,7 @@ function ApplicationPortfolio({ currentUser }) {
                   {tab.label}
                   {activeTab === tab.id && (
                     <div
-                      style={{
-                        position: "absolute",
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        height: "2px",
-                        background: tab.color,
-                      }}
+                      style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "2px", background: tab.color }}
                     />
                   )}
                 </button>
@@ -978,95 +817,23 @@ function ApplicationPortfolio({ currentUser }) {
               }}
             >
               {activeTab === "general" && (
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "24px",
-                  }}
-                >
-                  <h4
-                    style={{
-                      margin: "0 0 16px 0",
-                      fontSize: "1.1rem",
-                      color: "var(--text-color)",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                    }}
-                  >
-                    <span
-                      style={{
-                        background: "#0072bb",
-                        color: "#fff",
-                        width: "28px",
-                        height: "28px",
-                        borderRadius: "8px",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: "0.9rem",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      1
-                    </span>
+                <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                  <h4 style={{ margin: "0 0 16px 0", fontSize: "1.1rem", color: "var(--text-color)", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span style={{ background: "#0072bb", color: "#fff", width: "28px", height: "28px", borderRadius: "8px", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "0.9rem", fontWeight: "bold" }}>1</span>
                     ข้อมูลทั่วไปและธุรกิจ (General & Business)
                   </h4>
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 1fr",
-                      gap: "20px",
-                    }}
-                  >
-                    <div
-                      style={{
-                        background: "var(--card-bg)",
-                        padding: "20px",
-                        borderRadius: "12px",
-                        border: "1px solid var(--border-color)",
-                        gridColumn: "1 / -1",
-                        boxShadow: "0 4px 6px rgba(0,0,0,0.02)",
-                      }}
-                    >
-                      <div
-                        style={{
-                          color: "var(--text-muted)",
-                          fontSize: "0.85rem",
-                          fontWeight: 600,
-                          marginBottom: "8px",
-                        }}
-                      >
-                        Description (รายละเอียด)
-                      </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+                    <div style={{ background: "var(--card-bg)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border-color)", gridColumn: "1 / -1", boxShadow: "0 4px 6px rgba(0,0,0,0.02)" }}>
+                      <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "8px" }}>Description (รายละเอียด)</div>
                       {isEditing ? (
                         <textarea
                           value={editFormData.description || ""}
-                          onChange={(e) =>
-                            setEditFormData({
-                              ...editFormData,
-                              description: e.target.value,
-                            })
-                          }
-                          style={{
-                            width: "100%",
-                            minHeight: "80px",
-                            padding: "12px",
-                            borderRadius: "8px",
-                            background: "var(--input-bg)",
-                            border: "1px solid var(--border-color)",
-                            color: "var(--text-color)",
-                          }}
+                          onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value }) }
+                          style={{ width: "100%", minHeight: "80px", padding: "12px", borderRadius: "8px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }}
                         />
-                      ) : (
-                        <div style={{ color: "var(--text-color)" }}>
-                          {selectedApp.description || "-"}
-                        </div>
-                      )}
+                      ) : ( <div style={{ color: "var(--text-color)" }}>{selectedApp.description || "-"}</div> )}
                     </div>
 
-                    {/* 🌟 ฟิลด์ใหม่เพิ่มเติมจาก Excel 🌟 */}
                     <div style={{ background: "var(--card-bg)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border-color)" }}>
                       <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "8px" }}>ชื่อย่อระบบ (Abbreviation)</div>
                       {isEditing ? (
@@ -1090,9 +857,7 @@ function ApplicationPortfolio({ currentUser }) {
                           onChange={(e) => setEditFormData({ ...editFormData, manager: e.target.value }) }
                           style={{ width: "100%", padding: "12px", borderRadius: "8px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }}
                         />
-                      ) : (
-                        <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.manager || "-"}</div>
-                      )}
+                      ) : ( <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.manager || "-"}</div> )}
                     </div>
 
                     <div style={{ background: "var(--card-bg)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border-color)" }}>
@@ -1104,9 +869,7 @@ function ApplicationPortfolio({ currentUser }) {
                           onChange={(e) => setEditFormData({ ...editFormData, owner: e.target.value }) }
                           style={{ width: "100%", padding: "12px", borderRadius: "8px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }}
                         />
-                      ) : (
-                        <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.owner || "-"}</div>
-                      )}
+                      ) : ( <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.owner || "-"}</div> )}
                     </div>
 
                     <div style={{ background: "var(--card-bg)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border-color)" }}>
@@ -1152,11 +915,7 @@ function ApplicationPortfolio({ currentUser }) {
                              {editFormData.app_info?.impactBusiness === "Yes" ? "Yes (กระทบ)" : "No"}
                            </span>
                          </label>
-                      ) : (
-                        <div style={{ color: selectedApp.app_info?.impactBusiness === "Yes" ? "#ef4444" : "var(--text-muted)", fontWeight: "bold" }}>
-                          {selectedApp.app_info?.impactBusiness || "No"}
-                        </div>
-                      )}
+                      ) : ( <div style={{ color: selectedApp.app_info?.impactBusiness === "Yes" ? "#ef4444" : "var(--text-muted)", fontWeight: "bold" }}>{selectedApp.app_info?.impactBusiness || "No"}</div> )}
                     </div>
 
                     <div style={{ background: "var(--card-bg)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border-color)", display: "flex", alignItems: "center", gap: "15px" }}>
@@ -1170,11 +929,7 @@ function ApplicationPortfolio({ currentUser }) {
                              {editFormData.app_info?.hasSourceCode === "Yes" ? "Yes (มี)" : "No"}
                            </span>
                          </label>
-                      ) : (
-                        <div style={{ color: selectedApp.app_info?.hasSourceCode === "Yes" ? "#10b981" : "var(--text-muted)", fontWeight: "bold" }}>
-                          {selectedApp.app_info?.hasSourceCode || "No"}
-                        </div>
-                      )}
+                      ) : ( <div style={{ color: selectedApp.app_info?.hasSourceCode === "Yes" ? "#10b981" : "var(--text-muted)", fontWeight: "bold" }}>{selectedApp.app_info?.hasSourceCode || "No"}</div> )}
                     </div>
 
                     <div style={{ background: "var(--card-bg)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border-color)" }}>
@@ -1186,9 +941,7 @@ function ApplicationPortfolio({ currentUser }) {
                           onChange={(e) => setEditFormData({ ...editFormData, users: e.target.value }) }
                           style={{ width: "100%", padding: "12px", borderRadius: "8px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }}
                         />
-                      ) : (
-                        <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.users || "-"}</div>
-                      )}
+                      ) : ( <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.users || "-"}</div> )}
                     </div>
 
                     <div style={{ background: "var(--card-bg)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border-color)" }}>
@@ -1203,57 +956,19 @@ function ApplicationPortfolio({ currentUser }) {
                           <option value="Hold">Hold</option>
                           <option value="Inactive">Inactive</option>
                         </select>
-                      ) : (
-                        <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.status || "Active"}</div>
-                      )}
+                      ) : ( <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.status || "Active"}</div> )}
                     </div>
 
                   </div>
                 </div>
               )}
               {activeTab === "tech" && (
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "24px",
-                  }}
-                >
-                  <h4
-                    style={{
-                      margin: "0",
-                      fontSize: "1.1rem",
-                      color: "var(--text-color)",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                    }}
-                  >
-                    <span
-                      style={{
-                        background: "#8b5cf6",
-                        color: "#fff",
-                        width: "28px",
-                        height: "28px",
-                        borderRadius: "8px",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: "0.9rem",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      2
-                    </span>
+                <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                  <h4 style={{ margin: "0", fontSize: "1.1rem", color: "var(--text-color)", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span style={{ background: "#8b5cf6", color: "#fff", width: "28px", height: "28px", borderRadius: "8px", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "0.9rem", fontWeight: "bold" }}>2</span>
                     โครงสร้างเทคโนโลยีและ Server (Tech & Infra Stack)
                   </h4>
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 1fr",
-                      gap: "20px",
-                    }}
-                  >
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
                     <div style={{ background: "var(--card-bg)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border-color)" }}>
                       <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "8px" }}>Programming Language</div>
                       {isEditing ? (
@@ -1282,7 +997,6 @@ function ApplicationPortfolio({ currentUser }) {
                       ) : ( <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.tech?.backupType || "-"}</div> )}
                     </div>
 
-                    {/* Server Info Group */}
                     <div style={{ gridColumn: "1 / -1", background: "rgba(139, 92, 246, 0.05)", padding: "20px", borderRadius: "12px", border: "1px solid rgba(139, 92, 246, 0.2)", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
                        <h5 style={{ gridColumn: "1 / -1", margin: "0 0 10px 0", color: "#8b5cf6" }}>🖥️ ข้อมูล Server</h5>
                        
@@ -1327,9 +1041,7 @@ function ApplicationPortfolio({ currentUser }) {
                   </div>
 
                   <h4 style={{ margin: "10px 0 0 0", fontSize: "1.1rem", color: "var(--text-color)", display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span style={{ background: "#8b5cf6", color: "#fff", width: "28px", height: "28px", borderRadius: "8px", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "0.9rem", fontWeight: "bold" }}>
-                      3
-                    </span>
+                    <span style={{ background: "#8b5cf6", color: "#fff", width: "28px", height: "28px", borderRadius: "8px", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "0.9rem", fontWeight: "bold" }}>3</span>
                     การเชื่อมต่อข้อมูล (Application Interface)
                   </h4>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
@@ -1367,44 +1079,12 @@ function ApplicationPortfolio({ currentUser }) {
                 </div>
               )}
               {activeTab === "support" && (
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "24px",
-                  }}
-                >
-                  <h4
-                    style={{
-                      margin: "0 0 16px 0",
-                      fontSize: "1.1rem",
-                      color: "var(--text-color)",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                    }}
-                  >
-                    <span
-                      style={{
-                        background: "#10b981",
-                        color: "#fff",
-                        width: "28px",
-                        height: "28px",
-                        borderRadius: "8px",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: "0.9rem",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      4
-                    </span>
+                <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                  <h4 style={{ margin: "0 0 16px 0", fontSize: "1.1rem", color: "var(--text-color)", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span style={{ background: "#10b981", color: "#fff", width: "28px", height: "28px", borderRadius: "8px", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "0.9rem", fontWeight: "bold" }}>4</span>
                     ระดับการสนับสนุนและสัญญา (Support & Contact)
                   </h4>
                   <div style={{ display: "grid", gap: "20px" }}>
-                    
-                    {/* 🌟 เพิ่ม L1 Support 🌟 */}
                     <div style={{ background: "var(--card-bg)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border-color)", boxShadow: "0 4px 6px rgba(0,0,0,0.02)" }}>
                       <div style={{ color: "var(--blue)", fontSize: "0.85rem", fontWeight: 700, marginBottom: "8px" }}>Tier 1 (L1 Support) / Helpdesk</div>
                       {isEditing ? (
@@ -1421,9 +1101,7 @@ function ApplicationPortfolio({ currentUser }) {
                           onChange={(e) => handleNestedChange("support", "l2Contact", e.target.value) }
                           style={{ width: "100%", padding: "12px", borderRadius: "8px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }}
                         />
-                      ) : (
-                        <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.support?.l2Contact || "BPK IT Support on site"}</div>
-                      )}
+                      ) : ( <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.support?.l2Contact || "BPK IT Support on site"}</div> )}
                     </div>
 
                     <div style={{ background: "var(--card-bg)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border-color)", boxShadow: "0 4px 6px rgba(0,0,0,0.02)" }}>
@@ -1435,28 +1113,16 @@ function ApplicationPortfolio({ currentUser }) {
                           onChange={(e) => handleNestedChange("support", "l3Contact", e.target.value) }
                           style={{ width: "100%", padding: "12px", borderRadius: "8px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }}
                         />
-                      ) : (
-                        <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.support?.l3Contact || "GLS-G6-Developer-Group"}</div>
-                      )}
+                      ) : ( <div style={{ color: "var(--text-color)", fontWeight: 600 }}>{selectedApp.support?.l3Contact || "GLS-G6-Developer-Group"}</div> )}
                     </div>
                   </div>
                 </div>
               )}
               {activeTab === "security" && (
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "24px",
-                  }}
-                >
-                  
-                  {/* 🌟 เพิ่มส่วน CIA Triad ก่อนขึ้น PDPA 🌟 */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
                   <div>
                     <h4 style={{ margin: "0 0 16px 0", fontSize: "1.1rem", color: "var(--text-color)", display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span style={{ background: "#ef4444", color: "#fff", width: "28px", height: "28px", borderRadius: "8px", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "0.9rem", fontWeight: "bold" }}>
-                        5
-                      </span>
+                      <span style={{ background: "#ef4444", color: "#fff", width: "28px", height: "28px", borderRadius: "8px", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "0.9rem", fontWeight: "bold" }}>5</span>
                       Security & User Access (CIA Triad)
                     </h4>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "15px" }}>
@@ -1509,42 +1175,11 @@ function ApplicationPortfolio({ currentUser }) {
                   </div>
 
                   <div>
-                    <h4
-                      style={{
-                        margin: "10px 0 16px 0",
-                        fontSize: "1.1rem",
-                        color: "var(--text-color)",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                      }}
-                    >
-                      <span
-                        style={{
-                          background: "#ef4444",
-                          color: "#fff",
-                          width: "28px",
-                          height: "28px",
-                          borderRadius: "8px",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: "0.9rem",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        6
-                      </span>
+                    <h4 style={{ margin: "10px 0 16px 0", fontSize: "1.1rem", color: "var(--text-color)", display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span style={{ background: "#ef4444", color: "#fff", width: "28px", height: "28px", borderRadius: "8px", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "0.9rem", fontWeight: "bold" }}>6</span>
                       PDPA / Critical Info: ข้อมูลส่วนบุคคลที่ระบบจัดเก็บ
                     </h4>
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns:
-                          "repeat(auto-fill, minmax(200px, 1fr))",
-                        gap: "12px",
-                      }}
-                    >
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "12px" }}>
                       {fullPdpaItems.map((item) => {
                         const isChecked = isEditing
                           ? editFormData.compliance?.pdpa?.[item.key] || false
@@ -1553,48 +1188,23 @@ function ApplicationPortfolio({ currentUser }) {
                           <label
                             key={item.key}
                             style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "10px",
-                              background: isChecked
-                                ? "rgba(34, 197, 94, 0.1)"
-                                : "var(--card-bg)",
-                              padding: "12px 16px",
-                              borderRadius: "10px",
-                              border: isChecked
-                                ? "1px solid #22c55e"
-                                : "1px solid var(--border-color)",
-                              cursor: isEditing ? "pointer" : "default",
-                              transition: "all 0.2s",
-                              boxShadow: "0 2px 4px rgba(0,0,0,0.01)",
+                              display: "flex", alignItems: "center", gap: "10px", padding: "12px 16px", borderRadius: "10px",
+                              background: isChecked ? "rgba(34, 197, 94, 0.1)" : "var(--card-bg)",
+                              border: isChecked ? "1px solid #22c55e" : "1px solid var(--border-color)",
+                              cursor: isEditing ? "pointer" : "default", transition: "all 0.2s", boxShadow: "0 2px 4px rgba(0,0,0,0.01)",
                             }}
                           >
                             {isEditing ? (
                               <input
                                 type="checkbox"
                                 checked={isChecked}
-                                onChange={(e) =>
-                                  handlePdpaChange(item.key, e.target.checked)
-                                }
-                                style={{
-                                  width: "18px",
-                                  height: "18px",
-                                  accentColor: "#22c55e",
-                                }}
+                                onChange={(e) => handlePdpaChange(item.key, e.target.checked) }
+                                style={{ width: "18px", height: "18px", accentColor: "#22c55e" }}
                               />
                             ) : (
-                              <span style={{ fontSize: "1.1rem" }}>
-                                {isChecked ? "✅" : "⚪"}
-                              </span>
+                              <span style={{ fontSize: "1.1rem" }}>{isChecked ? "✅" : "⚪"}</span>
                             )}
-                            <span
-                              style={{
-                                fontWeight: isChecked ? "600" : "normal",
-                                color: isChecked
-                                  ? "#22c55e"
-                                  : "var(--text-color)",
-                              }}
-                            >
+                            <span style={{ fontWeight: isChecked ? "600" : "normal", color: isChecked ? "#22c55e" : "var(--text-color)" }}>
                               {item.label}
                             </span>
                           </label>
@@ -1603,130 +1213,38 @@ function ApplicationPortfolio({ currentUser }) {
                     </div>
                   </div>
                   <div style={{ marginTop: "10px" }}>
-                    <h4
-                      style={{
-                        margin: "0 0 16px 0",
-                        fontSize: "1.1rem",
-                        color: "var(--text-color)",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                      }}
-                    >
-                      <span
-                        style={{
-                          background: "#ef4444",
-                          color: "#fff",
-                          width: "28px",
-                          height: "28px",
-                          borderRadius: "8px",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: "0.9rem",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        7
-                      </span>
+                    <h4 style={{ margin: "0 0 16px 0", fontSize: "1.1rem", color: "var(--text-color)", display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span style={{ background: "#ef4444", color: "#fff", width: "28px", height: "28px", borderRadius: "8px", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "0.9rem", fontWeight: "bold" }}>7</span>
                       ROPA: บันทึกกิจกรรมการประมวลผลข้อมูล
                     </h4>
                     <div style={{ display: "grid", gap: "16px" }}>
                       {[
-                        {
-                          letter: "C",
-                          key: "collect",
-                          title: "Collect (แหล่งที่เก็บรวบรวมข้อมูล)",
-                          placeholder: "ระบุแหล่งที่มา...",
-                        },
-                        {
-                          letter: "S",
-                          key: "store",
-                          title: "Store (สถานที่และระยะเวลาจัดเก็บ)",
-                          placeholder: "ระบุสถานที่เก็บ/ระยะเวลา...",
-                        },
-                        {
-                          letter: "U",
-                          key: "use",
-                          title: "Use (วัตถุประสงค์ในการใช้)",
-                          placeholder: "ระบุวัตถุประสงค์...",
-                        },
-                        {
-                          letter: "D",
-                          key: "disclose",
-                          title: "Disclose (การเปิดเผยให้บุคคลที่ 3)",
-                          placeholder: "ระบุบุคคลภายนอกที่ส่งต่อให้...",
-                        },
+                        { letter: "C", key: "collect", title: "Collect (แหล่งที่เก็บรวบรวมข้อมูล)", placeholder: "ระบุแหล่งที่มา..." },
+                        { letter: "S", key: "store", title: "Store (สถานที่และระยะเวลาจัดเก็บ)", placeholder: "ระบุสถานที่เก็บ/ระยะเวลา..." },
+                        { letter: "U", key: "use", title: "Use (วัตถุประสงค์ในการใช้)", placeholder: "ระบุวัตถุประสงค์..." },
+                        { letter: "D", key: "disclose", title: "Disclose (การเปิดเผยให้บุคคลที่ 3)", placeholder: "ระบุบุคคลภายนอกที่ส่งต่อให้..." },
                       ].map((ropa) => (
                         <div
                           key={ropa.key}
-                          style={{
-                            display: "flex",
-                            gap: "20px",
-                            background: "var(--card-bg)",
-                            padding: "20px",
-                            borderRadius: "16px",
-                            border: "1px solid var(--border-color)",
-                            boxShadow: "0 4px 6px rgba(0,0,0,0.02)",
-                          }}
+                          style={{ display: "flex", gap: "20px", background: "var(--card-bg)", padding: "20px", borderRadius: "16px", border: "1px solid var(--border-color)", boxShadow: "0 4px 6px rgba(0,0,0,0.02)" }}
                         >
-                          <div
-                            style={{
-                              width: "40px",
-                              height: "40px",
-                              background: "var(--blue)",
-                              color: "#fff",
-                              borderRadius: "10px",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              fontWeight: 800,
-                              fontSize: "1.2rem",
-                              flexShrink: 0,
-                            }}
-                          >
+                          <div style={{ width: "40px", height: "40px", background: "var(--blue)", color: "#fff", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "1.2rem", flexShrink: 0 }}>
                             {ropa.letter}
                           </div>
                           <div style={{ flex: 1 }}>
-                            <div
-                              style={{
-                                color: "var(--text-color)",
-                                fontWeight: 700,
-                                marginBottom: "8px",
-                                fontSize: "0.95rem",
-                              }}
-                            >
+                            <div style={{ color: "var(--text-color)", fontWeight: 700, marginBottom: "8px", fontSize: "0.95rem" }}>
                               {ropa.title}
                             </div>
                             {isEditing ? (
                               <textarea
                                 placeholder={ropa.placeholder}
-                                value={
-                                  editFormData.compliance?.ropa?.[ropa.key] ||
-                                  ""
-                                }
-                                onChange={(e) =>
-                                  handleRopaChange(ropa.key, e.target.value)
-                                }
-                                style={{
-                                  width: "100%",
-                                  minHeight: "60px",
-                                  padding: "12px",
-                                  borderRadius: "8px",
-                                  background: "var(--input-bg)",
-                                  border: "1px solid var(--border-color)",
-                                  color: "var(--text-color)",
-                                }}
+                                value={ editFormData.compliance?.ropa?.[ropa.key] || "" }
+                                onChange={(e) => handleRopaChange(ropa.key, e.target.value) }
+                                style={{ width: "100%", minHeight: "60px", padding: "12px", borderRadius: "8px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }}
                               />
                             ) : (
-                              <div
-                                style={{
-                                  color: "var(--text-muted)",
-                                  fontSize: "0.95rem",
-                                }}
-                              >
-                                {selectedApp.compliance?.ropa?.[ropa.key] ||
-                                  "-"}
+                              <div style={{ color: "var(--text-muted)", fontSize: "0.95rem" }}>
+                                {selectedApp.compliance?.ropa?.[ropa.key] || "-"}
                               </div>
                             )}
                           </div>
@@ -1737,84 +1255,20 @@ function ApplicationPortfolio({ currentUser }) {
                 </div>
               )}
               {activeTab === "history" && (
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "24px",
-                  }}
-                >
-                  <h4
-                    style={{
-                      margin: "0",
-                      fontSize: "1.1rem",
-                      color: "var(--text-color)",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                    }}
-                  >
-                    <span
-                      style={{
-                        background: "#f59e0b",
-                        color: "#fff",
-                        width: "28px",
-                        height: "28px",
-                        borderRadius: "8px",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: "0.9rem",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      8
-                    </span>
+                <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                  <h4 style={{ margin: "0", fontSize: "1.1rem", color: "var(--text-color)", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span style={{ background: "#f59e0b", color: "#fff", width: "28px", height: "28px", borderRadius: "8px", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "0.9rem", fontWeight: "bold" }}>8</span>
                     ประวัติและการเปลี่ยนแปลง (History)
                   </h4>
-                  <div
-                    style={{
-                      background: "var(--card-bg)",
-                      padding: "20px",
-                      borderRadius: "16px",
-                      border: "1px solid var(--border-color)",
-                      boxShadow: "0 4px 6px rgba(0,0,0,0.02)",
-                    }}
-                  >
-                    <div
-                      style={{
-                        color: "var(--text-muted)",
-                        fontSize: "0.85rem",
-                        fontWeight: 600,
-                        marginBottom: "8px",
-                      }}
-                    >
-                      Comments / บันทึกย่อล่าสุด
-                    </div>
+                  <div style={{ background: "var(--card-bg)", padding: "20px", borderRadius: "16px", border: "1px solid var(--border-color)", boxShadow: "0 4px 6px rgba(0,0,0,0.02)" }}>
+                    <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "8px" }}>Comments / บันทึกย่อล่าสุด</div>
                     {isEditing ? (
                       <textarea
                         value={editFormData.comments || ""}
-                        onChange={(e) =>
-                          setEditFormData({
-                            ...editFormData,
-                            comments: e.target.value,
-                          })
-                        }
-                        style={{
-                          width: "100%",
-                          minHeight: "80px",
-                          padding: "12px",
-                          borderRadius: "8px",
-                          background: "var(--input-bg)",
-                          border: "1px solid var(--border-color)",
-                          color: "var(--text-color)",
-                        }}
+                        onChange={(e) => setEditFormData({ ...editFormData, comments: e.target.value }) }
+                        style={{ width: "100%", minHeight: "80px", padding: "12px", borderRadius: "8px", background: "var(--input-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }}
                       />
-                    ) : (
-                      <div style={{ color: "var(--text-color)" }}>
-                        {selectedApp.comments || "-"}
-                      </div>
-                    )}
+                    ) : ( <div style={{ color: "var(--text-color)" }}>{selectedApp.comments || "-"}</div> )}
                   </div>
                 </div>
               )}
@@ -1831,17 +1285,11 @@ function ApplicationPortfolio({ currentUser }) {
               }}
             >
               <div>
-                {!isEditing && !isCEO && (
+                {!isEditing && canUpdate && (
                   <button
                     onClick={handleStartEdit}
                     className="btn btn-primary"
-                    style={{
-                      padding: "10px 20px",
-                      borderRadius: "8px",
-                      fontWeight: "600",
-                      cursor: "pointer",
-                      transition: "all 0.2s",
-                    }}
+                    style={{ padding: "10px 20px", borderRadius: "8px", fontWeight: "600", cursor: "pointer", transition: "all 0.2s" }}
                   >
                     ✏️ แก้ไขข้อมูล (Edit Mode)
                   </button>
@@ -1854,48 +1302,22 @@ function ApplicationPortfolio({ currentUser }) {
                       onClick={handleCloseModal}
                       disabled={isSaving}
                       className="btn btn-tertiary"
-                      style={{
-                        padding: "10px 24px",
-                        border: "none",
-                        background: "var(--bg-color)",
-                        borderRadius: "8px",
-                        cursor: "pointer",
-                        color: "var(--text-muted)",
-                      }}
+                      style={{ padding: "10px 24px", border: "none", background: "var(--bg-color)", borderRadius: "8px", cursor: "pointer", color: "var(--text-muted)" }}
                     >
                       ยกเลิก (Cancel)
                     </button>
                     <button
                       onClick={handleSaveEdit}
                       disabled={isSaving}
-                      style={{
-                        background: "#166534",
-                        color: "#fff",
-                        border: "none",
-                        padding: "10px 30px",
-                        borderRadius: "8px",
-                        fontWeight: "700",
-                        cursor: isSaving ? "not-allowed" : "pointer",
-                      }}
+                      style={{ background: "#166534", color: "#fff", border: "none", padding: "10px 30px", borderRadius: "8px", fontWeight: "700", cursor: isSaving ? "not-allowed" : "pointer" }}
                     >
-                      {isSaving
-                        ? "กำลังบันทึก..."
-                        : '💾 บันทึกการเปลี่ยนเเปลง (Save)'}
+                      {isSaving ? "กำลังบันทึก..." : '💾 บันทึกการเปลี่ยนเเปลง (Save)'}
                     </button>
                   </>
                 ) : (
                   <button
                     onClick={handleCloseModal}
-                    style={{
-                      background: "var(--card-bg)",
-                      color: "var(--text-muted)",
-                      border: "1px solid var(--border-color)",
-                      padding: "10px 30px",
-                      borderRadius: "8px",
-                      fontWeight: "700",
-                      cursor: "pointer",
-                      boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-                    }}
+                    style={{ background: "var(--card-bg)", color: "var(--text-muted)", border: "1px solid var(--border-color)", padding: "10px 30px", borderRadius: "8px", fontWeight: "700", cursor: "pointer", boxShadow: "0 2px 4px rgba(0,0,0,0.05)" }}
                   >
                     ปิดหน้าต่าง
                   </button>
@@ -1908,4 +1330,5 @@ function ApplicationPortfolio({ currentUser }) {
     </div>
   );
 }
+
 export default ApplicationPortfolio;
