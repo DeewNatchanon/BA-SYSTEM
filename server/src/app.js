@@ -11,6 +11,9 @@ const env = require('./config/env');
 const notFound = require('./middleware/notFound');
 const errorHandler = require('./middleware/errorHandler');
 
+// 🌟 นำเข้า Database Connection ป้องกัน Server พังเวลาดึงข้อมูล
+const pool = require('./config/db'); 
+
 const app = express();
 
 app.use(
@@ -56,9 +59,8 @@ app.get('/health', (req, res) => {
 // 1. ดึงรายชื่อ Role ทั้งหมดไปแสดงในหน้า EditRole.js
 app.get('/api/roles', async (req, res) => {
   try {
-    // หมายเหตุ: ต้องใช้ตัวแปร db หรือ pool ที่พี่ใช้เชื่อมต่อฐานข้อมูล
-    // ถ้าใน app.js พี่ import database มาชื่อว่า pool ให้เปลี่ยน db.query เป็น pool.query ครับ
-    const { rows } = await db.query('SELECT * FROM roles'); 
+    // 🌟 เปลี่ยนมาใช้ pool.query เพื่อให้เชื่อมต่อฐานข้อมูลได้ถูกต้อง
+    const { rows } = await pool.query('SELECT * FROM roles'); 
     res.json(rows);
   } catch (err) {
     console.error("Error fetching roles:", err);
@@ -81,7 +83,7 @@ app.put('/api/roles/:id', async (req, res) => {
     `;
     const permissionsJson = JSON.stringify(permissions); // แปลงเป็น JSON ก่อนลง DB
     
-    await db.query(query, [roleId, name, permissionsJson]);
+    await pool.query(query, [roleId, name, permissionsJson]);
     res.json({ message: "อัปเดตสิทธิ์สำเร็จเรียบร้อย!" });
   } catch (err) {
     console.error("Error updating role:", err);
@@ -94,8 +96,7 @@ app.put('/api/projects/:id', async (req, res) => {
   const { status, phase, form_data } = req.body;
 
   try {
-    // 🔥 จุดสำคัญ: ต้องแปลง form_data กลับเป็น String JSON ก่อนบันทึกลง Database (ถ้าคอลัมน์เป็นชนิด TEXT)
-    // หรือถ้าคอลัมน์เป็นชนิด JSONB ใน Postgres ก็สามารถโยน Object ใส่ได้เลย
+    // 🔥 จุดสำคัญ: แปลง form_data กลับเป็น String JSON ก่อนบันทึกลง Database
     const formDataJson = JSON.stringify(form_data); 
 
     const updateQuery = `
@@ -105,7 +106,7 @@ app.put('/api/projects/:id', async (req, res) => {
       RETURNING *;
     `;
     
-    const result = await db.query(updateQuery, [status, phase, formDataJson, projectId]);
+    const result = await pool.query(updateQuery, [status, phase, formDataJson, projectId]);
     res.json(result.rows[0]);
 
   } catch (error) {

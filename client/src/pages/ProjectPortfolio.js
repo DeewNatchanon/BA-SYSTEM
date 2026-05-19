@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from "react";
-// 🌟 นำเข้า updateProjectInDb เพื่อใช้เปลี่ยนสถานะ
 import { fetchProjects, updateProjectInDb } from "../api/authApi";
 import Swal from "sweetalert2";
 import { useNavigate } from "react-router-dom";
@@ -60,32 +59,29 @@ const EditIcon = () => (
 const SortUpIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M5 12l7-7 7 7" /></svg>);
 const SortDownIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M19 12l-7 7-7-7" /></svg>);
 const SortDefaultIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 15l5 5 5-5M7 9l5-5 5 5" /></svg>);
+
+// 🌟 อัปเดตรายชื่อ Phase ให้ตรงกับ ProjectWorkspace.js
 const phaseList = [
-  { id: "requirement", label: "1. Requirement", color: "#3b82f6" },
-  { id: "design", label: "2. System Design", color: "#8b5cf6" },
-  { id: "development", label: "3. Development", color: "#ec4899" },
-  { id: "sit", label: "4. SIT", color: "#f59e0b" },
-  { id: "uat", label: "5. UAT", color: "#10b981" },
-  { id: "golive", label: "6. Go-live", color: "#ef4444" },
+  { key: "Requirement", label: "1. Requirement (รับความต้องการ)", color: "#3b82f6" },
+  { key: "Preparation", label: "2. Preparation (เตรียมความพร้อม)", color: "#8b5cf6" },
+  { key: "Development", label: "3. Development (การพัฒนา)", color: "#f59e0b" },
+  { key: "UAT", label: "4. UAT (ทดสอบระบบ)", color: "#10b981" },
+  { key: "Golive", label: "5. Go-Live (ขึ้นระบบจริง)", color: "#ef4444" },
 ];
 
 function ProjectPortfolio({ currentUser }) {
   const navigate = useNavigate();
-  
   const { canRead, canUpdate, canDelete } = usePermissions(currentUser, "project_portfolio");
 
   const [projects, setProjects] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
   const [filterPhase, setFilterPhase] = useState("All");
-
   const [sortBy, setSortBy] = useState("updated_at");
   const [sortOrder, setSortOrder] = useState("desc");
   const [showFilters, setShowFilters] = useState(false);
-
   const [isLoading, setIsLoading] = useState(true);
   const [selectedProject, setSelectedProject] = useState(null);
-  
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("overview"); 
 
@@ -102,7 +98,12 @@ function ProjectPortfolio({ currentUser }) {
           .map((p) => {
             let parsedForm = p.form_data;
             if (typeof parsedForm === "string") { try { parsedForm = JSON.parse(parsedForm); } catch (e) { parsedForm = {}; } }
-            return { ...p, form_data: parsedForm || {} };
+            
+            // 🌟 เตรียมข้อมูล Timeline ให้พร้อมใช้งาน
+            let parsedTimeline = p.timeline;
+            if (typeof parsedTimeline === "string") { try { parsedTimeline = JSON.parse(parsedTimeline); } catch (e) { parsedTimeline = {}; } }
+
+            return { ...p, form_data: parsedForm || {}, timeline: parsedTimeline || {} };
           });
         setProjects(safeData);
       }
@@ -112,7 +113,6 @@ function ProjectPortfolio({ currentUser }) {
     } finally { setIsLoading(false); }
   };
 
-  // 🌟 ฟังก์ชัน: เปลี่ยนสถานะเป็น "ยกเลิกโครงการ" (Step 1)
   const handleCancelProject = async (project) => {
     const result = await Swal.fire({
       title: "ยกเลิกโครงการ?",
@@ -141,7 +141,6 @@ function ProjectPortfolio({ currentUser }) {
         
         await updateProjectInDb(project.id, updatedProject, null, token);
         setProjects(prev => prev.map(p => p.id === project.id ? updatedProject : p));
-        
         Swal.fire("สำเร็จ", "ยกเลิกโครงการเรียบร้อยแล้ว", "success");
       } catch(err) {
         Swal.fire("ผิดพลาด", err.message, "error");
@@ -149,7 +148,6 @@ function ProjectPortfolio({ currentUser }) {
     }
   };
 
-  // 🌟 ฟังก์ชัน: ลบถาวร (Step 2)
   const handleDeleteProject = async (id) => {
     const result = await Swal.fire({ 
       title: "ลบข้อมูลถาวร?", 
@@ -193,6 +191,15 @@ function ProjectPortfolio({ currentUser }) {
     const year = d.getFullYear();
     return `${day}/${month}/${year}`;
   };
+
+  // 🌟 ฟังก์ชัน Format วันที่สำหรับ Gantt Chart
+  const formatDayMonth = (dateString) => {
+    if (!dateString) return "";
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return "";
+    const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+    return `${d.getDate()} ${months[d.getMonth()]}`;
+  };
   
   const getProgressColor = (percent) => {
     if (percent < 30) return "#dc3545";
@@ -209,12 +216,15 @@ function ProjectPortfolio({ currentUser }) {
   };
 
   const displayedProjects = useMemo(() => {
-    let filtered = filterRows(projects, { searchQuery: searchQuery, filters: { status: filterStatus !== "All" ? filterStatus : null, phase: filterPhase !== "All" ? filterPhase : null }, searchableFields: ["id", "form_data.requestId", "name", "form_data.tracking.glsManager", "form_data.assigned_to", "assignee"], });
+    let filtered = filterRows(projects, { 
+      searchQuery: searchQuery, 
+      filters: { status: filterStatus !== "All" ? filterStatus : null, phase: filterPhase !== "All" ? filterPhase : null }, 
+      searchableFields: ["id", "form_data.requestId", "name", "form_data.assignees"] 
+    });
+    
     const applySort = (data) => {
       if (!sortBy) return data;
       return [...data].sort((a, b) => {
-        
-        // 🌟 ดันโปรเจกต์ที่ยกเลิกแล้ว (Cancelled/Retired) ไปล่างสุดเสมอ
         const aIsCancelled = a.status === 'Cancelled' || a.status === 'Retired';
         const bIsCancelled = b.status === 'Cancelled' || b.status === 'Retired';
         if (aIsCancelled && !bIsCancelled) return 1;
@@ -224,7 +234,10 @@ function ProjectPortfolio({ currentUser }) {
         switch (sortBy) {
           case "id": aVal = a.form_data?.requestId || a.id || ""; bVal = b.form_data?.requestId || b.id || ""; break;
           case "name": aVal = a.name || ""; bVal = b.name || ""; break;
-          case "assignee": aVal = a.form_data?.tracking?.glsManager || a.form_data?.assigned_to || a.assignee || ""; bVal = b.form_data?.tracking?.glsManager || b.form_data?.assigned_to || b.assignee || ""; break;
+          case "assignee": 
+            aVal = Array.isArray(a.form_data?.assignees) ? a.form_data.assignees.join(", ") : (a.form_data?.assignees || ""); 
+            bVal = Array.isArray(b.form_data?.assignees) ? b.form_data.assignees.join(", ") : (b.form_data?.assignees || ""); 
+            break;
           case "status": aVal = a.status || ""; bVal = b.status || ""; break;
           case "phase": aVal = a.phase || ""; bVal = b.phase || ""; break;
           case "progress": aVal = a.form_data?.tracking?.completionPercent || 0; bVal = b.form_data?.tracking?.completionPercent || 0; return sortOrder === "asc" ? aVal - bVal : bVal - aVal;
@@ -252,6 +265,154 @@ function ProjectPortfolio({ currentUser }) {
           {label} <span style={{ display: "flex", alignItems: "center", color: isActive ? "var(--blue)" : "#cbd5e1", opacity: isActive ? 1 : 0.6, transition: "all 0.2s ease" }}>{isActive ? (sortOrder === "asc" ? <SortUpIcon /> : <SortDownIcon />) : <SortDefaultIcon />}</span>
         </div>
       </th>
+    );
+  };
+
+  // 🌟 ฟังก์ชันคำนวณตำแหน่งและวาด Gantt Chart ในหน้า Modal
+  const calculateGanttPosition = (start, end, projectStart, projectEnd) => {
+    if (!start || !end || !projectStart || !projectEnd) return { left: '0%', width: '0%' };
+    const tStart = new Date(projectStart).getTime(); const tEnd = new Date(projectEnd).getTime();
+    const pStart = new Date(start).getTime(); const pEnd = new Date(end).getTime();
+    const totalDuration = tEnd - tStart;
+    if (totalDuration <= 0) return { left: '0%', width: '100%' };
+    let leftPercent = ((pStart - tStart) / totalDuration) * 100;
+    let widthPercent = ((pEnd - pStart) / totalDuration) * 100;
+    if (leftPercent < 0) leftPercent = 0; if (leftPercent > 100) leftPercent = 100;
+    if (leftPercent + widthPercent > 100) widthPercent = 100 - leftPercent;
+    return { left: `${leftPercent}%`, width: `${widthPercent}%` };
+  };
+
+  const getTimelineMarkers = (start, end) => {
+    const markers = [];
+    if (!start || !end) return markers;
+    const totalMs = end.getTime() - start.getTime();
+    const totalDays = totalMs / (1000 * 60 * 60 * 24);
+    let step = 1;
+    if (totalDays > 120) step = 15;
+    else if (totalDays > 60) step = 7;
+    else if (totalDays > 30) step = 5;
+    else if (totalDays > 14) step = 3;
+    let curr = new Date(start);
+    while (curr <= end) {
+      const left = ((curr.getTime() - start.getTime()) / totalMs) * 100;
+      markers.push({ label: `${curr.getDate()} ${curr.toLocaleDateString('th-TH', { month: 'short' })}`, left: `${left}%` });
+      curr.setDate(curr.getDate() + step);
+    }
+    return markers;
+  };
+
+  const renderGanttChart = () => {
+    if (!selectedProject) return null;
+    
+    let pStartStr = selectedProject.form_data?.compliance?.baStartDate;
+    let pEndStr = selectedProject.form_data?.compliance?.baEndDate;
+    
+    if (!pStartStr || !pEndStr) {
+      let earliest = new Date();
+      let latest = new Date(); latest.setMonth(latest.getMonth() + 3);
+      if (selectedProject.timeline && Object.keys(selectedProject.timeline).length > 0) {
+         const starts = Object.values(selectedProject.timeline).map(p => p.startDate || p.planStart).filter(Boolean).map(d => new Date(d));
+         const ends = Object.values(selectedProject.timeline).map(p => p.endDate || p.planEnd).filter(Boolean).map(d => new Date(d));
+         if (starts.length > 0) earliest = new Date(Math.min(...starts));
+         if (ends.length > 0) latest = new Date(Math.max(...ends));
+      }
+      pStartStr = earliest.toISOString().split('T')[0];
+      pEndStr = latest.toISOString().split('T')[0];
+    }
+    
+    const gStart = new Date(pStartStr);
+    const gEnd = new Date(pEndStr);
+    const durationDays = (gEnd.getTime() - gStart.getTime()) / (1000 * 60 * 60 * 24);
+    const bufferDays = Math.max(14, Math.floor(durationDays * 0.15));
+    const chartStart = new Date(gStart); chartStart.setDate(chartStart.getDate() - 2);
+    const chartEnd = new Date(gEnd); chartEnd.setDate(chartEnd.getDate() + bufferDays);
+
+    const totalMs = chartEnd.getTime() - chartStart.getTime() || 1;
+    const today = new Date();
+    let todayLeft = ((today.getTime() - chartStart.getTime()) / totalMs) * 100;
+    const showToday = todayLeft >= 0 && todayLeft <= 100;
+    const timeMarkers = getTimelineMarkers(chartStart, chartEnd);
+
+    return (
+      <div style={{ background: "var(--card-bg)", borderRadius: "10px", border: "1px solid var(--border-color)", overflow: "hidden", marginBottom: "24px", fontFamily: "sans-serif", boxShadow: "0 4px 6px rgba(0,0,0,0.02)" }}>
+        <div style={{ display: "flex", background: "#3b82f6", color: "#fff", alignItems: "center" }}>
+          <div style={{ width: "240px", padding: "16px 20px", fontWeight: "800", borderRight: "1px solid rgba(255,255,255,0.2)", display: "flex", alignItems: "center", fontSize: "1.05rem", letterSpacing: "1px" }}>
+            AGILE PROJECT PLAN
+          </div>
+          <div style={{ flex: 1, position: "relative", display: "flex", alignItems: "center", padding: "0 20px" }}>
+             <div style={{ display: "flex", justifyContent: "space-between", width: "100%", color: "rgba(255,255,255,0.9)", fontSize: "0.85rem", fontWeight: "700", textTransform: "uppercase" }}>
+               <span>เริ่มโครงการ: {formatDateTH(gStart)}</span>
+               <span>Timeline Overview</span>
+               <span>กำหนดเสร็จ: {formatDateTH(gEnd)}</span>
+             </div>
+          </div>
+        </div>
+        <div style={{ display: "flex", borderBottom: "1px solid var(--border-color)", background: "var(--table-header-bg)", position: "relative", height: "32px", overflow: "hidden" }}>
+           <div style={{ width: "240px", borderRight: "1px solid var(--border-color)", flexShrink: 0 }}></div>
+           <div style={{ flex: 1, position: "relative" }}>
+             {timeMarkers.map((m, i) => (
+                <div key={i} style={{ position: "absolute", left: m.left, top: 0, bottom: 0, borderLeft: "1px solid rgba(0,0,0,0.1)", paddingLeft: "4px", display: "flex", alignItems: "center", fontSize: "0.7rem", fontWeight: "bold", color: "var(--text-muted)" }}>
+                  {m.label}
+                </div>
+             ))}
+           </div>
+        </div>
+        <div style={{ position: "relative", minHeight: "150px" }}>
+           <div style={{ position: "absolute", top: 0, bottom: 0, left: "240px", width: "calc(100% - 240px)", pointerEvents: "none" }}>
+              {timeMarkers.map((m, i) => (
+                 <div key={i} style={{ position: "absolute", left: m.left, top: 0, bottom: 0, borderLeft: "1px dashed rgba(0,0,0,0.08)" }} />
+              ))}
+              {showToday && (
+                <div style={{ position: "absolute", left: `${todayLeft}%`, top: 0, bottom: 0, borderLeft: "2px solid #0ea5e9", zIndex: 10 }}>
+                   <div style={{ position: "absolute", top: "0", left: "-24px", background: "#0ea5e9", color: "#fff", fontSize: "0.6rem", padding: "3px 6px", borderRadius: "0 0 4px 4px", fontWeight: "bold", boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}>TODAY</div>
+                </div>
+              )}
+           </div>
+
+           {phaseList.map((p, i) => {
+             const data = selectedProject.timeline?.[p.key] || selectedProject.form_data?.timeline?.[p.key] || selectedProject.form_data?.tracking?.phases?.[p.key.toLowerCase()];
+             let planBar = null; let actualBar = null;
+
+             if (data?.startDate || data?.planStart) {
+               const pStart = new Date(data.startDate || data.planStart); const pEnd = new Date(data.endDate || data.planEnd || data.startDate || data.planStart);
+               const pos = calculateGanttPosition(pStart, pEnd, chartStart, chartEnd);
+               planBar = (
+                 <div style={{ position: "absolute", left: pos.left, width: pos.width, top: "8px", height: "16px", background: "#e2e8f0", borderRadius: "4px", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b", fontSize: "0.65rem", fontWeight: "bold", overflow: "hidden", whiteSpace: "nowrap", boxShadow: "inset 0 0 0 1px #cbd5e1" }} title={`แผน: ${formatDateTH(pStart)} - ${formatDateTH(pEnd)}`}>
+                   {parseFloat(pos.width) > 8 ? `แผน: ${formatDayMonth(pStart)} - ${formatDayMonth(pEnd)}` : ""}
+                 </div>
+               );
+             }
+
+             if (data?.actualStart) {
+               const aStart = new Date(data.actualStart);
+               const aEnd = data.actualEnd ? new Date(data.actualEnd) : new Date(); 
+               const pos = calculateGanttPosition(aStart, aEnd, chartStart, chartEnd);
+               const isDone = data.status === 'Completed'; const isActive = data.status === 'In Progress';
+               let barColor = p.color; let labelSuffix = "";
+               
+               if (isDone && (data.endDate || data.planEnd)) {
+                   const planEnd = new Date(data.endDate || data.planEnd).setHours(0,0,0,0); const actualEnd = new Date(data.actualEnd).setHours(0,0,0,0);
+                   if (actualEnd > planEnd) { barColor = "#ef4444"; labelSuffix = " (ล่าช้า)"; } else { barColor = "#10b981"; }
+               } else if (isActive) { barColor = "#3b82f6"; }
+
+               actualBar = (
+                 <div style={{ position: "absolute", left: pos.left, width: pos.width, top: "28px", height: "16px", background: barColor, borderRadius: "4px", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: "0.65rem", fontWeight: "bold", overflow: "hidden", whiteSpace: "nowrap", boxShadow: "0 2px 4px rgba(0,0,0,0.1)", minWidth: "4px" }} title={`จริง: ${formatDateTH(aStart)} - ${data.actualEnd ? formatDateTH(aEnd) : 'ปัจจุบัน'}${labelSuffix}`}>
+                   {parseFloat(pos.width) > 8 ? `จริง: ${formatDayMonth(aStart)} - ${data.actualEnd ? formatDayMonth(aEnd) : 'ปัจจุบัน'}${labelSuffix}` : ""}
+                 </div>
+               );
+             }
+
+             return (
+               <div key={p.key} style={{ display: "flex", borderBottom: i === phaseList.length - 1 ? "none" : "1px solid var(--border-color)", background: i % 2 === 0 ? "var(--card-bg)" : "var(--bg-color)", position: "relative", zIndex: 5 }}>
+                 <div style={{ width: "240px", padding: "16px 20px", fontSize: "0.85rem", fontWeight: "700", color: "var(--text-color)", borderRight: "1px solid var(--border-color)", display: "flex", alignItems: "center" }}>{p.label.replace(/^\d+\.\s*/, '')}</div>
+                 <div style={{ flex: 1, position: "relative", padding: "0" }}>
+                   <div style={{ position: "relative", height: "52px" }}>{planBar} {actualBar}</div>
+                 </div>
+               </div>
+             );
+           })}
+        </div>
+      </div>
     );
   };
 
@@ -357,11 +518,14 @@ function ProjectPortfolio({ currentUser }) {
                     <span onClick={() => handleViewProject(p)} style={{ color: isCancelled ? "var(--text-muted)" : "var(--blue)", cursor: "pointer", fontWeight: "700" }}>{p.name}</span>
                   </td>
                   <td style={{ padding: "16px 14px", background: "transparent", fontSize: "0.85rem" }}>
-                    <span style={{ color: isCancelled ? "var(--text-muted)" : "#d32f2f", fontWeight: "700" }}>{p.form_data?.tracking?.glsManager || p.form_data?.assigned_to || p.assignee || "-"}</span>
+                    <span style={{ color: isCancelled ? "var(--text-muted)" : "#d32f2f", fontWeight: "700" }}>
+                      {Array.isArray(p.form_data?.assignees) && p.form_data.assignees.length > 0 
+                        ? p.form_data.assignees.join(", ") 
+                        : p.form_data?.assignees || "-"}
+                    </span>
                   </td>
                   <td style={{ padding: "16px 14px", background: "transparent", fontSize: "0.85rem" }}>
                     <div style={{ display: "flex", flexDirection: "column", gap: "8px", alignItems: "flex-start" }}>
-                      {/* 🌟 แสดงป้ายสถานะ ยกเลิกแล้ว สีเทาให้ชัดเจน */}
                       <span 
                         className={`status-badge ${p.status?.toLowerCase()}`}
                         style={isCancelled ? { background: '#f8fafc', color: '#64748b', border: '1px solid #cbd5e1' } : {}}
@@ -394,7 +558,6 @@ function ProjectPortfolio({ currentUser }) {
                           </button>
                         )}
                         
-                        {/* 🌟 ปุ่มลบแยกเป็น 2 จังหวะ: ยกเลิก -> ลบถาวร */}
                         {canDelete && !isCancelled && ( 
                           <button 
                             onClick={() => handleCancelProject(p)} 
@@ -424,7 +587,7 @@ function ProjectPortfolio({ currentUser }) {
         </table>
       </div>
 
-      {/* VIEW MODAL คงเดิม */}
+      {/* VIEW MODAL - ข้อมูลดูอย่างเดียว */}
       {isViewModalOpen && selectedProject && (
         <div className="pdf-preview-overlay" style={{ zIndex: 1050 }}>
           <div className="pdf-preview-card project-modal-card" style={{ width: "95%", maxWidth: "1040px", height: "90vh", display: "flex", flexDirection: "column", background: "var(--card-bg)", borderRadius: "16px", overflow: "hidden" }}>
@@ -510,8 +673,13 @@ function ProjectPortfolio({ currentUser }) {
                 </div>
               )}
               
+              {/* 🌟 แสดง Timeline ดึงข้อมูลมาจาก ManagerDashboard และ ProjectWorkspace */}
               {activeTab === "timeline" && (
                 <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                  
+                  {/* 🌟 แสดง Gantt Chart ของหน้า Workspace ในหน้านี้ */}
+                  {renderGanttChart()}
+
                   <div style={{ background: "var(--card-bg)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border-color)", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                       <h4 style={{ margin: 0, color: "var(--blue)" }}>กรอบเวลาตามที่ผู้จัดการอนุมัติ (Manager's Timeline)</h4>
@@ -526,18 +694,19 @@ function ProjectPortfolio({ currentUser }) {
                   </div>
 
                   <div style={{ background: "var(--card-bg)", padding: "20px", borderRadius: "12px", border: "1px solid var(--border-color)", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }}>
-                    
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "30px", position: "relative", padding: "0 20px" }}>
                        <div style={{ position: "absolute", top: "15px", left: "40px", right: "40px", height: "3px", background: "var(--border-color)", zIndex: 0 }} />
                        {phaseList.map((p, i) => {
-                          const s = selectedProject.form_data?.tracking?.phases?.[p.id]?.status;
-                          const color = s === "completed" ? "#10b981" : s === "in_progress" ? "#3b82f6" : "#cbd5e1";
+                          const pData = selectedProject.timeline?.[p.key] || selectedProject.form_data?.timeline?.[p.key] || selectedProject.form_data?.tracking?.phases?.[p.key.toLowerCase()];
+                          const s = pData?.status;
+                          
+                          const color = s === "Completed" ? "#10b981" : s === "In Progress" ? "#3b82f6" : "#cbd5e1";
                           return (
-                            <div key={p.id} style={{ zIndex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", width: "80px" }}>
+                            <div key={p.key} style={{ zIndex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", width: "80px" }}>
                                <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: color, border: `4px solid var(--card-bg)`, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: "bold", fontSize: "0.8rem", boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}>
-                                 {s === "completed" ? "✓" : i + 1}
+                                 {s === "Completed" ? "✓" : i + 1}
                                </div>
-                               <span style={{ fontSize: "0.7rem", color: s !== "pending" ? "var(--text-color)" : "var(--text-muted)", fontWeight: "bold", textAlign: "center", whiteSpace: "nowrap" }}>{p.label.split(". ")[1]}</span>
+                               <span style={{ fontSize: "0.7rem", color: s ? "var(--text-color)" : "var(--text-muted)", fontWeight: "bold", textAlign: "center", whiteSpace: "nowrap" }}>{p.label.split(". ")[1]}</span>
                             </div>
                           )
                        })}
@@ -546,20 +715,21 @@ function ProjectPortfolio({ currentUser }) {
                     <h4 style={{ margin: "0 0 15px 0", color: "#d97706" }}>📋 สถานะแต่ละขั้นตอน (Phase Status)</h4>
                     <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
                        {phaseList.map((phase) => {
-                          const pData = selectedProject.form_data?.tracking?.phases?.[phase.id];
-                          if (!pData) return null;
+                          const pData = selectedProject.timeline?.[phase.key] || selectedProject.form_data?.timeline?.[phase.key] || selectedProject.form_data?.tracking?.phases?.[phase.key.toLowerCase()];
+                          if (!pData || (!pData.startDate && !pData.status && !pData.planStart)) return null;
+
                           return (
-                            <div key={phase.id} style={{ display: "grid", gridTemplateColumns: "200px 1fr 1fr", gap: "15px", alignItems: "center", padding: "12px", background: "var(--bg-color)", borderRadius: "8px", border: "1px solid var(--border-color)" }}>
-                               <strong style={{ color: pData.status === 'completed' ? "#10b981" : "var(--text-color)" }}>{phase.label}</strong>
+                            <div key={phase.key} style={{ display: "grid", gridTemplateColumns: "200px 1fr 1fr", gap: "15px", alignItems: "center", padding: "12px", background: "var(--bg-color)", borderRadius: "8px", border: "1px solid var(--border-color)" }}>
+                               <strong style={{ color: pData.status === 'Completed' ? "#10b981" : "var(--text-color)" }}>{phase.label}</strong>
                                <div style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
-                                  แผน (Plan): {formatDateTH(pData.planStart)} - {formatDateTH(pData.planEnd)}
+                                  แผน (Plan): {formatDateTH(pData.startDate || pData.planStart)} - {formatDateTH(pData.endDate || pData.planEnd)}
                                </div>
                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                   <span style={{ fontSize: "0.85rem", color: "var(--text-color)" }}>
                                      จริง (Actual): {formatDateTH(pData.actualStart)} - {formatDateTH(pData.actualEnd)}
                                   </span>
-                                  <span style={{ padding: "4px 10px", borderRadius: "20px", fontSize: "0.75rem", fontWeight: "bold", background: pData.status === 'completed' ? "rgba(16, 185, 129, 0.1)" : pData.status === 'in_progress' ? "rgba(59, 130, 246, 0.1)" : "rgba(100, 116, 139, 0.1)", color: pData.status === 'completed' ? "#10b981" : pData.status === 'in_progress' ? "#3b82f6" : "#64748b" }}>
-                                     {pData.status === 'completed' ? 'เสร็จสิ้น' : pData.status === 'in_progress' ? 'กำลังทำ' : 'รอดำเนินการ'}
+                                  <span style={{ padding: "4px 10px", borderRadius: "20px", fontSize: "0.75rem", fontWeight: "bold", background: pData.status === 'Completed' ? "rgba(16, 185, 129, 0.1)" : pData.status === 'In Progress' ? "rgba(59, 130, 246, 0.1)" : "rgba(100, 116, 139, 0.1)", color: pData.status === 'Completed' ? "#10b981" : pData.status === 'In Progress' ? "#3b82f6" : "#64748b" }}>
+                                     {pData.status === 'Completed' ? 'เสร็จสิ้น' : pData.status === 'In Progress' ? 'กำลังทำ' : 'รอดำเนินการ'}
                                   </span>
                                </div>
                             </div>

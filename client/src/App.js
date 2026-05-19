@@ -17,7 +17,6 @@ import {
   loginWithPassword,
   saveAuthSession,
   fetchProjects,
-  fetchPendingRequests
 } from "./api/authApi";
 import "./index.css";
 import ManagerDashboard from "./pages/ManagerDashboard";
@@ -55,7 +54,6 @@ const BellIcon = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
 );
 
-// 🌟 สร้างฟังก์ชันเช็คสิทธิ์ (Permissions) ไว้ใช้ทั่ว App แทนการเช็ค Role ชื่อตรงๆ 🌟
 // 🌟 สร้างฟังก์ชันเช็คสิทธิ์ (Permissions) ไว้ใช้ทั่ว App แทนการเช็ค Role ชื่อตรงๆ 🌟
 const checkPerm = (user, moduleName) => {
   let perms = user?.permissions || {};
@@ -121,16 +119,20 @@ function App() {
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const currentUser = session?.user || null;
-  const roleLabel = useMemo(
-    () =>
-      currentUser?.role === "manager"
-        ? "🏅 Manager"
-        : currentUser?.role === "ceo"
-          ? "👑 Executive"
-          : "👤 Employee",
-    [currentUser],
-  );
-
+  const roleLabel = useMemo(() => {
+  const role = currentUser?.role;
+  if (!role) return "👤 Unknown";
+  // Emoji map สำหรับ Role พิเศษ — Role ใหม่จาก EditRole จะแสดงชื่อตรงๆ อัตโนมัติ
+  const emojiMap = {
+    manager:  "🏅",
+    ceo:      "👑",
+    employee: "👤",
+  };
+  const emoji = emojiMap[role] ?? "👤";
+  const label = role.charAt(0).toUpperCase() + role.slice(1);
+  return `${emoji} ${label}`;
+  }, [currentUser]);
+  
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem("ba-system-theme", theme);
@@ -178,46 +180,73 @@ function App() {
     bootstrapSession();
   }, [session?.token]);
 
+  // 🌟 ฟังก์ชันแจ้งเตือนฉบับอัปเกรด (รวมข้อมูลจาก ManagerDashboard)
   useEffect(() => {
     const loadNotifs = async () => {
       if (!currentUser || !session?.token) return;
       try {
         let newNotifs = [];
         
-        // 🌟 เปลี่ยนมาเช็คสิทธิ์แทนการเช็ค string role 🌟
-        if (checkPerm(currentUser, "manager_dashboard")) {
-          const pending = await fetchPendingRequests(session.token);
-          if (pending?.length > 0) {
-            pending.forEach((req) =>
-              newNotifs.push({
-                id: `pending-${req.id}`,
-                title: "🔔 รอการอนุมัติ",
-                text: `โปรเจกต์ ${req.name} (${req.id}) รอให้คุณตรวจสอบ`,
-                time: formatNotificationTime(req.created_at),
-                rawDate: new Date(req.created_at.endsWith("Z") ? req.created_at : `${req.created_at}Z`),
-                read: false,
-                linkPath: "/manager-dashboard",
-              }),
-            );
+        // ดึง Project ทั้งหมดมาคัดกรองเองเพื่อความแม่นยำ 100%
+        const allProjectsRaw = await fetchProjects(session.token);
+        const allProjects = allProjectsRaw.map(p => {
+          let parsedForm = p.form_data;
+          if (typeof parsedForm === 'string') {
+            try { parsedForm = JSON.parse(parsedForm); } catch(e) { parsedForm = {}; }
           }
+          return { ...p, form_data: parsedForm || {} };
+        });
+
+        // 🌟 สำหรับ Manager ให้แจ้งเตือนโปรเจกต์ใหม่ และ คำขอเปลี่ยนเฟส 🌟
+        if (checkPerm(currentUser, "manager_dashboard")) {
+          // 1. แจ้งเตือนโปรเจกต์ใหม่ (Pending Approval)
+          const pendingNew = allProjects.filter(p => p.status === "Pending Approval");
+          pendingNew.forEach(req => {
+            newNotifs.push({
+              id: `pending-new-${req.id}`,
+              title: "🔔 รอการอนุมัติ (เปิดโครงการ)",
+              text: `โปรเจกต์ ${req.name} รอให้คุณตรวจสอบและจ่ายงาน`,
+              time: formatNotificationTime(req.created_at),
+              rawDate: new Date(req.created_at.endsWith("Z") ? req.created_at : `${req.created_at}Z`),
+              read: false,
+              linkPath: "/manager-dashboard",
+            });
+          });
+
+          // 2. แจ้งเตือนขออนุมัติจบเฟส (isPendingApproval === true)
+          const pendingPhase = allProjects.filter(p => p.status !== "Pending Approval" && p.form_data?.tracking?.isPendingApproval === true);
+          pendingPhase.forEach(req => {
+            const phaseName = req.form_data?.tracking?.pendingPhase || "ขั้นตอนย่อย";
+            newNotifs.push({
+              id: `pending-phase-${req.id}-${req.updated_at || req.created_at}`,
+              title: "🔄 รออนุมัติ (ปิดเฟสงาน)",
+              text: `โปรเจกต์ ${req.name} ขออนุมัติปิดด่าน ${phaseName}`,
+              time: formatNotificationTime(req.updated_at || req.created_at),
+              rawDate: new Date((req.updated_at || req.created_at).endsWith("Z") ? (req.updated_at || req.created_at) : `${(req.updated_at || req.created_at)}Z`),
+              read: false,
+              linkPath: "/manager-dashboard",
+            });
+          });
         }
         
-        const allProjects = await fetchProjects(session.token);
+        // 🌟 การแจ้งเตือนอัปเดตทั่วไป (สำหรับทุกคนที่เกี่ยวข้องกับโปรเจกต์)
         if (allProjects?.length > 0) {
           allProjects
             .filter((p) => p.updated_at && p.status !== "Pending Approval")
             .forEach((p) => {
-              // 🌟 เปลี่ยนมาเช็คสิทธิ์ 🌟
               if (
                 checkPerm(currentUser, "manager_dashboard") ||
                 p.form_data?.assigned_to === currentUser.username ||
                 p.requester_name === currentUser.username
               ) {
+                // ซ่อนแจ้งเตือนอัปเดตทั่วไปถ้าโปรเจกต์นั้นกำลังส่งขออนุมัติปิดเฟสอยู่ (กันแจ้งเตือนซ้ำซ้อนให้ Manager)
+                if (checkPerm(currentUser, "manager_dashboard") && p.form_data?.tracking?.isPendingApproval) return;
+
                 const progress = p.form_data?.tracking?.completionPercent || 0;
                 newNotifs.push({
                   id: `update-${p.id}-${p.updated_at}`,
-                  title: "📝 มีการอัปเดต",
-                  text: `[${p.id}] ความคืบหน้า ${progress}%`,
+                  title: "📝 มีการอัปเดตงาน",
+                  text: `โปรเจกต์ ${p.name} มีความคืบหน้า ${progress}%`,
                   time: formatNotificationTime(p.updated_at),
                   rawDate: new Date(p.updated_at.endsWith("Z") ? p.updated_at : `${p.updated_at}Z`),
                   read: false,
@@ -227,6 +256,7 @@ function App() {
             });
         }
 
+        // เรียงลำดับใหม่ล่าสุดขึ้นก่อน
         newNotifs.sort((a, b) => b.rawDate - a.rawDate);
         newNotifs = newNotifs.slice(0, 15);
 
@@ -239,8 +269,9 @@ function App() {
         console.error(e);
       }
     };
+
     loadNotifs();
-    const id = setInterval(loadNotifs, 60000);
+    const id = setInterval(loadNotifs, 60000); // เช็คทุก 1 นาที
     return () => clearInterval(id);
   }, [currentUser, session?.token]);
 
@@ -633,7 +664,9 @@ function App() {
                   {currentUser?.username || "Unknown User"}
                 </span>
                 <span className="user-role">
-                  {currentUser?.role === "manager" ? "Manager" : currentUser?.role === "ceo" ? "Executive" : "Employee"}
+                  {currentUser?.role
+                    ? currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1)
+                    : "Employee"}
                 </span>
               </div>
               <div className="user-avatar" style={{ background: "linear-gradient(135deg, var(--blue), var(--blue-dark))" }}>

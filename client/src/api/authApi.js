@@ -2,7 +2,7 @@ const SESSION_KEY = 'ba-system.auth-session';
 const isDockerPort = window.location.port === '3001';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 
-  (isDockerPort ? 'http://10.11.11.31:4001' : 'http://10.11.11.31:4000');
+  (isDockerPort ? 'http://10.11.11.31:4001' : 'http://localhost:4000');
 
 export const loginWithPassword = async (username, password) => {
   const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
@@ -132,7 +132,8 @@ export const fetchProjects = async (token) => {
   }
   
   const result = await response.json();
-  return result.data || []; 
+  // 🌟 ปรับให้รองรับข้อมูลที่เป็น Array ทันที
+  return Array.isArray(result) ? result : (result.data || []); 
 };
 
 export const updateProjectInDb = async (projectId, projectData, arg3, arg4) => {
@@ -146,28 +147,26 @@ export const updateProjectInDb = async (projectId, projectData, arg3, arg4) => {
     token = arg4;
   }
 
-  let body;
-  let headers = {
-    'Authorization': `Bearer ${token}`
-  };
-
+  // 🌟 บังคับใช้ FormData เสมอ เพื่อแก้ปัญหา Backend รับค่า JSON ไม่ได้ (สาเหตุของ Error 500)
+  const formData = new FormData();
+  formData.append('projectData', JSON.stringify(projectData));
   if (file) {
-    const formData = new FormData();
-    formData.append('projectData', JSON.stringify(projectData));
     formData.append('progressFile', file);
-    body = formData;
-  } else {
-    headers['Content-Type'] = 'application/json';
-    body = JSON.stringify(projectData);
   }
 
   const response = await fetch(`${API_BASE_URL}/api/projects/update/${projectId}`, {
     method: 'PUT',
-    headers,
-    body
+    headers: {
+      'Authorization': `Bearer ${token}`
+      // ❌ ไม่ต้องใส่ Content-Type เพราะ fetch จะจัดการ boundary ให้เองเมื่อใช้ FormData
+    },
+    body: formData
   });
 
-  if (!response.ok) throw new Error('Failed to update project');
+  if (!response.ok) {
+     const err = await response.json().catch(() => ({}));
+     throw new Error(err.error || 'Failed to update project');
+  }
   return response.json();
 };
 
@@ -176,8 +175,10 @@ export const fetchPendingRequests = async (token) => {
     headers: { 'Authorization': `Bearer ${token}` }
   });
   if (!response.ok) throw new Error('ดึงข้อมูลผิดพลาด');
+  
   const result = await response.json();
-  return result.data; 
+  // 🌟 ปรับให้รองรับข้อมูลที่เป็น Array ทันที
+  return Array.isArray(result) ? result : (result.data || []); 
 };
 
 export const approveProjectRequest = async (projectId, approvalPayload, token) => {

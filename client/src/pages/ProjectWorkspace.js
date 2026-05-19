@@ -20,6 +20,8 @@ const IconShield = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="n
 const IconLock = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>;
 const IconX = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
 const IconMonitor = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>;
+const IconPause = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>;
+
 // DatePicker Custom Input
 const CustomDateInput = React.forwardRef(({ value, onClick, placeholder, disabled }, ref) => (
   <button type="button" onClick={disabled ? undefined : onClick} ref={ref} style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: disabled ? "1px dashed var(--border-color)" : "1px solid var(--blue)", background: disabled ? "var(--bg-color)" : "#fff", color: disabled ? "var(--text-muted)" : "var(--text-color)", textAlign: "left", fontSize: "0.75rem", display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.7 : 1, transition: 'all 0.2s' }}>
@@ -43,6 +45,8 @@ function ProjectWorkspace({ currentUser }) {
   const [newPdpaText, setNewPdpaText] = useState("");
   const [newImpactTeamText, setNewImpactTeamText] = useState("");
 
+  const isLockedByHold = editFormData?.status === 'Hold';
+
   const impactTeamsList = [ "iMed", "HMS", "Other Unit", "EPMS", "SAP SuccessFactor", "SAP P2P", "SAP R2C", "SAP Non Hos-MFG", "SAP Non Hos-Nhealth", "Doctor Fee", "E-Form", "Infra", "SOG" ];
   const fullPdpaItems = [
     { key: "health", label: "ข้อมูลสุขภาพ" }, { key: "idCard", label: "บัตรประชาชน" }, { key: "passport", label: "Passport" }, { key: "hn", label: "HN" },
@@ -51,11 +55,11 @@ function ProjectWorkspace({ currentUser }) {
   ];
 
   const phases = [
-    { key: "Requirement", label: "1. Requirement (รับความต้องการ)", color: "#3b82f6" },
-    { key: "Preparation", label: "2. Preparation (เตรียมความพร้อม)", color: "#8b5cf6" },
-    { key: "Development", label: "3. Development (การพัฒนา)", color: "#f59e0b" },
-    { key: "UAT", label: "4. UAT (ทดสอบระบบ)", color: "#10b981" },
-    { key: "Golive", label: "5. Go-Live (ขึ้นระบบจริง)", color: "#ef4444" },
+    { key: "Requirement", label: "1. Requirement", color: "#3b82f6" },
+    { key: "Preparation", label: "2. Preparation", color: "#8b5cf6" },
+    { key: "Development", label: "3. Development", color: "#f59e0b" },
+    { key: "UAT", label: "4. UAT", color: "#10b981" },
+    { key: "Golive", label: "5. Go-live", color: "#ef4444" },
   ];
 
   useEffect(() => {
@@ -75,12 +79,20 @@ function ProjectWorkspace({ currentUser }) {
     parsedData.form_data.support = parsedData.form_data.support || {};
     parsedData.form_data.security_cia = parsedData.form_data.security_cia || {};
     parsedData.form_data.compliance = parsedData.form_data.compliance || { pdpa: {}, ropa: {}, customPdpaList: [] };
-    if (!parsedData.timeline) parsedData.timeline = {};
     
+    let safeTimeline = {};
+    if (parsedData.timeline && typeof parsedData.timeline === 'object' && Object.keys(parsedData.timeline).length > 0) {
+        safeTimeline = parsedData.timeline;
+    } else if (typeof parsedData.timeline === 'string' && parsedData.timeline.length > 2) {
+        try { safeTimeline = JSON.parse(parsedData.timeline); } catch(e) {}
+    } else if (parsedData.form_data?.timeline) {
+        safeTimeline = parsedData.form_data.timeline;
+    }
+    
+    parsedData.timeline = safeTimeline;
     setEditFormData(parsedData);
   }, [initialProject, navigate]);
 
-  const toDate = (s) => (s ? new Date(s) : null);
   const toIso = (d) => {
     if (!d) return "";
     const year = d.getFullYear(); const month = String(d.getMonth() + 1).padStart(2, "0"); const day = String(d.getDate()).padStart(2, "0");
@@ -112,6 +124,45 @@ function ProjectWorkspace({ currentUser }) {
   };
 
   const handlePhaseAction = (phaseKey, action) => {
+    if (isLockedByHold) return; 
+
+    if (action === 'complete') {
+      Swal.fire({
+        title: 'ส่งคำขออนุมัติ?',
+        text: `คุณต้องการส่งด่าน ${phaseKey} ให้ผู้จัดการตรวจสอบเพื่อปิดเฟสใช่หรือไม่?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'ใช่, ส่งคำขอ',
+        cancelButtonText: 'ยกเลิก',
+        confirmButtonColor: '#10b981'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          setEditFormData((prev) => {
+            const newTimeline = JSON.parse(JSON.stringify(prev.timeline || {}));
+            if (!newTimeline[phaseKey]) newTimeline[phaseKey] = {};
+            
+            newTimeline[phaseKey].actualEnd = toIso(new Date());
+
+            return {
+              ...prev,
+              timeline: newTimeline,
+              form_data: {
+                ...prev.form_data,
+                tracking: {
+                  ...(prev.form_data?.tracking || {}),
+                  isPendingApproval: true, 
+                  pendingPhase: phaseKey,
+                  pendingStatus: phaseKey === 'Golive' ? 'Completed' : 'Active'
+                }
+              }
+            };
+          });
+          Swal.fire('ส่งคำขอแล้ว!', 'กรุณากดปุ่ม "บันทึกข้อมูล (Save)" สีน้ำเงินด้านบนขวา เพื่อส่งข้อมูลไปยังหน้าจอ Manager Dashboard อย่างสมบูรณ์', 'success');
+        }
+      });
+      return; 
+    }
+
     setEditFormData((prev) => {
       const newTimeline = JSON.parse(JSON.stringify(prev.timeline || {}));
       if (!newTimeline[phaseKey]) newTimeline[phaseKey] = {};
@@ -120,18 +171,13 @@ function ProjectWorkspace({ currentUser }) {
       if (action === 'start') {
         newTimeline[phaseKey].status = 'In Progress';
         if (!newTimeline[phaseKey].actualStart) newTimeline[phaseKey].actualStart = todayIso;
-      } else if (action === 'complete') {
-        newTimeline[phaseKey].status = 'Completed';
-        if (!newTimeline[phaseKey].actualEnd) newTimeline[phaseKey].actualEnd = todayIso;
       }
 
-      // 🌟 คำนวณ Global Phase อัตโนมัติ เพื่อให้หน้า Portfolio อัปเดตทันที
       let globalPhase = prev.phase || "Requirement";
-      let globalStatus = prev.status || "Initiate";
-      if (globalStatus === "Initiate" && action === 'start') globalStatus = "Active";
-
-      if (newTimeline["Golive"]?.status === "Completed") { globalPhase = "Go-Live"; globalStatus = "Go-live"; }
-      else if (newTimeline["Golive"]?.status === "In Progress") { globalPhase = "Go-Live"; }
+      let globalStatus = prev.status || "Active";
+      
+      if (newTimeline["Golive"]?.status === "Completed") { globalPhase = "Go-live"; globalStatus = "Completed"; }
+      else if (newTimeline["Golive"]?.status === "In Progress") { globalPhase = "Go-live"; }
       else if (newTimeline["UAT"]?.status === "Completed" || newTimeline["UAT"]?.status === "In Progress") { globalPhase = "UAT"; }
       else if (newTimeline["Development"]?.status === "Completed" || newTimeline["Development"]?.status === "In Progress") { globalPhase = "Development"; }
       else if (newTimeline["Preparation"]?.status === "Completed" || newTimeline["Preparation"]?.status === "In Progress") { globalPhase = "Preparation"; }
@@ -141,12 +187,37 @@ function ProjectWorkspace({ currentUser }) {
     });
   };
 
-  const handleGlobalStatusChange = (e) => { setEditFormData(prev => ({ ...prev, status: e.target.value })); };
-  const handleTrackingChange = (field, value) => { setEditFormData((prev) => ({ ...prev, form_data: { ...prev.form_data, tracking: { ...prev.form_data.tracking, [field]: value } } })); };
-  const handleNestedChange = (section, field, value) => { setEditFormData((prev) => ({ ...prev, form_data: { ...prev.form_data, [section]: { ...(prev.form_data[section] || {}), [field]: value } } })); };
+  const handleToggleHold = () => {
+    const isCurrentlyHold = editFormData.status === 'Hold';
+    const newStatus = isCurrentlyHold ? 'Active' : 'Hold';
+    
+    setEditFormData((prev) => ({
+      ...prev,
+      status: newStatus,
+      form_data: {
+        ...prev.form_data,
+        tracking: {
+          ...(prev.form_data?.tracking || {}),
+          isPendingApproval: false 
+        }
+      }
+    }));
+
+    Swal.fire({
+      icon: 'info',
+      title: isCurrentlyHold ? 'กลับมาดำเนินงานต่อ' : 'ระงับโครงการชั่วคราว',
+      text: isCurrentlyHold ? 'สถานะเปลี่ยนเป็น Active แล้ว สามารถแก้ไขข้อมูลได้' : 'สถานะเปลี่ยนเป็น Hold แล้ว (ระบบจะล็อกการแก้ไขข้อมูลทั้งหมด)',
+      timer: 2000,
+      showConfirmButton: false
+    });
+  };
+
+  const handleTrackingChange = (field, value) => { if(!isLockedByHold) setEditFormData((prev) => ({ ...prev, form_data: { ...prev.form_data, tracking: { ...prev.form_data.tracking, [field]: value } } })); };
+  const handleNestedChange = (section, field, value) => { if(!isLockedByHold) setEditFormData((prev) => ({ ...prev, form_data: { ...prev.form_data, [section]: { ...(prev.form_data[section] || {}), [field]: value } } })); };
   const handleTechChange = (field, value) => handleNestedChange("tech", field, value);
 
   const handleImpactTeamToggle = (teamLabel) => {
+    if(isLockedByHold) return;
     setEditFormData((prev) => {
       const currentTeams = prev.form_data.tracking?.impactTeams || [];
       const updatedTeams = currentTeams.includes(teamLabel) ? currentTeams.filter((t) => t !== teamLabel) : [...currentTeams, teamLabel];
@@ -154,12 +225,13 @@ function ProjectWorkspace({ currentUser }) {
     });
   };
   const handleAddCustomImpactTeam = () => {
-    if (!newImpactTeamText.trim()) return;
+    if (isLockedByHold || !newImpactTeamText.trim()) return;
     const key = "custom_team_" + Date.now(); const label = newImpactTeamText.trim();
     setEditFormData(prev => ({ ...prev, form_data: { ...prev.form_data, tracking: { ...prev.form_data.tracking, customImpactTeamsList: [...(prev.form_data.tracking.customImpactTeamsList || []), { key, label }], impactTeams: [...(prev.form_data.tracking.impactTeams || []), label] } } }));
     setNewImpactTeamText("");
   };
   const handleDeleteCustomImpactTeam = (keyToDelete, labelToDelete) => {
+    if(isLockedByHold) return;
     setEditFormData((prev) => {
       const newCustomList = (prev.form_data.tracking?.customImpactTeamsList || []).filter(item => item.key !== keyToDelete);
       const newImpactTeams = (prev.form_data.tracking?.impactTeams || []).filter(t => t !== labelToDelete);
@@ -168,22 +240,22 @@ function ProjectWorkspace({ currentUser }) {
   };
 
   const handleAddCustomPdpa = () => {
-    if (!newPdpaText.trim()) return;
+    if (isLockedByHold || !newPdpaText.trim()) return;
     const key = "custom_" + Date.now();
     setEditFormData(prev => ({ ...prev, form_data: { ...prev.form_data, compliance: { ...prev.form_data.compliance, customPdpaList: [...(prev.form_data.compliance.customPdpaList || []), { key, label: newPdpaText.trim() }], pdpa: { ...(prev.form_data.compliance.pdpa || {}), [key]: true } } } }));
     setNewPdpaText("");
   };
   const handleDeleteCustomPdpa = (keyToDelete) => {
+    if(isLockedByHold) return;
     setEditFormData((prev) => {
       const newCustomList = (prev.form_data.compliance?.customPdpaList || []).filter(item => item.key !== keyToDelete);
       const newPdpa = { ...(prev.form_data.compliance?.pdpa || {}) }; delete newPdpa[keyToDelete];
       return { ...prev, form_data: { ...prev.form_data, compliance: { ...prev.form_data.compliance, customPdpaList: newCustomList, pdpa: newPdpa } } };
     });
   };
-  const handlePdpaChange = (key, checked) => { setEditFormData((prev) => ({ ...prev, form_data: { ...prev.form_data, compliance: { ...prev.form_data.compliance, pdpa: { ...(prev.form_data.compliance?.pdpa || {}), [key]: checked } } } })); };
-  const handleRopaChange = (field, value) => { setEditFormData((prev) => ({ ...prev, form_data: { ...prev.form_data, compliance: { ...prev.form_data.compliance, ropa: { ...(prev.form_data.compliance?.ropa || {}), [field]: value } } } })); };
+  const handlePdpaChange = (key, checked) => { if(!isLockedByHold) setEditFormData((prev) => ({ ...prev, form_data: { ...prev.form_data, compliance: { ...prev.form_data.compliance, pdpa: { ...(prev.form_data.compliance?.pdpa || {}), [key]: checked } } } })); };
+  const handleRopaChange = (field, value) => { if(!isLockedByHold) setEditFormData((prev) => ({ ...prev, form_data: { ...prev.form_data, compliance: { ...prev.form_data.compliance, ropa: { ...(prev.form_data.compliance?.ropa || {}), [field]: value } } } })); };
 
-  // 🌟 คำนวณความคืบหน้า (Progress %) อัตโนมัติ
   const calculateOverallProgress = () => {
     const pKeys = phases.map(p => p.key);
     let completedCount = 0;
@@ -192,7 +264,7 @@ function ProjectWorkspace({ currentUser }) {
       if (editFormData.timeline?.[p]?.status === "Completed") completedCount++; 
       else if (editFormData.timeline?.[p]?.status === "In Progress") inProgressCount++;
     });
-    const score = completedCount + (inProgressCount * 0.5); // กำลังทำได้ 50% ของเฟสนั้นๆ
+    const score = completedCount + (inProgressCount * 0.5);
     return Math.round((score / pKeys.length) * 100);
   };
 
@@ -204,22 +276,24 @@ function ProjectWorkspace({ currentUser }) {
       
       const currentProgress = calculateOverallProgress();
       
-      // 🌟 จัดโครงสร้างให้ตรงตามที่ DB ต้องการ
-      const updateData = {
-        ...editFormData,
-        form_data: {
-          ...editFormData.form_data,
-          tracking: { 
-            ...editFormData.form_data?.tracking, 
-            completionPercent: currentProgress // เซฟเปอร์เซ็นต์เข้า DB
-          }
+      const finalFormData = {
+        ...editFormData.form_data,
+        tracking: { 
+          ...editFormData.form_data?.tracking, 
+          completionPercent: currentProgress 
         }
       };
 
-      // 🌟 ส่งค่าไปแบบ Object (JSON) 🌟 แก้ไขบั๊กที่ข้อมูลหายตอนเซฟ
+      const updateData = {
+        status: editFormData.status,
+        phase: editFormData.phase,
+        form_data: JSON.stringify(finalFormData),
+        timeline: JSON.stringify(editFormData.timeline || {})
+      };
+
       await updateProjectInDb(editFormData.id, updateData, progressFile, token);
 
-      Swal.fire('สำเร็จ!', 'อัปเดตข้อมูลโครงการเรียบร้อยแล้ว', 'success').then(() => { navigate('/projects'); });
+      Swal.fire('สำเร็จ!', 'บันทึกข้อมูลเรียบร้อยแล้ว หากมีการกดส่งด่าน ข้อมูลจะถูกส่งไปที่ผู้จัดการทันที', 'success').then(() => { navigate('/projects'); });
     } catch (error) {
       console.error(error);
       Swal.fire('ข้อผิดพลาด', 'ไม่สามารถบันทึกข้อมูลได้: ' + error.message, 'error');
@@ -384,11 +458,37 @@ function ProjectWorkspace({ currentUser }) {
 
   const isAllPlansSet = phases.every(p => editFormData.timeline?.[p.key]?.startDate && editFormData.timeline?.[p.key]?.endDate);
 
+  const parseDateLimit = (dateStr, isEnd) => {
+    if (!dateStr) return null;
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return null;
+    if (isEnd) d.setHours(23, 59, 59, 999);
+    else d.setHours(0, 0, 0, 0);
+    return d;
+  };
+
+  const stripTime = (dateInput) => {
+    if (!dateInput) return null;
+    const d = new Date(dateInput);
+    if (isNaN(d.getTime())) return null;
+    d.setHours(0, 0, 0, 0);
+    return d;
+  };
+
+  const limitStart = parseDateLimit(editFormData.form_data?.compliance?.baStartDate, false);
+  const limitEnd = parseDateLimit(editFormData.form_data?.compliance?.baEndDate, true);
+
   return (
     <div className="page-wrap" style={{ maxWidth: '1400px', margin: '0 auto', gap: '24px' }}>
       
+      {isLockedByHold && (
+        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', padding: '12px 24px', borderRadius: '12px', color: '#ef4444', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+          <IconLock /> ขณะนี้โครงการอยู่ในสถานะ Hold ระบบได้ล็อกการแก้ไขข้อมูลทั้งหมดชั่วคราว
+        </div>
+      )}
+
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', background: 'var(--card-bg)', padding: '24px', borderRadius: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.03)', border: '1px solid var(--border-color)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', background: 'var(--card-bg)', padding: '24px', borderRadius: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.03)', border: '1px solid var(--border-color)', marginBottom: '20px' }}>
         <div>
           <button onClick={() => navigate('/projects')} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', cursor: 'pointer', marginBottom: '12px', fontWeight: 600, padding: 0 }}>
             <ArrowLeftIcon /> ย้อนกลับไป Portfolio
@@ -401,17 +501,73 @@ function ProjectWorkspace({ currentUser }) {
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <div style={{ padding: "10px 16px", background: "rgba(16, 185, 129, 0.1)", color: "#10b981", borderRadius: "10px", fontWeight: "bold" }}>สถานะ: {editFormData.status}</div>
+          <div style={{ padding: "10px 16px", background: isLockedByHold ? '#fef2f2' : "rgba(16, 185, 129, 0.1)", color: isLockedByHold ? '#ef4444' : "#10b981", borderRadius: "10px", fontWeight: "bold", border: isLockedByHold ? '1px solid #fecaca' : 'none' }}>
+            สถานะ: {editFormData.status}
+          </div>
           
           {canUpdate && (
-            <button className="btn btn-primary" onClick={handleSaveWorkspace} disabled={isSaving} style={{ padding: '12px 24px', fontSize: '1rem', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 15px rgba(2, 132, 199, 0.25)' }}>
-              <SaveIcon /> {isSaving ? 'กำลังบันทึก...' : 'บันทึกข้อมูล (Save)'}
-            </button>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              {editFormData.status !== 'Completed' && (
+                <button 
+                  className="btn" 
+                  onClick={handleToggleHold} 
+                  style={{ 
+                    padding: '12px 20px', borderRadius: '12px', fontWeight: 'bold', border: '1px solid',
+                    background: isLockedByHold ? '#dcfce7' : '#fffbeb', 
+                    color: isLockedByHold ? '#166534' : '#d97706',
+                    borderColor: isLockedByHold ? '#bbf7d0' : '#fde68a',
+                    cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: '6px'
+                  }}
+                >
+                  {isLockedByHold ? <><IconPlay /> กลับมาดำเนินการ</> : <><IconPause /> ระงับงาน (Hold)</>}
+                </button>
+              )}
+              <button className="btn btn-primary" onClick={handleSaveWorkspace} disabled={isSaving} style={{ padding: '12px 24px', fontSize: '1rem', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 15px rgba(2, 132, 199, 0.25)' }}>
+                <SaveIcon /> {isSaving ? 'กำลังบันทึก...' : 'บันทึกข้อมูล (Save)'}
+              </button>
+            </div>
           )}
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
+      {/* 🌟 แสดงประวัติการตรวจสอบ (Audit Trail) ให้รู้ว่าใครส่ง ใครเป็นคนอนุมัติ */}
+      <div style={{ background: "var(--surface-2)", padding: "16px 24px", borderRadius: "12px", border: "1px solid var(--border-color)", marginBottom: "24px", display: "flex", gap: "32px", flexWrap: "wrap", fontSize: "0.9rem" }}>
+        <div>
+          <span style={{ color: "var(--text-muted)", fontWeight: "bold", marginRight: "8px" }}>ส่งคำขอเข้าโฟลว์โดย:</span>
+          <span style={{ color: "var(--text-color)", fontWeight: "600" }}>{editFormData.form_data?.tracking?.submittedBy || editFormData.form_data?.requesterName || "-"}</span>
+          {editFormData.form_data?.tracking?.submittedAt && (
+            <span style={{ color: "var(--text-muted)", fontSize: "0.8rem", marginLeft: "8px" }}>
+              ({formatDateTH(editFormData.form_data.tracking.submittedAt)})
+            </span>
+          )}
+        </div>
+        <div style={{ borderLeft: "1px solid var(--border-color)", paddingLeft: "32px" }}>
+          <span style={{ color: "var(--text-muted)", fontWeight: "bold", marginRight: "8px" }}>ผู้จัดการที่ร่วมอนุมัติไปแล้ว:</span>
+          <span style={{ color: "var(--blue)", fontWeight: "600" }}>
+            {editFormData.form_data?.approvalPool?.length > 0 
+              ? editFormData.form_data.approvalPool.join(", ") 
+              : "ยังไม่มีผู้อนุมัติ"}
+          </span>
+          <span style={{ color: "var(--text-muted)", fontSize: "0.8rem", marginLeft: "8px" }}>
+            ({editFormData.form_data?.approvalPool?.length || 0} จาก {editFormData.form_data?.glsManagers?.length || 0} คน)
+          </span>
+        </div>
+      </div>
+
+      {/* แบนเนอร์แสดงข้อความสั่งการจากผู้จัดการ */}
+      {editFormData.form_data?.tracking?.remark && (
+        <div style={{ background: "rgba(2, 132, 199, 0.08)", borderLeft: "5px solid var(--blue)", padding: "16px 24px", borderRadius: "0 12px 12px 0", borderTop: "1px solid rgba(2, 132, 199, 0.1)", borderRight: "1px solid rgba(2, 132, 199, 0.1)", borderBottom: "1px solid rgba(2, 132, 199, 0.1)", marginTop: "12px", marginBottom: "24px" }}>
+          <h4 style={{ margin: "0 0 6px 0", color: "var(--blue-dark)", fontSize: "0.95rem", fontWeight: "bold", display: "flex", alignItems: "center", gap: "8px" }}>
+            📢 สารสั่งการล่าสุดจากผู้จัดการ {editFormData.form_data?.tracking?.teamName ? `[ถึง: ${editFormData.form_data.tracking.teamName}]` : ""}
+          </h4>
+          <p style={{ margin: 0, fontSize: "0.9rem", color: "var(--text-color)", fontStyle: "italic", lineHeight: "1.5" }}>
+            {editFormData.form_data.tracking.remark}
+          </p>
+        </div>
+      )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px', opacity: isLockedByHold ? 0.85 : 1 }}>
         
         {/* Tab Navigation */}
         <div style={{ display: "flex", background: "var(--card-bg)", padding: "8px", borderRadius: "12px", border: "1px solid var(--border-color)", overflowX: "auto" }}>
@@ -441,12 +597,19 @@ function ProjectWorkspace({ currentUser }) {
               
               {renderGanttChart()}
 
-              {/* 🌟 Section 1: กำหนดแผนงาน (Planning) 🌟 */}
               <div style={{ background: "var(--card-bg)", border: "1px solid var(--border-color)", borderRadius: "10px", padding: "20px" }}>
-                <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-color)', marginBottom: '16px', fontSize: '1.1rem' }}>
-                    <IconCalendar /> 1. กำหนดแผนงานโครงการ (Project Planning)
-                </h4>
-                {/* 🌟 ปรับขนาดตารางให้ขยายเต็มหน้าจอ และช่อง Input กว้างกำลังดี 🌟 */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-color)', margin: 0, fontSize: '1.1rem' }}>
+                      <IconCalendar /> 1. กำหนดแผนงานโครงการ (Project Planning)
+                  </h4>
+                  
+                  {limitStart && limitEnd && (
+                    <div style={{ fontSize: "0.85rem", color: "#059669", background: "#d1fae5", padding: "8px 12px", borderRadius: "8px", display: "flex", alignItems: "center", gap: "6px", fontWeight: "bold", border: "1px solid #10b981" }}>
+                      <IconCalendar /> กรอบเวลาที่ได้รับอนุมัติ: {formatDateTH(limitStart)} - {formatDateTH(limitEnd)}
+                    </div>
+                  )}
+                </div>
+
                 <div style={{ border: "1px solid var(--border-color)", borderRadius: "10px", overflow: "visible", overflowX: "auto", width: "100%" }}>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 250px 250px", gap: "20px", padding: "14px 20px", background: "var(--input-bg)", borderBottom: "1px solid var(--border-color)", fontWeight: "bold", fontSize: "0.85rem", color: "var(--text-muted)", minWidth: "700px" }}>
                     <div>ขั้นตอน (Phase)</div>
@@ -455,16 +618,54 @@ function ProjectWorkspace({ currentUser }) {
                   </div>
                   {phases.map((phase, index) => {
                     const phaseData = editFormData.timeline?.[phase.key] || {};
+                    
+                    const phaseStartVal = stripTime(phaseData.startDate);
+                    const phaseEndVal = stripTime(phaseData.endDate); 
+
+                    let minEndLimit = limitStart;
+                    if (phaseStartVal) {
+                        minEndLimit = phaseStartVal > (limitStart || 0) ? phaseStartVal : limitStart;
+                    }
+
+                    const isStartAllowed = (date) => {
+                        if (!limitStart || !limitEnd) return true;
+                        const checkTime = stripTime(date).getTime();
+                        return checkTime >= stripTime(limitStart).getTime() && checkTime <= stripTime(limitEnd).getTime();
+                    };
+
+                    const isEndAllowed = (date) => {
+                        if (!limitStart || !limitEnd) return true;
+                        const checkTime = stripTime(date).getTime();
+                        const minAllowedTime = minEndLimit ? stripTime(minEndLimit).getTime() : stripTime(limitStart).getTime();
+                        return checkTime >= minAllowedTime && checkTime <= stripTime(limitEnd).getTime();
+                    };
+
                     return (
                       <div key={phase.key} style={{ display: "grid", gridTemplateColumns: "1fr 250px 250px", gap: "20px", alignItems: "center", padding: "16px 20px", background: "var(--card-bg)", borderBottom: index < phases.length - 1 ? "1px solid var(--border-color)" : "none", minWidth: "700px" }}>
                         <div style={{ fontWeight: "bold", color: "var(--text-color)", fontSize: "0.85rem", display: "flex", alignItems: "center", gap: "10px" }}>
                           <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: phase.color, display: "inline-block" }}></span> {phase.label}
                         </div>
                         <div style={{ width: "100%", display: "block" }}>
-                          <DatePicker dateFormat="dd/MM/yyyy" selected={toDate(phaseData.startDate)} onChange={(d) => handleTimelineChange(phase.key, "startDate", toIso(d))} customInput={<CustomDateInput placeholder="กำหนดวันเริ่ม" disabled={!canUpdate || (phaseData.status && phaseData.status !== "Pending")} />} />
+                          <DatePicker 
+                            dateFormat="dd/MM/yyyy" 
+                            selected={phaseStartVal} 
+                            onChange={(d) => handleTimelineChange(phase.key, "startDate", toIso(d))} 
+                            minDate={limitStart} 
+                            maxDate={limitEnd}   
+                            filterDate={isStartAllowed} 
+                            customInput={<CustomDateInput placeholder="กำหนดวันเริ่ม" disabled={isLockedByHold || !canUpdate || (phaseData.status && phaseData.status !== "Pending")} />} 
+                          />
                         </div>
                         <div style={{ width: "100%", display: "block" }}>
-                          <DatePicker dateFormat="dd/MM/yyyy" selected={toDate(phaseData.endDate)} onChange={(d) => handleTimelineChange(phase.key, "endDate", toIso(d))} minDate={toDate(phaseData.startDate)} customInput={<CustomDateInput placeholder="กำหนดวันเสร็จ" disabled={!canUpdate || (phaseData.status && phaseData.status !== "Pending")} />} />
+                          <DatePicker 
+                            dateFormat="dd/MM/yyyy" 
+                            selected={phaseEndVal} 
+                            onChange={(d) => handleTimelineChange(phase.key, "endDate", toIso(d))} 
+                            minDate={minEndLimit} 
+                            maxDate={limitEnd} 
+                            filterDate={isEndAllowed} 
+                            customInput={<CustomDateInput placeholder="กำหนดวันเสร็จ" disabled={isLockedByHold || !canUpdate || (phaseData.status && phaseData.status !== "Pending")} />} 
+                          />
                         </div>
                       </div>
                     );
@@ -478,7 +679,6 @@ function ProjectWorkspace({ currentUser }) {
                 </div>
               )}
 
-              {/* 🌟 Section 2: ดำเนินการและบันทึกเวลาจริง (Execution) 🌟 */}
               <div style={{ background: "var(--card-bg)", border: "1px solid var(--border-color)", borderRadius: "10px", padding: "20px" }}>
                 <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-color)', marginBottom: "16px", fontSize: '1.1rem' }}>
                     <IconPlay /> 2. บันทึกเวลาปฏิบัติงาน (Execution & Actual Log)
@@ -496,14 +696,16 @@ function ProjectWorkspace({ currentUser }) {
                   {phases.map((phase, index) => {
                     const phaseData = editFormData.timeline?.[phase.key] || {};
                     const prevPhase = index > 0 ? editFormData.timeline?.[phases[index-1].key] : null;
-                    const isLocked = index > 0 && prevPhase?.status !== "Completed";
+                    const isLockedByPrev = index > 0 && prevPhase?.status !== "Completed";
+                    
+                    const isPendingThisPhase = editFormData.form_data?.tracking?.isPendingApproval && editFormData.form_data?.tracking?.pendingPhase === phase.key;
 
                     let statusBadge = { bg: "rgba(100, 116, 139, 0.1)", text: "#64748b", label: "รอดำเนินการ" };
                     if (phaseData.status === 'In Progress') statusBadge = { bg: "rgba(59, 130, 246, 0.1)", text: "#3b82f6", label: "กำลังทำงาน" };
                     if (phaseData.status === 'Completed') statusBadge = { bg: "rgba(16, 185, 129, 0.1)", text: "#10b981", label: "เสร็จสิ้น" };
 
                     return (
-                      <div key={phase.key} style={{ display: "grid", gridTemplateColumns: "1fr 100px 2fr 110px 120px 140px", gap: "10px", alignItems: "center", padding: "16px", background: "var(--card-bg)", borderBottom: index < phases.length - 1 ? "1px solid var(--border-color)" : "none", opacity: isLocked && (!phaseData.status || phaseData.status === 'Pending') ? 0.6 : 1, transition: "opacity 0.2s", minWidth: "950px" }}>
+                      <div key={phase.key} style={{ display: "grid", gridTemplateColumns: "1fr 100px 2fr 110px 120px 140px", gap: "10px", alignItems: "center", padding: "16px", background: "var(--card-bg)", borderBottom: index < phases.length - 1 ? "1px solid var(--border-color)" : "none", opacity: (isLockedByPrev || isLockedByHold) && (!phaseData.status || phaseData.status === 'Pending') ? 0.6 : 1, transition: "opacity 0.2s", minWidth: "950px" }}>
                         
                         <div style={{ fontWeight: "bold", color: "var(--text-color)", fontSize: "0.85rem", display: "flex", alignItems: "center", gap: "10px" }}>
                           <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: phase.color, display: "inline-block" }}></span> 
@@ -514,7 +716,6 @@ function ProjectWorkspace({ currentUser }) {
                           <span style={{ padding: "6px 10px", borderRadius: "12px", fontSize: "0.7rem", fontWeight: "bold", background: statusBadge.bg, color: statusBadge.text, whiteSpace: "nowrap" }}>{statusBadge.label}</span>
                         </div>
                         
-                        {/* 🌟 ทำจริง (Actual Log แบบ Read-only ล้วนๆ ถอด DatePicker ออกตามคำขอ) 🌟 */}
                         <div style={{ display: "flex", gap: "6px" }}>
                           <div style={{ flex: 1, padding: "8px 10px", background: "var(--bg-color)", borderRadius: "6px", border: "1px solid var(--border-color)", fontSize: "0.75rem", color: phaseData.actualStart ? "var(--text-color)" : "var(--text-muted)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <span>{phaseData.actualStart ? formatDateTH(phaseData.actualStart) : "รอกดเริ่มงาน"}</span>
@@ -526,7 +727,6 @@ function ProjectWorkspace({ currentUser }) {
                           </div>
                         </div>
 
-                        {/* ประเมินผล */}
                         <div style={{ textAlign: "center" }}>
                           {phaseData.status === 'Completed' && phaseData.endDate && phaseData.actualEnd ? (
                             (() => {
@@ -538,16 +738,15 @@ function ProjectWorkspace({ currentUser }) {
                           ) : <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>-</span>}
                         </div>
                         
-                        {/* 🌟 Action Buttons 🌟 */}
                         <div style={{ textAlign: "center" }}>
-                          {!isLocked ? (
+                          {!isLockedByPrev ? (
                             canUpdate ? (
                               <>
                                 {(!phaseData.status || phaseData.status === 'Pending') && (
-                                  <button type="button" disabled={!isAllPlansSet} onClick={() => handlePhaseAction(phase.key, 'start')} style={{ width: "100%", padding: "8px", borderRadius: "6px", fontSize: "0.8rem", background: isAllPlansSet ? "var(--blue)" : "#cbd5e1", color: "#fff", border: "none", fontWeight: "bold", cursor: isAllPlansSet ? "pointer" : "not-allowed", transition: "0.2s", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}><IconPlay /> เริ่มงาน</button>
+                                  <button type="button" disabled={!isAllPlansSet || isLockedByHold} onClick={() => handlePhaseAction(phase.key, 'start')} style={{ width: "100%", padding: "8px", borderRadius: "6px", fontSize: "0.8rem", background: isAllPlansSet && !isLockedByHold ? "var(--blue)" : "#cbd5e1", color: "#fff", border: "none", fontWeight: "bold", cursor: isAllPlansSet && !isLockedByHold ? "pointer" : "not-allowed", transition: "0.2s", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}><IconPlay /> เริ่มงาน</button>
                                 )}
                                 {phaseData.status === 'In Progress' && (
-                                  <button type="button" onClick={() => handlePhaseAction(phase.key, 'complete')} style={{ width: "100%", padding: "8px", borderRadius: "6px", fontSize: "0.8rem", background: "#10b981", color: "#fff", border: "none", fontWeight: "bold", cursor: "pointer", transition: "0.2s", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}><IconCheck /> เสร็จสิ้น</button>
+                                  <button type="button" disabled={isPendingThisPhase || isLockedByHold} onClick={() => handlePhaseAction(phase.key, 'complete')} style={{ width: "100%", padding: "8px", borderRadius: "6px", fontSize: "0.8rem", background: isPendingThisPhase ? "#f59e0b" : isLockedByHold ? "#cbd5e1" : "#10b981", color: "#fff", border: "none", fontWeight: "bold", cursor: isPendingThisPhase || isLockedByHold ? "not-allowed" : "pointer", transition: "0.2s", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}><IconCheck /> {isPendingThisPhase ? "รออนุมัติ..." : "เสร็จสิ้น"}</button>
                                 )}
                                 {phaseData.status === 'Completed' && <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: "bold" }}>-</span>}
                               </>
@@ -557,13 +756,12 @@ function ProjectWorkspace({ currentUser }) {
                           ) : <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>รอถึงคิว</span>}
                         </div>
 
-                        {/* 🌟 อัปโหลดหลักฐาน 🌟 */}
                         <div style={{ textAlign: "center", display: "flex", flexDirection: "column", gap: "6px", alignItems: "center", justifyContent: "center" }}>
-                          {!isLocked ? (
+                          {!isLockedByPrev ? (
                             canUpdate ? (
                               <>
-                                <input type="file" id={`file-${phase.key}`} style={{ display: "none" }} accept="image/*,application/pdf" onChange={(e) => { const file = e.target.files[0]; if (file) { setProgressFile(file); handleTimelineChange(phase.key, "evidenceName", file.name); } }} />
-                                <label htmlFor={`file-${phase.key}`} style={{ padding: "6px 10px", borderRadius: "6px", fontSize: "0.75rem", background: phaseData.evidenceName ? "rgba(16, 185, 129, 0.1)" : "var(--bg-color)", border: phaseData.evidenceName ? "1px solid #10b981" : "1px dashed var(--border-color)", color: phaseData.evidenceName ? "#10b981" : "var(--blue)", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", width: "100%", justifyContent: "center", fontWeight: "bold", transition: "all 0.2s" }}>
+                                <input type="file" id={`file-${phase.key}`} disabled={isLockedByHold} style={{ display: "none" }} accept="image/*,application/pdf" onChange={(e) => { const file = e.target.files[0]; if (file) { setProgressFile(file); handleTimelineChange(phase.key, "evidenceName", file.name); } }} />
+                                <label htmlFor={`file-${phase.key}`} style={{ padding: "6px 10px", borderRadius: "6px", fontSize: "0.75rem", background: phaseData.evidenceName ? "rgba(16, 185, 129, 0.1)" : "var(--bg-color)", border: phaseData.evidenceName ? "1px solid #10b981" : "1px dashed var(--border-color)", color: phaseData.evidenceName ? "#10b981" : "var(--blue)", cursor: isLockedByHold ? "not-allowed" : "pointer", opacity: isLockedByHold ? 0.5 : 1, display: "flex", alignItems: "center", gap: "4px", width: "100%", justifyContent: "center", fontWeight: "bold", transition: "all 0.2s" }}>
                                   <IconUpload /> {phaseData.evidenceName ? "เปลี่ยนไฟล์" : "อัปโหลด"}
                                 </label>
                                 {phaseData.evidenceName && (
@@ -592,9 +790,9 @@ function ProjectWorkspace({ currentUser }) {
               <div style={{ display: "flex", gap: "20px", background: "var(--bg-color)", padding: "20px", borderRadius: "10px", border: "1px solid var(--border-color)", flexWrap: "wrap" }}>
                 <div style={{ flex: 1, minWidth: "250px" }}>
                    <label style={{ color: "var(--text-muted)", fontWeight: "bold", display: "block", marginBottom: "8px" }}>สถานะหลักโครงการ (Global Status)</label>
-                   <select name="status" value={editFormData.status} onChange={handleGlobalStatusChange} disabled={!canUpdate} style={{ width: "100%", padding: "10px", borderRadius: "8px", background: "var(--card-bg)", color: "var(--text-color)", border: "1px solid var(--border-color)", outline: "none", cursor: !canUpdate ? "not-allowed" : "pointer" }}>
-                     <option value="Initiate">Initiate</option><option value="Active">Active</option><option value="Hold">Hold (ระงับชั่วคราว)</option><option value="Go-live">Go-live</option>
-                   </select>
+                   <div style={{ width: "100%", padding: "10px", borderRadius: "8px", background: "var(--input-bg)", color: isLockedByHold ? "#ef4444" : "var(--text-color)", border: "1px solid var(--border-color)", fontWeight: "bold", opacity: 0.8, cursor: "not-allowed" }}>
+                     {editFormData.status} <span style={{ fontSize: "0.8rem", fontWeight: "normal", color: "var(--text-muted)" }}>{isLockedByHold ? "(ระงับการแก้ไขชั่วคราว)" : "(ล็อกสถานะ: คำนวณอัตโนมัติ)"}</span>
+                   </div>
                 </div>
                 <div style={{ flex: 1, minWidth: "250px", borderLeft: "1px solid var(--border-color)", paddingLeft: "20px" }}>
                    <label style={{ color: "var(--text-muted)", fontWeight: "bold", display: "block", marginBottom: "8px" }}>ความคืบหน้าภาพรวม</label>
@@ -610,23 +808,44 @@ function ProjectWorkspace({ currentUser }) {
               <div style={{ background: "var(--bg-color)", border: "1px solid var(--border-color)", borderRadius: "10px", padding: "20px" }}>
                 <h4 style={{ margin: "0 0 15px 0", color: "var(--text-color)" }}>ข้อมูลระบบและผู้รับผิดชอบ</h4>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "15px" }}>
-                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>ผู้รับผิดชอบ (GLS PM)</label><input value={editFormData.form_data?.tracking?.glsManager || ""} onChange={(e) => handleTrackingChange("glsManager", e.target.value)} disabled={!canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", border: "1px solid var(--border-color)", padding: "10px", borderRadius: "8px", width: "100%" }} /></div>
-                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>เจ้าของระบบ (GLS Owner)</label><input value={editFormData.form_data?.tracking?.glsOwner || ""} onChange={(e) => handleTrackingChange("glsOwner", e.target.value)} disabled={!canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", border: "1px solid var(--border-color)", padding: "10px", borderRadius: "8px", width: "100%" }} /></div>
-                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>ชื่อแอปพลิเคชัน</label><input value={editFormData.form_data?.tracking?.appName || ""} onChange={(e) => handleTrackingChange("appName", e.target.value)} disabled={!canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", border: "1px solid var(--border-color)", padding: "10px", borderRadius: "8px", width: "100%" }} /></div>
-                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>รหัสระบบ (App ID)</label><input value={editFormData.form_data?.tracking?.appId || ""} onChange={(e) => handleTrackingChange("appId", e.target.value)} disabled={!canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", border: "1px solid var(--border-color)", padding: "10px", borderRadius: "8px", width: "100%" }} /></div>
-                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>ไซต์ (Deploy Site)</label><input value={editFormData.form_data?.tracking?.deployIn || ""} onChange={(e) => handleTrackingChange("deployIn", e.target.value)} disabled={!canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", border: "1px solid var(--border-color)", padding: "10px", borderRadius: "8px", width: "100%" }} /></div>
+                  {/* 🌟 อัปเดตช่องแสดงชื่อ: แยกผู้ปฏิบัติงาน(Assignees) และหัวหน้า(Manager) ให้ชัดเจน */}
+                  <div className="form-group">
+                    <label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>ผู้ปฏิบัติงานหลัก (Assignees)</label>
+                    <input 
+                      value={Array.isArray(editFormData.form_data?.assignees) ? editFormData.form_data.assignees.join(", ") : (editFormData.form_data?.assignees || "")} 
+                      onChange={(e) => {
+                        if(!isLockedByHold && canUpdate) {
+                          setEditFormData(prev => ({
+                            ...prev,
+                            form_data: { ...prev.form_data, assignees: e.target.value.split(",").map(s => s.trimStart()) }
+                          }));
+                        }
+                      }} 
+                      disabled={isLockedByHold || !canUpdate} 
+                      style={{ background: "var(--card-bg)", color: "var(--text-color)", border: "1px solid var(--border-color)", padding: "10px", borderRadius: "8px", width: "100%" }} 
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>หัวหน้าคุมงาน (GLS Manager)</label>
+                    <input value={editFormData.form_data?.tracking?.glsManager || ""} onChange={(e) => handleTrackingChange("glsManager", e.target.value)} disabled={isLockedByHold || !canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", border: "1px solid var(--border-color)", padding: "10px", borderRadius: "8px", width: "100%" }} />
+                  </div>
+                  
+                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>เจ้าของระบบ (GLS Owner)</label><input value={editFormData.form_data?.tracking?.glsOwner || ""} onChange={(e) => handleTrackingChange("glsOwner", e.target.value)} disabled={isLockedByHold || !canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", border: "1px solid var(--border-color)", padding: "10px", borderRadius: "8px", width: "100%" }} /></div>
+                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>ชื่อแอปพลิเคชัน</label><input value={editFormData.form_data?.tracking?.appName || ""} onChange={(e) => handleTrackingChange("appName", e.target.value)} disabled={isLockedByHold || !canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", border: "1px solid var(--border-color)", padding: "10px", borderRadius: "8px", width: "100%" }} /></div>
+                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>รหัสระบบ (App ID)</label><input value={editFormData.form_data?.tracking?.appId || ""} onChange={(e) => handleTrackingChange("appId", e.target.value)} disabled={isLockedByHold || !canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", border: "1px solid var(--border-color)", padding: "10px", borderRadius: "8px", width: "100%" }} /></div>
+                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>ไซต์ (Deploy Site)</label><input value={editFormData.form_data?.tracking?.deployIn || ""} onChange={(e) => handleTrackingChange("deployIn", e.target.value)} disabled={isLockedByHold || !canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", border: "1px solid var(--border-color)", padding: "10px", borderRadius: "8px", width: "100%" }} /></div>
                 </div>
               </div>
 
               <div style={{ background: "var(--bg-color)", border: "1px solid var(--border-color)", borderRadius: "10px", padding: "20px" }}>
                 <h4 style={{ margin: "0 0 15px 0", color: "var(--text-color)" }}>ข้อมูลเพิ่มเติมและงบประมาณ</h4>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "15px" }}>
-                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>กลุ่มลูกค้า (Customer Group)</label><input value={editFormData.form_data?.tracking?.customerGroup || ""} onChange={(e) => handleTrackingChange("customerGroup", e.target.value)} disabled={!canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", border: "1px solid var(--border-color)", padding: "10px", borderRadius: "8px", width: "100%" }} /></div>
-                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>ประเภทโปรเจกต์</label><input value={editFormData.form_data?.tracking?.projectType || ""} onChange={(e) => handleTrackingChange("projectType", e.target.value)} disabled={!canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", border: "1px solid var(--border-color)", padding: "10px", borderRadius: "8px", width: "100%" }} /></div>
-                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>ประเภทงบประมาณ</label><input value={editFormData.form_data?.tracking?.budgetType || ""} onChange={(e) => handleTrackingChange("budgetType", e.target.value)} disabled={!canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", border: "1px solid var(--border-color)", padding: "10px", borderRadius: "8px", width: "100%" }} /></div>
-                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>งบอนุมัติ (บาท)</label><input type="number" value={editFormData.form_data?.tracking?.approvedBudget || ""} onChange={(e) => handleTrackingChange("approvedBudget", e.target.value)} disabled={!canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", border: "1px solid var(--border-color)", padding: "10px", borderRadius: "8px", width: "100%" }} /></div>
-                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>ค่าใช้จ่ายจริง (บาท)</label><input type="number" value={editFormData.form_data?.tracking?.actualCost || ""} onChange={(e) => handleTrackingChange("actualCost", e.target.value)} disabled={!canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", border: "1px solid var(--border-color)", padding: "10px", borderRadius: "8px", width: "100%" }} /></div>
-                  <div className="form-group" style={{ gridColumn: "1 / -1" }}><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>หมายเหตุ (Remark)</label><textarea value={editFormData.form_data?.tracking?.remark || ""} onChange={(e) => handleTrackingChange("remark", e.target.value)} disabled={!canUpdate} rows="2" style={{ background: "var(--card-bg)", color: "var(--text-color)", width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", outline: "none" }} /></div>
+                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>กลุ่มลูกค้า (Customer Group)</label><input value={editFormData.form_data?.tracking?.customerGroup || ""} onChange={(e) => handleTrackingChange("customerGroup", e.target.value)} disabled={isLockedByHold || !canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", border: "1px solid var(--border-color)", padding: "10px", borderRadius: "8px", width: "100%" }} /></div>
+                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>ประเภทโปรเจกต์</label><input value={editFormData.form_data?.tracking?.projectType || ""} onChange={(e) => handleTrackingChange("projectType", e.target.value)} disabled={isLockedByHold || !canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", border: "1px solid var(--border-color)", padding: "10px", borderRadius: "8px", width: "100%" }} /></div>
+                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>ประเภทงบประมาณ</label><input value={editFormData.form_data?.tracking?.budgetType || ""} onChange={(e) => handleTrackingChange("budgetType", e.target.value)} disabled={isLockedByHold || !canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", border: "1px solid var(--border-color)", padding: "10px", borderRadius: "8px", width: "100%" }} /></div>
+                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>งบอนุมัติ (บาท)</label><input type="number" value={editFormData.form_data?.tracking?.approvedBudget || ""} onChange={(e) => handleTrackingChange("approvedBudget", e.target.value)} disabled={isLockedByHold || !canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", border: "1px solid var(--border-color)", padding: "10px", borderRadius: "8px", width: "100%" }} /></div>
+                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>ค่าใช้จ่ายจริง (บาท)</label><input type="number" value={editFormData.form_data?.tracking?.actualCost || ""} onChange={(e) => handleTrackingChange("actualCost", e.target.value)} disabled={isLockedByHold || !canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", border: "1px solid var(--border-color)", padding: "10px", borderRadius: "8px", width: "100%" }} /></div>
+                  <div className="form-group" style={{ gridColumn: "1 / -1" }}><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>หมายเหตุ (Remark)</label><textarea value={editFormData.form_data?.tracking?.remark || ""} onChange={(e) => handleTrackingChange("remark", e.target.value)} disabled={isLockedByHold || !canUpdate} rows="2" style={{ background: "var(--card-bg)", color: "var(--text-color)", width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", outline: "none" }} /></div>
                 </div>
               </div>
             </div>
@@ -640,14 +859,14 @@ function ProjectWorkspace({ currentUser }) {
               <div style={{ background: "var(--bg-color)", border: "1px solid var(--border-color)", borderRadius: "10px", padding: "20px" }}>
                 <h4 style={{ margin: "0 0 15px 0", color: "var(--text-color)" }}>1. ข้อมูลพื้นฐานแอปพลิเคชัน (App Info)</h4>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "15px" }}>
-                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>ชื่อย่อระบบ</label><input type="text" value={editFormData.form_data?.app_info?.abbreviation || ""} onChange={(e) => handleNestedChange("app_info", "abbreviation", e.target.value)} disabled={!canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /></div>
-                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>โมดูล</label><input type="text" value={editFormData.form_data?.app_info?.module || ""} onChange={(e) => handleNestedChange("app_info", "module", e.target.value)} disabled={!canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /></div>
-                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>ระดับองค์กร</label><input type="text" value={editFormData.form_data?.app_info?.enterprise || ""} onChange={(e) => handleNestedChange("app_info", "enterprise", e.target.value)} disabled={!canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /></div>
-                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>หมวดหมู่ (Catalog)</label><input type="text" value={editFormData.form_data?.app_info?.catalog || ""} onChange={(e) => handleNestedChange("app_info", "catalog", e.target.value)} disabled={!canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /></div>
-                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>ประเภท</label><select value={editFormData.form_data?.app_info?.type || ""} onChange={(e) => handleNestedChange("app_info", "type", e.target.value)} disabled={!canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%", outline: "none" }}><option value="">เลือกประเภท</option><option value="Inhouse">Inhouse</option><option value="Package">Package</option></select></div>
-                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>เวลาใช้งาน</label><input type="text" value={editFormData.form_data?.app_info?.usageHour || ""} onChange={(e) => handleNestedChange("app_info", "usageHour", e.target.value)} disabled={!canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /></div>
+                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>ชื่อย่อระบบ</label><input type="text" value={editFormData.form_data?.app_info?.abbreviation || ""} onChange={(e) => handleNestedChange("app_info", "abbreviation", e.target.value)} disabled={isLockedByHold || !canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /></div>
+                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>โมดูล</label><input type="text" value={editFormData.form_data?.app_info?.module || ""} onChange={(e) => handleNestedChange("app_info", "module", e.target.value)} disabled={isLockedByHold || !canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /></div>
+                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>ระดับองค์กร</label><input type="text" value={editFormData.form_data?.app_info?.enterprise || ""} onChange={(e) => handleNestedChange("app_info", "enterprise", e.target.value)} disabled={isLockedByHold || !canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /></div>
+                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>หมวดหมู่ (Catalog)</label><input type="text" value={editFormData.form_data?.app_info?.catalog || ""} onChange={(e) => handleNestedChange("app_info", "catalog", e.target.value)} disabled={isLockedByHold || !canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /></div>
+                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>ประเภท</label><select value={editFormData.form_data?.app_info?.type || ""} onChange={(e) => handleNestedChange("app_info", "type", e.target.value)} disabled={isLockedByHold || !canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%", outline: "none" }}><option value="">เลือกประเภท</option><option value="Inhouse">Inhouse</option><option value="Package">Package</option></select></div>
+                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>เวลาใช้งาน</label><input type="text" value={editFormData.form_data?.app_info?.usageHour || ""} onChange={(e) => handleNestedChange("app_info", "usageHour", e.target.value)} disabled={isLockedByHold || !canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /></div>
                   
-                  <div onClick={() => canUpdate && handleNestedChange("app_info", "hasSourceCode", editFormData.form_data?.app_info?.hasSourceCode === "Yes" ? "No" : "Yes")} style={{ gridColumn: "1 / -1", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", background: editFormData.form_data?.app_info?.hasSourceCode === "Yes" ? "rgba(16, 185, 129, 0.05)" : "var(--card-bg)", borderRadius: "12px", border: editFormData.form_data?.app_info?.hasSourceCode === "Yes" ? "1px solid #10b981" : "1px solid var(--border-color)", cursor: canUpdate ? "pointer" : "not-allowed", transition: "all 0.2s ease" }}>
+                  <div onClick={() => !isLockedByHold && canUpdate && handleNestedChange("app_info", "hasSourceCode", editFormData.form_data?.app_info?.hasSourceCode === "Yes" ? "No" : "Yes")} style={{ gridColumn: "1 / -1", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", background: editFormData.form_data?.app_info?.hasSourceCode === "Yes" ? "rgba(16, 185, 129, 0.05)" : "var(--card-bg)", borderRadius: "12px", border: editFormData.form_data?.app_info?.hasSourceCode === "Yes" ? "1px solid #10b981" : "1px solid var(--border-color)", cursor: isLockedByHold ? "not-allowed" : canUpdate ? "pointer" : "not-allowed", transition: "all 0.2s ease" }}>
                     <div>
                       <div style={{ color: editFormData.form_data?.app_info?.hasSourceCode === "Yes" ? "#10b981" : "var(--text-color)", fontSize: "0.95rem", fontWeight: "bold", marginBottom: "4px", display: "flex", alignItems: "center", gap: "6px" }}><IconMonitor /> มี Source Code (Source Code Availability)</div>
                       <div style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>คลิกเพื่อระบุว่าระบบนี้มีซอร์สโค้ดจัดเก็บไว้ที่โรงพยาบาลหรือไม่</div>
@@ -665,16 +884,16 @@ function ProjectWorkspace({ currentUser }) {
                   โครงสร้าง Server และเทคโนโลยี (Tech Stack)
                 </h4>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "15px" }}>
-                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>ภาษาที่ใช้ (Language)</label><input value={editFormData.form_data?.tech?.language || ""} onChange={(e) => handleTechChange("language", e.target.value)} disabled={!canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /></div>
-                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>Tools</label><input value={editFormData.form_data?.tech?.tools || ""} onChange={(e) => handleTechChange("tools", e.target.value)} disabled={!canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /></div>
-                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>แพลตฟอร์ม (Platform)</label><select value={editFormData.form_data?.tech?.platform || ""} onChange={(e) => handleTechChange("platform", e.target.value)} disabled={!canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%", outline: "none" }}><option value="Web Base">Web Base</option><option value="Mobile App">Mobile App</option><option value="Desktop App">Desktop App</option></select></div>
-                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>Type of Backup</label><input value={editFormData.form_data?.tech?.backupType || ""} onChange={(e) => handleTechChange("backupType", e.target.value)} disabled={!canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /></div>
+                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>ภาษาที่ใช้ (Language)</label><input value={editFormData.form_data?.tech?.language || ""} onChange={(e) => handleTechChange("language", e.target.value)} disabled={isLockedByHold || !canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /></div>
+                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>Tools</label><input value={editFormData.form_data?.tech?.tools || ""} onChange={(e) => handleTechChange("tools", e.target.value)} disabled={isLockedByHold || !canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /></div>
+                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>แพลตฟอร์ม (Platform)</label><select value={editFormData.form_data?.tech?.platform || ""} onChange={(e) => handleTechChange("platform", e.target.value)} disabled={isLockedByHold || !canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%", outline: "none" }}><option value="Web Base">Web Base</option><option value="Mobile App">Mobile App</option><option value="Desktop App">Desktop App</option></select></div>
+                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>Type of Backup</label><input value={editFormData.form_data?.tech?.backupType || ""} onChange={(e) => handleTechChange("backupType", e.target.value)} disabled={isLockedByHold || !canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /></div>
                   
                   <div style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px", background: "rgba(139, 92, 246, 0.05)", padding: "15px", borderRadius: "8px", border: "1px solid rgba(139, 92, 246, 0.2)" }}>
-                    <div className="form-group" style={{ margin: 0 }}><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>Web Server (IP / Name)</label><div style={{ display: "flex", gap: "10px" }}><input placeholder="IP" value={editFormData.form_data?.tech?.webServerIp || ""} onChange={(e) => handleTechChange("webServerIp", e.target.value)} disabled={!canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /><input placeholder="Name" value={editFormData.form_data?.tech?.webServerName || ""} onChange={(e) => handleTechChange("webServerName", e.target.value)} disabled={!canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /></div></div>
-                    <div className="form-group" style={{ margin: 0 }}><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>App Server (IP / Name)</label><div style={{ display: "flex", gap: "10px" }}><input placeholder="IP" value={editFormData.form_data?.tech?.appServerIp || ""} onChange={(e) => handleTechChange("appServerIp", e.target.value)} disabled={!canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /><input placeholder="Name" value={editFormData.form_data?.tech?.appServerName || ""} onChange={(e) => handleTechChange("appServerName", e.target.value)} disabled={!canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /></div></div>
-                    <div className="form-group" style={{ margin: 0 }}><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>DB Server (IP / Name)</label><div style={{ display: "flex", gap: "10px" }}><input placeholder="IP" value={editFormData.form_data?.tech?.dbServerIp || ""} onChange={(e) => handleTechChange("dbServerIp", e.target.value)} disabled={!canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /><input placeholder="Name" value={editFormData.form_data?.tech?.dbServerName || ""} onChange={(e) => handleTechChange("dbServerName", e.target.value)} disabled={!canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /></div></div>
-                    <div className="form-group" style={{ margin: 0 }}><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>HIS Server (Connection)</label><input value={editFormData.form_data?.tech?.hisServer || ""} onChange={(e) => handleTechChange("hisServer", e.target.value)} disabled={!canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /></div>
+                    <div className="form-group" style={{ margin: 0 }}><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>Web Server (IP / Name)</label><div style={{ display: "flex", gap: "10px" }}><input placeholder="IP" value={editFormData.form_data?.tech?.webServerIp || ""} onChange={(e) => handleTechChange("webServerIp", e.target.value)} disabled={isLockedByHold || !canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /><input placeholder="Name" value={editFormData.form_data?.tech?.webServerName || ""} onChange={(e) => handleTechChange("webServerName", e.target.value)} disabled={isLockedByHold || !canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /></div></div>
+                    <div className="form-group" style={{ margin: 0 }}><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>App Server (IP / Name)</label><div style={{ display: "flex", gap: "10px" }}><input placeholder="IP" value={editFormData.form_data?.tech?.appServerIp || ""} onChange={(e) => handleTechChange("appServerIp", e.target.value)} disabled={isLockedByHold || !canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /><input placeholder="Name" value={editFormData.form_data?.tech?.appServerName || ""} onChange={(e) => handleTechChange("appServerName", e.target.value)} disabled={isLockedByHold || !canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /></div></div>
+                    <div className="form-group" style={{ margin: 0 }}><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>DB Server (IP / Name)</label><div style={{ display: "flex", gap: "10px" }}><input placeholder="IP" value={editFormData.form_data?.tech?.dbServerIp || ""} onChange={(e) => handleTechChange("dbServerIp", e.target.value)} disabled={isLockedByHold || !canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /><input placeholder="Name" value={editFormData.form_data?.tech?.dbServerName || ""} onChange={(e) => handleTechChange("dbServerName", e.target.value)} disabled={isLockedByHold || !canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /></div></div>
+                    <div className="form-group" style={{ margin: 0 }}><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>HIS Server (Connection)</label><input value={editFormData.form_data?.tech?.hisServer || ""} onChange={(e) => handleTechChange("hisServer", e.target.value)} disabled={isLockedByHold || !canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /></div>
                   </div>
                 </div>
               </div>
@@ -685,15 +904,15 @@ function ProjectWorkspace({ currentUser }) {
                   การเชื่อมต่อข้อมูล (Application Interface)
                 </h4>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px" }}>
-                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>Interface Inbound Data</label><input type="text" value={editFormData.form_data?.interface?.inbound || ""} onChange={(e) => handleNestedChange("interface", "inbound", e.target.value)} disabled={!canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /></div>
-                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>Interface Outbound Data</label><input type="text" value={editFormData.form_data?.interface?.outbound || ""} onChange={(e) => handleNestedChange("interface", "outbound", e.target.value)} disabled={!canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /></div>
+                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>Interface Inbound Data</label><input type="text" value={editFormData.form_data?.interface?.inbound || ""} onChange={(e) => handleNestedChange("interface", "inbound", e.target.value)} disabled={isLockedByHold || !canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /></div>
+                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>Interface Outbound Data</label><input type="text" value={editFormData.form_data?.interface?.outbound || ""} onChange={(e) => handleNestedChange("interface", "outbound", e.target.value)} disabled={isLockedByHold || !canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /></div>
                   <div className="form-group">
                     <label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>Processing System</label>
-                    <select value={editFormData.form_data?.interface?.processing || ""} onChange={(e) => handleNestedChange("interface", "processing", e.target.value)} disabled={!canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%", outline: "none" }}>
+                    <select value={editFormData.form_data?.interface?.processing || ""} onChange={(e) => handleNestedChange("interface", "processing", e.target.value)} disabled={isLockedByHold || !canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%", outline: "none" }}>
                       <option value="">เลือกประเภท</option><option value="Online">Online</option><option value="Batch">Batch</option><option value="Batch&Online">Batch & Online</option>
                     </select>
                   </div>
-                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>Public Interface</label><input type="text" value={editFormData.form_data?.interface?.public || ""} onChange={(e) => handleNestedChange("interface", "public", e.target.value)} disabled={!canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /></div>
+                  <div className="form-group"><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>Public Interface</label><input type="text" value={editFormData.form_data?.interface?.public || ""} onChange={(e) => handleNestedChange("interface", "public", e.target.value)} disabled={isLockedByHold || !canUpdate} style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /></div>
                 </div>
               </div>
 
@@ -703,9 +922,9 @@ function ProjectWorkspace({ currentUser }) {
                   ระดับการสนับสนุนและสัญญา (Support & SLA)
                 </h4>
                 <div style={{ display: "grid", gap: "15px" }}>
-                  <div className="form-group" style={{ margin: 0 }}><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>Tier 1 (L1 Support) / Helpdesk</label><input type="text" value={editFormData.form_data?.support?.l1Contact || ""} onChange={(e) => handleNestedChange("support", "l1Contact", e.target.value)} disabled={!canUpdate} placeholder="e.g. Centralized IT Helpdesk" style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /></div>
-                  <div className="form-group" style={{ margin: 0 }}><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>Tier 2 (L2 Support) / Site IT</label><input type="text" value={editFormData.form_data?.support?.l2Contact || ""} onChange={(e) => handleNestedChange("support", "l2Contact", e.target.value)} disabled={!canUpdate} placeholder="e.g. BPK IT Support on site" style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /></div>
-                  <div className="form-group" style={{ margin: 0 }}><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>Tier 3 (L3 Support) / App Owner</label><input type="text" value={editFormData.form_data?.support?.l3Contact || ""} onChange={(e) => handleNestedChange("support", "l3Contact", e.target.value)} disabled={!canUpdate} placeholder="e.g. GLS-G6-Developer-Group" style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /></div>
+                  <div className="form-group" style={{ margin: 0 }}><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>Tier 1 (L1 Support) / Helpdesk</label><input type="text" value={editFormData.form_data?.support?.l1Contact || ""} onChange={(e) => handleNestedChange("support", "l1Contact", e.target.value)} disabled={isLockedByHold || !canUpdate} placeholder="e.g. Centralized IT Helpdesk" style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /></div>
+                  <div className="form-group" style={{ margin: 0 }}><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>Tier 2 (L2 Support) / Site IT</label><input type="text" value={editFormData.form_data?.support?.l2Contact || ""} onChange={(e) => handleNestedChange("support", "l2Contact", e.target.value)} disabled={isLockedByHold || !canUpdate} placeholder="e.g. BPK IT Support on site" style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /></div>
+                  <div className="form-group" style={{ margin: 0 }}><label style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "bold" }}>Tier 3 (L3 Support) / App Owner</label><input type="text" value={editFormData.form_data?.support?.l3Contact || ""} onChange={(e) => handleNestedChange("support", "l3Contact", e.target.value)} disabled={isLockedByHold || !canUpdate} placeholder="e.g. GLS-G6-Developer-Group" style={{ background: "var(--card-bg)", color: "var(--text-color)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-color)", width: "100%" }} /></div>
                 </div>
               </div>
             </div>
@@ -724,7 +943,7 @@ function ProjectWorkspace({ currentUser }) {
                 
                 <div 
                   onClick={() => {
-                    if(!canUpdate) return;
+                    if(isLockedByHold || !canUpdate) return;
                     const isCurrentlyYes = editFormData.form_data?.app_info?.impactBusiness === "Yes";
                     setEditFormData((prev) => ({
                       ...prev,
@@ -740,7 +959,7 @@ function ProjectWorkspace({ currentUser }) {
                     padding: "16px 20px", marginBottom: editFormData.form_data?.app_info?.impactBusiness === "Yes" ? "15px" : "0",
                     background: editFormData.form_data?.app_info?.impactBusiness === "Yes" ? "rgba(239, 68, 68, 0.05)" : "var(--card-bg)", 
                     borderRadius: "12px", border: editFormData.form_data?.app_info?.impactBusiness === "Yes" ? "1px solid #fca5a5" : "1px solid var(--border-color)", 
-                    cursor: canUpdate ? "pointer" : "not-allowed", transition: "all 0.2s ease"
+                    cursor: isLockedByHold ? "not-allowed" : canUpdate ? "pointer" : "not-allowed", transition: "all 0.2s ease"
                   }}
                 >
                   <div>
@@ -759,32 +978,29 @@ function ProjectWorkspace({ currentUser }) {
                 {editFormData.form_data?.app_info?.impactBusiness === "Yes" && (
                   <>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: "10px", padding: "15px", background: "var(--card-bg)", borderRadius: "8px", border: "1px dashed #fca5a5" }}>
-                      {/* 🌟 รายการทีมแบบคงที่ 🌟 */}
                       {impactTeamsList.map((team) => {
                         const isChecked = editFormData.form_data?.tracking?.impactTeams?.includes(team) || false;
                         return (
-                          <label key={team} style={{ display: "flex", alignItems: "center", gap: "10px", cursor: canUpdate ? "pointer" : "default", background: isChecked ? "var(--bg-color)" : "var(--input-bg)", padding: "10px", borderRadius: "6px", border: isChecked ? "2px solid #ef4444" : "1px solid var(--border-color)", transition: "all 0.2s", boxShadow: isChecked ? "0 2px 4px rgba(239, 68, 68, 0.1)" : "none" }}>
-                            <input type="checkbox" disabled={!canUpdate} checked={isChecked} onChange={() => handleImpactTeamToggle(team)} style={{ width: "16px", height: "16px", accentColor: "#ef4444" }} />
+                          <label key={team} style={{ display: "flex", alignItems: "center", gap: "10px", cursor: isLockedByHold || !canUpdate ? "default" : "pointer", background: isChecked ? "var(--bg-color)" : "var(--input-bg)", padding: "10px", borderRadius: "6px", border: isChecked ? "2px solid #ef4444" : "1px solid var(--border-color)", transition: "all 0.2s", boxShadow: isChecked ? "0 2px 4px rgba(239, 68, 68, 0.1)" : "none" }}>
+                            <input type="checkbox" disabled={isLockedByHold || !canUpdate} checked={isChecked} onChange={() => handleImpactTeamToggle(team)} style={{ width: "16px", height: "16px", accentColor: "#ef4444" }} />
                             <span style={{ fontSize: "0.85rem", color: isChecked ? "#ef4444" : "var(--text-color)", fontWeight: isChecked ? "600" : "normal" }}>{team}</span>
                           </label>
                         )
                       })}
-                      {/* 🌟 รายการทีมที่ถูกเพิ่มเข้ามาใหม่ (ลบได้) 🌟 */}
                       {(editFormData.form_data?.tracking?.customImpactTeamsList || []).map((item) => {
                         const isChecked = editFormData.form_data?.tracking?.impactTeams?.includes(item.label) || false;
                         return (
                           <div key={item.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: isChecked ? "var(--bg-color)" : "var(--input-bg)", padding: "10px", borderRadius: "6px", border: isChecked ? "2px solid #ef4444" : "1px solid var(--border-color)", transition: "all 0.2s", boxShadow: isChecked ? "0 2px 4px rgba(239, 68, 68, 0.1)" : "none" }}>
-                            <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: canUpdate ? "pointer" : "default", flex: 1 }}>
-                              <input type="checkbox" disabled={!canUpdate} checked={isChecked} onChange={() => handleImpactTeamToggle(item.label)} style={{ width: "16px", height: "16px", accentColor: "#ef4444" }} />
+                            <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: isLockedByHold || !canUpdate ? "default" : "pointer", flex: 1 }}>
+                              <input type="checkbox" disabled={isLockedByHold || !canUpdate} checked={isChecked} onChange={() => handleImpactTeamToggle(item.label)} style={{ width: "16px", height: "16px", accentColor: "#ef4444" }} />
                               <span style={{ fontSize: "0.85rem", color: isChecked ? "#ef4444" : "var(--text-color)", fontWeight: isChecked ? "600" : "normal" }}>{item.label}</span>
                             </label>
-                            {canUpdate && <button type="button" onClick={() => handleDeleteCustomImpactTeam(item.key, item.label)} style={{ background: "transparent", border: "none", color: "#ef4444", fontWeight: "bold", cursor: "pointer", padding: "0 5px", fontSize: "1rem" }} title="ลบทีมนี้"><IconX /></button>}
+                            {!isLockedByHold && canUpdate && <button type="button" onClick={() => handleDeleteCustomImpactTeam(item.key, item.label)} style={{ background: "transparent", border: "none", color: "#ef4444", fontWeight: "bold", cursor: "pointer", padding: "0 5px", fontSize: "1rem" }} title="ลบทีมนี้"><IconX /></button>}
                           </div>
                         )
                       })}
                     </div>
-                    {/* 🌟 ช่องสำหรับพิมพ์เพิ่มทีม Impact ใหม่ 🌟 */}
-                    {canUpdate && (
+                    {!isLockedByHold && canUpdate && (
                       <div style={{ marginTop: "15px", display: "flex", gap: "10px", alignItems: "center", background: "var(--input-bg)", padding: "10px", borderRadius: "8px", border: "1px dashed var(--border-color)" }}>
                         <input 
                           type="text" 
@@ -806,32 +1022,30 @@ function ProjectWorkspace({ currentUser }) {
                   ข้อมูลส่วนบุคคล (PDPA)
                 </h4>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: "10px" }}>
-                  {/* รายการ PDPA มาตรฐาน */}
                   {fullPdpaItems.map((item) => {
                     const isChecked = editFormData.form_data?.compliance?.pdpa?.[item.key] || false;
                     return (
-                      <label key={item.key} style={{ display: "flex", alignItems: "center", gap: "10px", cursor: canUpdate ? "pointer" : "default", background: isChecked ? "var(--card-bg)" : "var(--input-bg)", padding: "10px", borderRadius: "6px", border: isChecked ? "1px solid #ef4444" : "1px solid var(--border-color)", transition: "all 0.2s" }}>
-                        <input type="checkbox" disabled={!canUpdate} checked={isChecked} onChange={(e) => handlePdpaChange(item.key, e.target.checked)} style={{ width: "16px", height: "16px", accentColor: "#ef4444" }} />
+                      <label key={item.key} style={{ display: "flex", alignItems: "center", gap: "10px", cursor: isLockedByHold || !canUpdate ? "default" : "pointer", background: isChecked ? "var(--card-bg)" : "var(--input-bg)", padding: "10px", borderRadius: "6px", border: isChecked ? "1px solid #ef4444" : "1px solid var(--border-color)", transition: "all 0.2s" }}>
+                        <input type="checkbox" disabled={isLockedByHold || !canUpdate} checked={isChecked} onChange={(e) => handlePdpaChange(item.key, e.target.checked)} style={{ width: "16px", height: "16px", accentColor: "#ef4444" }} />
                         <span style={{ fontSize: "0.85rem", color: isChecked ? "#ef4444" : "var(--text-color)", fontWeight: isChecked ? "600" : "normal" }}>{item.label}</span>
                       </label>
                     )
                   })}
-                  {/* 🌟 รายการ PDPA ที่เพิ่มเข้ามาเอง (Custom) พร้อมปุ่มลบ 🌟 */}
                   {(editFormData.form_data?.compliance?.customPdpaList || []).map((item) => {
                     const isChecked = editFormData.form_data?.compliance?.pdpa?.[item.key] || false;
                     return (
                       <div key={item.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: isChecked ? "var(--card-bg)" : "var(--input-bg)", padding: "10px", borderRadius: "6px", border: isChecked ? "1px solid #ef4444" : "1px solid var(--border-color)", transition: "all 0.2s" }}>
-                        <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: canUpdate ? "pointer" : "default", flex: 1 }}>
-                          <input type="checkbox" disabled={!canUpdate} checked={isChecked} onChange={(e) => handlePdpaChange(item.key, e.target.checked)} style={{ width: "16px", height: "16px", accentColor: "#ef4444" }} />
+                        <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: isLockedByHold || !canUpdate ? "default" : "pointer", flex: 1 }}>
+                          <input type="checkbox" disabled={isLockedByHold || !canUpdate} checked={isChecked} onChange={(e) => handlePdpaChange(item.key, e.target.checked)} style={{ width: "16px", height: "16px", accentColor: "#ef4444" }} />
                           <span style={{ fontSize: "0.85rem", color: isChecked ? "#ef4444" : "var(--text-color)", fontWeight: isChecked ? "600" : "normal" }}>{item.label}</span>
                         </label>
-                        {canUpdate && <button type="button" onClick={() => handleDeleteCustomPdpa(item.key)} style={{ background: "transparent", border: "none", color: "#ef4444", fontWeight: "bold", cursor: "pointer", padding: "0 5px", fontSize: "1rem" }} title="ลบรายการนี้"><IconX /></button>}
+                        {!isLockedByHold && canUpdate && <button type="button" onClick={() => handleDeleteCustomPdpa(item.key)} style={{ background: "transparent", border: "none", color: "#ef4444", fontWeight: "bold", cursor: "pointer", padding: "0 5px", fontSize: "1rem" }} title="ลบรายการนี้"><IconX /></button>}
                       </div>
                     )
                   })}
                 </div>
                 
-                {canUpdate && (
+                {!isLockedByHold && canUpdate && (
                   <div style={{ marginTop: "15px", display: "flex", gap: "10px", alignItems: "center", background: "var(--input-bg)", padding: "10px", borderRadius: "8px", border: "1px dashed var(--border-color)" }}>
                     <input 
                       type="text" value={newPdpaText} onChange={e => setNewPdpaText(e.target.value)} 
@@ -859,7 +1073,7 @@ function ProjectWorkspace({ currentUser }) {
                       <div style={{ width: "35px", height: "35px", background: "var(--blue)", color: "#fff", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", flexShrink: 0 }}>{ropa.letter}</div>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "5px" }}>{ropa.title}</div>
-                        <input type="text" value={editFormData.form_data?.compliance?.ropa?.[ropa.key] || ""} onChange={(e) => handleRopaChange(ropa.key, e.target.value)} disabled={!canUpdate} placeholder={ropa.placeholder} style={{ width: "100%", padding: "10px", borderRadius: "6px", background: "var(--card-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }} />
+                        <input type="text" value={editFormData.form_data?.compliance?.ropa?.[ropa.key] || ""} onChange={(e) => handleRopaChange(ropa.key, e.target.value)} disabled={isLockedByHold || !canUpdate} placeholder={ropa.placeholder} style={{ width: "100%", padding: "10px", borderRadius: "6px", background: "var(--card-bg)", border: "1px solid var(--border-color)", color: "var(--text-color)" }} />
                       </div>
                     </div>
                   ))}

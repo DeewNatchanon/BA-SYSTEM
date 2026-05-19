@@ -1,12 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../config/db'); 
-const { requireAuth } = require('../middleware/auth'); 
+const { requireAuth, requirePermission } = require('../middleware/auth'); 
 const { signAccessToken } = require('../utils/jwt');
-const bcrypt = require('bcrypt'); // 🌟 เพิ่มบรรทัดนี้เพื่อใช้เช็ครหัสผ่าน
-// =========================================================
-// 🚀 1. เส้นทาง: เข้าสู่ระบบ (Login)
-// =========================================================
+const { verifyPassword } = require('../utils/password');
+
 router.post('/login', async (req, res) => {
     const { username, password } = req.body;
 
@@ -15,21 +13,6 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ error: 'กรุณากรอกรหัสพนักงานและรหัสผ่าน' });
         }
 
-        // ---------------------------------------------------------
-        // 🏥 FUTURE: จุดเชื่อมต่อ API ส่วนกลางของโรงพยาบาล 🏥
-        // ---------------------------------------------------------
-        /* const hospitalRes = await axios.post('https://api.hospital.com/auth/verify', {
-             user: username,
-             pass: password
-         });
-
-         if (!hospitalRes.data.success) {
-             return res.status(401).json({ error: 'รหัสพนักงาน หรือรหัสผ่าน ไม่ถูกต้อง' });
-         }
-        */
-        // ---------------------------------------------------------
-
-        // 🔍 ตรวจสอบผู้ใช้ในฐานข้อมูลระบบเรา (เพื่อเอา Role และสิทธิ์การใช้งาน)
         const userQuery = `
             SELECT u.*, r.name AS role_name, r.permissions 
             FROM users u 
@@ -39,86 +22,51 @@ router.post('/login', async (req, res) => {
         const userResult = await pool.query(userQuery, [username]);
         let user = userResult.rows[0];
 
-        if (!user) {
-            return res.status(401).json({ error: 'คุณยังไม่มีสิทธิ์เข้าใช้งานระบบนี้ กรุณาติดต่อ Admin' });
-        } 
+        if (!user) return res.status(401).json({ error: 'คุณยังไม่มีสิทธิ์เข้าใช้งานระบบนี้ กรุณาติดต่อ Admin' });
+        if (!user.password_hash) return res.status(401).json({ error: 'บัญชีนี้ยังไม่ได้ตั้งค่ารหัสผ่านในระบบ' });
 
-        // 🌟 จุดที่แก้ไข: เปลี่ยนจาก user.password เป็น user.password_hash 🌟
-        if (!user.password_hash) {
-            return res.status(401).json({ error: 'บัญชีนี้ยังไม่ได้ตั้งค่ารหัสผ่านในระบบ' });
-        }
+        const isMatch = await verifyPassword(password, user.password_hash);
+        if (!isMatch) return res.status(401).json({ error: 'รหัสพนักงาน หรือรหัสผ่าน ไม่ถูกต้อง' });
 
-        // ตรวจสอบรหัสผ่านด้วย bcrypt
-        const isMatch = await bcrypt.compare(password, user.password_hash);
-        
-        if (!isMatch) {
-            return res.status(401).json({ error: 'รหัสพนักงาน หรือรหัสผ่าน ไม่ถูกต้อง' });
-        }
-
-        // 🎫 ออก Token เมื่อรหัสผ่านถูกต้อง
         const token = signAccessToken({ 
             sub: user.id, 
             username: user.username, 
-            role: user.role_name 
+            role: user.role_name,
+            permissions: user.permissions || {}
         });
 
         res.json({ 
             token, 
             user: { 
-                id: user.id, 
-                username: user.username, 
-                role: user.role_name, 
-                avatar: user.avatar || null,
-                permissions: user.permissions || {}
+                id: user.id, username: user.username, role: user.role_name, 
+                avatar: user.avatar || null, permissions: user.permissions || {}
             } 
         });
-
     } catch (error) {
-        console.error("Login Error:", error);
         res.status(500).json({ error: 'เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์' });
     }
 });
 
-// =========================================================
-// 🚀 2. เส้นทาง: ตรวจสอบสถานะ (Check Session / Me)
-// =========================================================
 router.get('/me', requireAuth, async (req, res) => {
     try {
-        // ดึง Token ปัจจุบันจาก Header
         const accessToken = req.headers.authorization?.split(" ")[1];
         const userId = req.auth?.sub || req.auth?.id || req.user?.id;
-        
-        if (!userId) {
-            return res.status(401).json({ error: 'ไม่พบข้อมูลใน Token' });
-        }
+        if (!userId) return res.status(401).json({ error: 'ไม่พบข้อมูลใน Token' });
 
-        const userQuery = `
-            SELECT u.*, r.name AS role_name, r.permissions 
-            FROM users u 
-            LEFT JOIN roles r ON u.role_id = r.id 
-            WHERE u.id = $1
-        `;
+        const userQuery = `SELECT u.*, r.name AS role_name, r.permissions FROM users u LEFT JOIN roles r ON u.role_id = r.id WHERE u.id = $1`;
         const userResult = await pool.query(userQuery, [userId]);
         const dbUser = userResult.rows[0];
-        
         if (!dbUser) return res.status(404).json({ error: 'ไม่พบข้อมูลผู้ใช้' });
 
         res.json({
-            token: accessToken, // 🌟 ส่ง Token เดิมกลับไป
-            user: {
-                id: dbUser.id,
-                username: dbUser.username,
-                role: dbUser.role_name, 
-                avatar: dbUser.avatar || null,
-                permissions: dbUser.permissions || {} 
-            }
+            token: accessToken, 
+            user: { id: dbUser.id, username: dbUser.username, role: dbUser.role_name, avatar: dbUser.avatar || null, permissions: dbUser.permissions || {} }
         });
     } catch (error) {
-        console.error("Me Route Error:", error);
         res.status(500).json({ error: 'Server Error' });
     }
 });
-// 🚀 1. ดึงรายการ Roles ทั้งหมดไปโชว์ในหน้า EditRole
+
 router.get('/roles', requireAuth, async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM roles ORDER BY id ASC');
@@ -128,68 +76,44 @@ router.get('/roles', requireAuth, async (req, res) => {
     }
 });
 
-// 🚀 2. บันทึกการแก้ไขสิทธิ์ (หัวใจสำคัญที่ทำให้ข้อมูลไม่ลง DB)
-router.put('/roles/:id', requireAuth, async (req, res) => {
+router.put('/roles/:id', requireAuth,async (req, res) => {
     const { id } = req.params;
     const { permissions } = req.body;
     try {
-        await pool.query(
-            'UPDATE roles SET permissions = $1::jsonb WHERE id = $2',
-            [JSON.stringify(permissions), id]
-        );
+        await pool.query('UPDATE roles SET permissions = $1::jsonb WHERE id = $2', [JSON.stringify(permissions), id]);
         res.json({ message: 'บันทึกสิทธิ์เรียบร้อยแล้ว' });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
-// 🚀 เพิ่มเส้นทางสำหรับสร้าง Role ใหม่ลงฐานข้อมูล (เวอร์ชันแก้ปัญหา ID)
+
 router.post('/roles', requireAuth, async (req, res) => {
     const { name, permissions } = req.body;
     try {
-        // 1. ดึงค่า ID ล่าสุดในตารางมาบวก 1 เพื่อสร้าง ID ใหม่ (ป้องกัน Error ไม่มี ID)
-        const maxIdResult = await pool.query('SELECT COALESCE(MAX(id), 0) + 1 AS next_id FROM roles');
-        const nextId = maxIdResult.rows[0].next_id;
-
-        // 2. บันทึกข้อมูลโดยระบุ ID ลงไปตรงๆ และบังคับแปลงเป็น JSONB
-        const result = await pool.query(
-            'INSERT INTO roles (id, name, permissions) VALUES ($1, $2, $3::jsonb) RETURNING *',
-            [nextId, name, JSON.stringify(permissions || {})]
-        );
+        const result = await pool.query('INSERT INTO roles (name, permissions) VALUES ($1, $2::jsonb) RETURNING *', [name, JSON.stringify(permissions || {})]);
         res.status(201).json(result.rows[0]);
-
     } catch (error) {
-        console.error("Create Role Error:", error);
-        // 🌟 เปลี่ยนมาส่งข้อความ Error จริงจาก Database ไปให้หน้าเว็บ เพื่อให้เรารู้สาเหตุที่แท้จริง
         res.status(500).json({ error: error.message }); 
     }
 });
-// 🚀 4. เส้นทางลบ Role และโอนย้าย User ไปที่ employee อัตโนมัติ
+
 router.delete('/roles/:id', requireAuth, async (req, res) => {
     const { id } = req.params;
     try {
-        // 1. ตรวจสอบก่อนว่าเป็น Role หลักที่ห้ามลบหรือไม่
         const roleRes = await pool.query('SELECT name FROM roles WHERE id = $1', [id]);
         if (roleRes.rows.length === 0) return res.status(404).json({ error: 'ไม่พบข้อมูลบทบาทนี้' });
-        
         const roleName = roleRes.rows[0].name.toLowerCase();
-        if (['employee', 'manager', 'ceo'].includes(roleName)) {
-            return res.status(400).json({ error: 'ไม่อนุญาตให้ลบ Role หลักของระบบได้ (employee, manager, ceo)' });
-        }
+        if (['employee', 'manager', 'ceo'].includes(roleName)) return res.status(400).json({ error: 'ไม่อนุญาตให้ลบ Role หลักของระบบได้ (employee, manager, ceo)' });
 
-        // 2. หา ID ของ role 'employee' เพื่อเตรียมย้าย User
         const empRes = await pool.query("SELECT id FROM roles WHERE name = 'employee'");
         if (empRes.rows.length === 0) return res.status(500).json({ error: 'ระบบไม่พบ Role employee พื้นฐาน' });
         const empRoleId = empRes.rows[0].id;
 
-        // 3. ย้าย Users ที่เคยผูกกับ Role ที่กำลังจะโดนลบ ให้ไปอยู่กับ employee
         await pool.query('UPDATE users SET role_id = $1 WHERE role_id = $2', [empRoleId, id]);
-
-        // 4. ลบ Role นั้นออกจากระบบ
         await pool.query('DELETE FROM roles WHERE id = $1', [id]);
 
         res.json({ message: 'ลบข้อมูลสำเร็จ และย้ายผู้ใช้งานไปที่ Employee แล้ว' });
     } catch (error) {
-        console.error("Delete Role Error:", error);
         res.status(500).json({ error: error.message });
     }
 });
