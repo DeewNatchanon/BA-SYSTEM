@@ -101,10 +101,8 @@ const CustomDateInput = forwardRef(({ value, onClick, placeholder }, ref) => (
 ));
 
 // ─── Ba Date Picker Wrapper ───────────────────────────────────────────────────
-// รับ/ส่ง value เป็น YYYY-MM-DD string, แสดงผลเป็น วว/ดด/ปปปป
 const BaDatePicker = ({ value, onChange, placeholder, minDate }) => (
   <>
-    {/* Override popup style ให้ลอยเหนือ modal */}
     <style>{`
       .ba-dp-wrap .react-datepicker-popper { z-index: 9999 !important; }
       .ba-dp-wrap .react-datepicker {
@@ -398,21 +396,35 @@ function ManagerDashboard({ currentUser }) {
           return { ...p, form_data: parsedForm || {}, timeline: parsedTimeline || {} };
         });
 
-        setNewProjects(safeProjects.filter(p => p.status === "Pending Approval"));
-
+        // 🌟 แก้ไข: New Projects แสดงเฉพาะโปรเจกต์ที่เราระบุชื่อเป็นหัวหน้าเท่านั้น!
         const myName = currentUser?.username || "";
+        
+        setNewProjects(safeProjects.filter(p => {
+          if (p.status !== "Pending Approval") return false;
+          
+          // เช็คว่า user ปัจจุบันอยู่ในรายชื่อ glsManagers ที่เลือกมาจาก RequestForm หรือไม่
+          const reqGlsManagers = Array.isArray(p.form_data?.glsManagers) ? p.form_data.glsManagers : [];
+          return reqGlsManagers.includes(myName);
+        }));
+
+        // 🌟 แก้ไข: Phase Requests แสดงเฉพาะหัวหน้างาน (ตัดสิทธิ์ Assignees ไม่ให้อนุมัติงานตัวเองได้)
         setPhaseRequests(safeProjects.filter((p) => {
           const isPending =
             p.status !== "Pending Approval" &&
             (p.form_data?.tracking?.isPendingApproval === true ||
               String(p.form_data?.tracking?.isPendingApproval).toLowerCase() === "true");
           if (!isPending) return false;
+          
           const gls  = Array.isArray(p.form_data?.glsManagers) ? p.form_data.glsManagers : [];
-          const asn  = Array.isArray(p.form_data?.assignees)   ? p.form_data.assignees   : [];
-          return gls.includes(myName) || asn.includes(myName) ||
-            (p.form_data?.tracking?.glsManager || "").includes(myName) ||
-            (p.form_data?.projectManager || "").includes(myName) ||
-            (p.form_data?.tracking?.glsOwner || "").includes(myName);
+          const trackingManagerStr = p.form_data?.tracking?.glsManager || "";
+          const projectManagerStr = p.form_data?.projectManager || "";
+          const ownerStr = p.form_data?.tracking?.glsOwner || "";
+
+          // ❌ ไม่ให้ผู้ปฏิบัติงาน (Assignees) อนุมัติเฟสเองอีกต่อไป
+          return gls.includes(myName) ||
+            trackingManagerStr.includes(myName) ||
+            projectManagerStr.includes(myName) ||
+            ownerStr.includes(myName);
         }));
       }
     } catch (error) {
